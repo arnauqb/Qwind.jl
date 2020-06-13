@@ -94,20 +94,3 @@ end
     @test compute_force_multiplier(1e-10, 1e-5) ≈ 2300 atol = 0 rtol = 0.1
     @test compute_force_multiplier(1e-2, 1e-5) ≈ 6 atol = 0 rtol = 0.1
 end
-
-
-#@testset "Force radiation" begin
-#    @test all(isapprox.(
-#        integrate(100.0, 50.0, wind, include_tau_uv = false, maxevals = 10000),
-#        [2.4e-6, 2e-6],
-#        atol = 0,
-#        rtol = 0.1,
-#    ))
-#    @test all(isapprox.(
-#        integrate(5.0, 10.0, wind, include_tau_uv = false, maxevals = 10000),
-#        [-3.3e-6, 3e-5],
-#        atol = 0,
-#        rtol = 0.1,
-#    ))
-#    # @test all(isapprox.(force_radiation(1000., 0.1, 0., wind, include_tau_uv=false), [1.9e-11, 9e-11], atol=0, rtol=0.2))
-#end

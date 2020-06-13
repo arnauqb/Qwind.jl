@@ -199,13 +199,15 @@ function compute_xray_tau(
 end
 
 
+
+
 ## UV Physics
 
 
 """
 UV opacity
 """
-uv_opacity() = SIGMA_T
+compute_uv_opacity() = SIGMA_T
 
 function compute_uv_tau(r, z, number_density, r_0 = 0.0, z_0 = 0.0)
     d = sqrt((r - r_0)^2 + (z - z_0)^2)
