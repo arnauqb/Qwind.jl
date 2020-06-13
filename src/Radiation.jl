@@ -43,14 +43,6 @@ function compute_xray_opacity(ionization_parameter)
     end
 end
 
-function compute_xray_opacity(r, r_x)
-    if r > r_x
-        return 100.0 * SIGMA_T
-    else
-        return SIGMA_T
-    end
-end
-
 function ionization_radius_kernel(
     xray_luminosity,
     number_density,
