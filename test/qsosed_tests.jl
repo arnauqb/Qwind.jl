@@ -1,3 +1,5 @@
+using Test
+
 @testset "NT rel factors" begin
     @test nt_rel_factors.([6, 100, 1e8], 0, 6.0) ≈
           [0, 0.6522661452445981, 0.9960299145167933] rtol = 5e-3 atol = 0
