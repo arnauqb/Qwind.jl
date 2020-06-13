@@ -1,4 +1,5 @@
 using Test
+using Qwind
 
 @testset "NT rel factors" begin
     @test nt_rel_factors.([6, 100, 1e8], 0, 6.0) ≈
