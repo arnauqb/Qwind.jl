@@ -12,7 +12,8 @@ export Streamline,
     z_0,
     r_in,
     create_line,
-    initial_radii
+    initial_radii,
+    escaped
 
 struct Streamline
     r::Vector{Float64}
@@ -84,10 +85,10 @@ max_z(line::Streamline) = maximum(line.z)
 r_0(line::Streamline) = line.r[1]
 z_0(line::Streamline) = line.z[1]
 
-function escaped(line::Streamline)
+function escaped(line::Streamline, bh_mass)
     d = sqrt.(line.r .^ 2 + line.z .^ 2)
-    v_T = sqrt.(line.v_r .^ 2 * line.v_z .^ 2)
-    v_esc = sqrt.(2 ./ d)
+    v_T = sqrt.(line.v_r .^ 2 + line.v_z .^ 2)
+    v_esc = sqrt.((2 * G * bh_mass) ./ d)
     return any(v_T > v_esc)
 end
 

@@ -27,6 +27,8 @@ using Qwind
     @test r_0(line2) == 1.5
     @test z(line2) == 6.0
     @test z_0(line2) == 2.0
+    M = 1 / G
+    @test escaped(line2, M) == true
     push!(line2.r, 2.5)
     push!(line2.z, 2.6)
     @test max_r(line2) == 5.0
@@ -46,4 +48,5 @@ using Qwind
     @test r_in(lines) == 2.0
     @test max_r(lines) == 5.0
     @test max_z(lines) == 6.0
+
 end
