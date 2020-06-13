@@ -227,11 +227,11 @@ force_multiplier_k_log_interpolator = extrapolate(
     ),
     Flat(),
 )
-force_multiplier_k(ionization_parameter, mode::Interp) =
+compute_force_multiplier_k(ionization_parameter, mode::Interp) =
     force_multiplier_k_log_interpolator(log10(ionization_parameter))
-force_multiplier_k(ionization_parameter) =
-    force_multiplier_k(ionization_parameter, Interp())
-function force_multiplier_k(ionization_parameter, mode::NoInterp)
+compute_force_multiplier_k(ionization_parameter) =
+    compute_force_multiplier_k(ionization_parameter, Interp())
+function compute_force_multiplier_k(ionization_parameter, mode::NoInterp)
     k = 0.03 + 0.385 * exp(-1.4 * ionization_parameter^0.6)
     return k
 end
