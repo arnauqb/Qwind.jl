@@ -68,8 +68,8 @@ in Steven & Kallman 1990
 """
 force_multiplier_k_log_interpolator = extrapolate(
     interpolate(
-        (Tables.k_interp_log_xi,),
-        Tables.k_interp_k,
+        (fm_interpolation_data["k_interp_x"],),
+        fm_interpolation_data["k_interp_y"],
         Gridded(Linear()),
     ),
     Flat(),
@@ -89,8 +89,8 @@ in Steven & Kallman 1990
 """
 force_multiplier_eta_log_interpolator = extrapolate(
     interpolate(
-        (Tables.etamax_interp_log_xi,),
-        Tables.etamax_interp_etamax,
+        (fm_interpolation_data["eta_interp_x"],),
+        fm_interpolation_data["eta_interp_y"],
         Gridded(Linear()),
     ),
     Flat(),

@@ -1,3 +1,5 @@
+export fm_interpolation_data
+
 k_interp_log_xi = [
     -4,
     -3,
@@ -101,3 +103,10 @@ etamax_interp_etamax = [
     1.20,
     0.78,
 ]
+
+fm_interpolation_data = Dict(
+    "k_interp_x" => k_interp_log_xi,
+    "k_interp_y" => k_interp_k,
+    "eta_interp_x" => etamax_interp_log_xi,
+    "eta_interp_y" => etamax_interp_etamax,
+)
