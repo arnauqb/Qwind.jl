@@ -21,6 +21,24 @@ end
     @test xray_tau(3, 4, 4, 1e6) == 20 * SIGMA_T
     @test xray_tau(12, 16, 2, 1e-2) ≈ 4000 * SIGMA_T
     @test xray_tau(4, 5, 2, 1e6, 1, 1) == 10 * SIGMA_T
+    @test xray_tau([1, 3], [4 / 3, 4], [2, 2], [1e6, 1e6]) == 10 * SIGMA_T
+end
+
+@testset "Ionization radius" begin
+    xray_lumin = 1e6
+    density = 10.0
+    r_in = 1.0
+    xi_0 = 1e5
+    r_x = Qwind.ionization_radius(xray_lumin, density, r_in, atol = 1e-2)
+    @test Qwind.ionization_radius_kernel(xray_lumin, density, r_in, r_x, xi_0) ≈
+          0 atol = 1e-2
+    tau_x = xray_tau(r_x, 0, density, xi_0)
+    @test ionization_parameter(r_x, 0, density, tau_x, xray_lumin) ≈ xi_0
+    r_x = Qwind.ionization_radius(xray_lumin, density, r_in, atol = 1e-4)
+    @test Qwind.ionization_radius_kernel(xray_lumin, density, r_in, r_x, xi_0) ≈
+          0 atol = 1e-4
+    tau_x = xray_tau(r_x, 0, density, xi_0)
+    @test ionization_parameter(r_x, 0, density, tau_x, xray_lumin) ≈ xi_0
 end
 
 @testset "UV optical depth" begin
@@ -35,10 +53,10 @@ end
     @test Qwind.force_multiplier_k(10^3.51) == 0.045
     @test Qwind.force_multiplier_k(1e-5) == 0.411
     @test Qwind.force_multiplier_k(1e10) == 0.013
-    @test Qwind.force_multiplier_eta(1e-3) == 10 ^ 6.95
-    @test Qwind.force_multiplier_eta(10^3.50) == 10 ^ 1.58
-    @test Qwind.force_multiplier_eta(1e-5) == 10 ^ 6.95
-    @test Qwind.force_multiplier_eta(1e10) == 10 ^ 0.78
+    @test Qwind.force_multiplier_eta(1e-3) == 10^6.95
+    @test Qwind.force_multiplier_eta(10^3.50) == 10^1.58
+    @test Qwind.force_multiplier_eta(1e-5) == 10^6.95
+    @test Qwind.force_multiplier_eta(1e10) == 10^0.78
     @test force_multiplier(1e5, 1e5) < 1e-3
     @test force_multiplier(1e5, 1e-5) < 1e-3
     @test force_multiplier(1e-8, 1e-5) > 2000

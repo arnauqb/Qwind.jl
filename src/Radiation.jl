@@ -1,4 +1,4 @@
-using Interpolations
+using Interpolations, Roots
 export xray_opacity,
     xray_tau, uv_tau, uv_opacity, ionization_parameter, force_multiplier
 export NoInterp, Interp, QuadTree, NoGrid
@@ -9,6 +9,8 @@ struct NoInterp <: InterpolationType end
 struct Interp <: InterpolationType end
 struct QuadTree <: GridType end
 struct NoGrid <: GridType end
+
+## X-Ray phyiscs
 
 """
 Ionization parameter ξ
@@ -30,6 +32,52 @@ function xray_opacity(ionization_parameter)
 end
 
 """
+If we want to solve the equation ξ(r_x) = ξ_0, then we need to solve
+the implicit equation ξ_0 = L_x / (n r_x^2) * exp(-σ * n * (r_x - r_in)),
+where we introduce the change t = log(r_x) to make it less suitable to roundoff
+errors.
+
+# Parameters
+- xray_luminosity (in cgs)
+- number_density (in cgs)
+- r_in initial material radius (in cgs)
+- r_x ionization radius candidate (in cgs)
+- target ionization parameter (in cgs)
+"""
+function ionization_radius_kernel(
+    xray_luminosity,
+    number_density,
+    r_in,
+    r_x,
+    target_ionization_parameter,
+)
+    return log(
+        xray_luminosity /
+        (target_ionization_parameter * number_density * r_x^2),
+    ) - number_density * SIGMA_T * (r_x - r_in)
+end
+
+function ionization_radius(
+    xray_luminosity,
+    number_density,
+    r_in,
+    target_ionization_parameter = 1e5;
+    atol = 1e-2,
+    rtol = 0,
+)
+    # t = log(r_x) => r_x = e^t
+    func(t) = ionization_radius_kernel(
+        xray_luminosity,
+        number_density,
+        r_in,
+        exp(t),
+        target_ionization_parameter,
+    )
+    t0 = find_zero(func, (-40, 40), Bisection(), atol = atol, rtol = rtol)
+    return exp(t0)
+end
+
+"""
 X-Ray optical depth
 
 # Parameters
@@ -44,12 +92,37 @@ function xray_tau(
     z,
     number_density,
     ionization_parameter,
-    r_0 = 0.0,
-    z_0 = 0.0,
+    r_1 = 0.0,
+    z_1 = 0.0,
 )
-    d = sqrt((r - r_0)^2 + (z - z_0)^2)
+    d = sqrt((r - r_1)^2 + (z - z_1)^2)
     return number_density * xray_opacity(ionization_parameter) * d
 end
+
+function xray_tau(
+    r::Vector,
+    z::Vector,
+    number_density::Vector,
+    ionization_parameter::Vector,
+)
+    ret = 0.0
+    r1, z1 = 0.0, 0.0
+    for i = 1:length(r)
+        ret += xray_tau(
+            r[i],
+            z[i],
+            number_density[i],
+            ionization_parameter[i],
+            r1,
+            z1,
+        )
+        r1, z1 = r[i], z[i]
+    end
+    return ret
+end
+
+## UV Physics
+
 
 """
 UV opacity
