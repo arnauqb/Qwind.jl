@@ -11,12 +11,12 @@ struct ConstantRad <: RadiationMode end
 include("Tables.jl")
 include("BlackHole.jl")
 include("Constants.jl")
-include("Grid.jl")
 include("Qsosed.jl")
 include("Streamline.jl")
 include("Solver.jl")
 include("Radiation.jl")
 include("Integration.jl")
+include("Grid.jl")
 
 
 end # module
