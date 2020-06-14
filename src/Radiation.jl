@@ -284,3 +284,9 @@ end
 
 compute_force_multiplier(t, ionization_parameter) =
     compute_force_multiplier(t, ionization_parameter, Interp())
+
+function force_radiation(integrand, r, z, force_multiplier, M, r_lims=(6.0, 1500.0), phi_lims=(0.0, 2π))
+    res, err = integrate_2d(integrand, x_lims=r_lims, y_lims=phi_lims)
+    radiation_constant = 3 * G * M / (8π)
+    return (1 + force_multiplier)
+end
