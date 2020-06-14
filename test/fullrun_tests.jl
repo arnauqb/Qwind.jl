@@ -24,5 +24,19 @@ grid = Grid(r_min, r_max, z_min, z_max, vacuum_density)
 
 # initialize streamlines
 r_in = 50 * Rg(black_hole)
-lines_r_range = 10 .^ range(log10(r_in), log10(1500.0), length=20.0)
+r_fi = 1500 * Rg(black_hole)
+n_lines = 30
+velocity_generator(r_0) = 5e7
+density_generator(r_0) = 2e8
+streamlines = Streamlines(
+    r_in,
+    r_fi,
+    n_lines,
+    velocity_generator,
+    density_generator,
+    black_hole.M;
+    z_0 = 0.0,
+    log_spaced = true,
+)
+
 

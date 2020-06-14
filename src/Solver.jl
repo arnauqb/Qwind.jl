@@ -14,7 +14,7 @@ struct Parameters
     z_min::Float64
     z_max::Float64
     integrand::Any
-    radiation_mode::RadiationMode
+    radiation_calculator::Any
 end
 
 
@@ -34,7 +34,7 @@ function compute_initial_acceleration(r, z, v_r, v_z, params::Parameters)
     u = [r, z, v_r, v_z]
     du = [v_r, v_z, 0, 0]
     gravitational_acceleration = compute_gravitational_acceleration(r, z, params.bh_mass)
-    radiation_acceleration = radiation_calculator(du, u, params, params.radiation_mode)
+    radiation_acceleration = params.radiation_calculator(du, u, params)
     centrifugal_term = params.line.angular_momentum^2 / r^3
     isnan(centrifugal_term) ? centrifugal_term = 0 : nothing
     a_r = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
@@ -55,12 +55,9 @@ function radiation_calculator(du, u, p, mode::RE)
     tau_eff = compute_tau_eff(density, dv_dr, p.v_th)
     force_multiplier = compute_force_multiplier(tau_eff, ξ)
     force_radiation =
-        compute_radiation_force(p.integrand, r, z, force_multiplier, p.bh_mass)
+        p.radiation_calculator(p.integrand, r, z, force_multiplier, p.bh_mass)
     return force_radiation
 end
-
-radiation_calculator(du, u, p, mode::NoRad) = [0.0, 0.0] # for tests
-radiation_calculator(du, u, p, mode::ConstantRad) = [0.0, 400] # for tests
 
 function termination_condition(u, t, integrator)
     r, z, v_r, v_z = u
@@ -90,7 +87,7 @@ function residual!(out, du, u, p, t)
     r, z, v_r, v_z = u
     r_dot, z_dot, v_r_dot, v_z_dot = du
     gravitational_acceleration = compute_gravitational_acceleration(r, z, p.bh_mass)
-    radiation_acceleration = radiation_calculator(du, u, p, p.radiation_mode)
+    radiation_acceleration = p.radiation_calculator(du, u, p)
     centrifugal_term = p.line.angular_momentum^2 / r^3
     isnan(centrifugal_term) ? centrifugal_term = 0 : nothing
     a_r = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
