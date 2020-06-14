@@ -98,3 +98,12 @@ end
     @test compute_force_multiplier(1e-10, 1e-5) ≈ 2300 atol = 0 rtol = 0.1
     @test compute_force_multiplier(1e-2, 1e-5) ≈ 6 atol = 0 rtol = 0.1
 end
+
+@testset "Radiation structure" begin
+      black_hole = BlackHole(1e8 * M_SUN, 0.5, 0.0)
+      radiation = Radiation(black_hole, 0.70906799789733695, 0.14436810902317002, [])
+      @test xray_luminosity(radiation) ≈ 9.074006146667613e+44
+      @test eddington_luminosity(radiation) ≈ 1.2570651798467906e+46
+      @test bolometric_luminosity(radiation) ≈ 6.285325899233953e+45
+      @test mass_accretion_rate(radiation) ≈ 1.2228101097715833e+26
+end

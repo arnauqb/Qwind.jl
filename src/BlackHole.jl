@@ -7,7 +7,8 @@ export BlackHole,
     Rg,
     Rs,
     solar_mass,
-    gravitational_acceleration
+    mass,
+    compute_gravitational_acceleration
 
 struct BlackHole
     M::Float64
@@ -29,25 +30,27 @@ Rs(bh::BlackHole) = 2 * Rg(bh)
 function isco(bh::BlackHole)
     z1 =
         1 +
-        (1 - bh.spin^2)^(1 / 3) *
-        ((1 + abs(bh.spin))^(1 / 3) + (1 - abs(bh.spin))^(1 / 3))
+        (1 - bh.spin^2)^(1 / 3) * ((1 + abs(bh.spin))^(1 / 3) + (1 - abs(bh.spin))^(1 / 3))
     z2 = sqrt(3 * bh.spin^2 + z1^2)
     rms = 3 + z2 - sign(bh.spin) * sqrt((3 - z1) * (3 + z1 + 2 * z2))
     return rms * Rg(bh)
 end
 
+mass(bh::BlackHole) = bh.M
 solar_mass(bh::BlackHole) = bh.M / M_SUN
 
 function efficiency(bh::BlackHole)
-    return 1 - sqrt(1 - 2 / (3 * isco(bh)))
+    return 1 - sqrt(1 - 2 / (3 * isco(bh) / Rg(bh)))
 end
 
 function mass_accretion_rate(bh::BlackHole)
     return bolometric_luminosity(bh) / (efficiency(bh) * C^2)
 end
 
-function gravitational_acceleration(r, z, bh::BlackHole)
+function compute_gravitational_acceleration(r, z, M)
     d = sqrt(r^2 + z^2)
-    return G * bh.M / d^3 * [r, z]
+    return - G * M / d^3 * [r, z]
 end
 
+compute_gravitational_acceleration(r, z, bh::BlackHole) =
+    compute_gravitational_acceleration(r, z, bh.M)

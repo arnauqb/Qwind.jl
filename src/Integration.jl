@@ -83,7 +83,14 @@ function make_radiation_force_integrand(;
     )
 end
 
-function make_qwind1_integrand(mass_accretion_rate, spin, isco)
+
+function make_integrand(mode::RE, mass_accretion_rate, spin, isco)
+    mdot_func(r_d, phi_d, r, z) = mass_accretion_rate
+    uv_func(r_d, phi_d, r, z) = 1.0
+    return make_radiation_force_integrand(mdot_func, uv_func)
+end
+
+function make_integrand(mode::QSOSED, mass_accretion_rate, spin, isco)
     mdot_func(r_d, phi_d, r, z) = mass_accretion_rate
     uv_func(r_d, phi_d, r, z) = 1.0
     return make_radiation_force_integrand(mdot_func, uv_func)

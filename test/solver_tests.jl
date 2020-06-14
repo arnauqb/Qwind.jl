@@ -1,10 +1,81 @@
 using Qwind
-function gravity_only(out,du,u,p,t)
-  out[1] = - 0.04u[1]              + 1e4*u[2]*u[3] - du[1]
-  out[2] = + 0.04u[1] - 3e7*u[2]^2 - 1e4*u[2]*u[3] - du[2]
-  out[3] = u[1] + u[2] + u[3] - 1.0
+using Test
+using DifferentialEquations
+
+earth_radius = 6371e5 #cm
+earth_gravity = -981 # cm/s^2
+earth_mass = 5.972e27 # g
+
+@testset "Test Free fall" begin
+    line = Streamline(
+        0.0,
+        earth_radius + 1e5, # free fall from 1km
+        0.0,
+        0.0,
+        1e8,
+        1,
+        earth_mass)
+    params = Parameters(
+        line,
+        earth_mass,
+        0, 
+        0.0,
+        0.0,
+        0.0,
+        0,
+        2 * earth_radius,
+        earth_radius,
+        2 * earth_radius,
+        nothing,
+        NoRad(),
+    )
+    solver = Qwind.initialize_solver(
+        line::Streamline,
+        params::Parameters;
+        atol = 1e-7,
+        rtol = 1e-3,
+    )
+    solve!(solver)
+    analytical_solution(t) = z_0(line) - 0.5 * earth_gravity * t^2
+    for (t, z) in zip(line.t, line.z)
+        true_solution = analytical_solution(t)
+        @test z ≈ true_solution rtol=1e-3
+    end
 end
 
-@testset "Test Solver" begin
-    dae_problem = create_dae_problem(test_f, )
+@testset "Test Free fall + constant radiation" begin
+    line = Streamline(
+        0.0,
+        earth_radius + 1e5, # free fall from 1km
+        0.0,
+        0.0,
+        1e8,
+        1,
+        earth_mass)
+    params = Parameters(
+        line,
+        earth_mass,
+        0, 
+        0.0,
+        0.0,
+        0.0,
+        0,
+        2 * earth_radius,
+        earth_radius,
+        2 * earth_radius,
+        nothing,
+        ConstantRad(),
+    )
+    solver = Qwind.initialize_solver(
+        line::Streamline,
+        params::Parameters;
+        atol = 1e-7,
+        rtol = 1e-3,
+    )
+    solve!(solver)
+    analytical_solution(t) = z_0(line) - 0.5 * (400 + earth_gravity) * t^2
+    for (t, z) in zip(line.t, line.z)
+        true_solution = analytical_solution(t)
+        @test z ≈ true_solution rtol=1e-3
+    end
 end
