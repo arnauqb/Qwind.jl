@@ -17,12 +17,6 @@ struct Parameters
     radiation_mode::RadiationMode
 end
 
-out_of_domain(params::Parameters) =
-    !(
-        (params.r_min <= r(params.line) <= params.r_max) &&
-        (params.z_min <= z(params.line) <= params.z_max)
-    )
-
 
 "Updates the density of the streamline giving its current position and velocity,
 using mass conservation."
@@ -65,24 +59,21 @@ function radiation_calculator(du, u, p, mode::RE)
     return force_radiation
 end
 
-radiation_calculator(du, u, p, mode::NoRad) = [0.0, 0.0]
-radiation_calculator(du, u, p, mode::ConstantRad) = [0.0, 400]
+radiation_calculator(du, u, p, mode::NoRad) = [0.0, 0.0] # for tests
+radiation_calculator(du, u, p, mode::ConstantRad) = [0.0, 400] # for tests
 
 function termination_condition(u, t, integrator)
     r, z, v_r, v_z = u
     _, _, a_r, a_z = integrator.du
     line = integrator.p.line
-    in_grid =
-        (integrator.p.r_min <= r <= integrator.p.r_max) &&
-        (integrator.p.z_min <= z <= integrator.p.z_max)
-    out_of_grid_condition = !in_grid
+    out_of_grid_condition = out_of_grid(integrator.p)
     return out_of_grid_condition
 end
 
 function affect!(integrator)
     if escaped(integrator.p.line, integrator.p.bh_mass)
         print(" \U1F4A8")
-    elseif out_of_domain(integrator.p)
+    elseif out_of_grid(integrator.p)
         print(" \U2753")
     else
         print(" \U1F4A5")
@@ -140,16 +131,3 @@ function initialize_solver(line::Streamline, params::Parameters; atol = 1e-7, rt
     return integrator
 end
 
-#function initialize_solver(line::Streamline, bh::BlackHole, grid::Grid, mode::RE)
-#    params = Parameters(
-#        line.line_width_norm,
-#        mass(bh),
-#        r_in(grid),
-#        number_density_0(line),
-#        r_min,
-#        r_max,
-#        z_min,
-#        z_max,
-#    )
-#end
-#

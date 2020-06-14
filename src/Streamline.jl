@@ -7,6 +7,7 @@ export Streamline,
     v_z,
     v_z_0,
     v_0,
+    line_width,
     number_density,
     number_density_0,
     max_r,
@@ -61,6 +62,8 @@ end
 
 r(line::Streamline) = line.r[end]
 z(line::Streamline) = line.z[end]
+line_width(line::Streamline, r) = line.line_width_norm * r
+line_width(line::Streamline) = line.line_width_norm * r(line)
 v_r(line::Streamline) = line.v_r[end]
 v_r_0(line::Streamline) = line.v_r[1]
 v_z(line::Streamline) = line.v_z[end]
@@ -92,7 +95,42 @@ end
 struct Streamlines
     lines::Vector{Streamline}
 end
+Base.length(iter::Streamlines) = length(iter.lines)
 initial_radii(lines::Streamlines) = [line.r[1] for line in lines.lines]
 r_in(lines::Streamlines) = lines.lines[1].r[1]
 max_r(lines::Streamlines) = maximum([max_r(line) for line in lines.lines])
 max_z(lines::Streamlines) = maximum([max_z(line) for line in lines.lines])
+
+
+function Streamlines(
+    r_in,
+    r_fi,
+    n_lines,
+    velocity_generator,
+    density_generator,
+    bh_mass;
+    z_0 = 0.0,
+    log_spaced = true,
+)
+    if log_spaced
+        line_delimiters = 10 .^ range(log10(r_in), log10(r_fi), length = n_lines + 1)
+        lines_range = []
+        for i = 1:n_lines
+            r0 = line_delimiters[i] + (line_delimiters[i+1] - line_delimiters[i]) / 2.0
+            push!(lines_range, r0)
+        end
+        lines_widths = diff(line_delimiters)
+    else
+        dr = (r_fi - r_in) / n_lines
+        lines_range = [r_in + (i + 0.5) * dr for i = 0:n_lines-1]
+        lines_widths = diff([lines_range; r_fi + dr / 2])
+    end
+    lines = []
+    for (r0, line_width) in zip(lines_range, lines_widths)
+        v0 = velocity_generator(r0)
+        density = density_generator(r0)
+        line = Streamline(r0, 0.0, 0.0, v0, density, line_width, bh_mass)
+        push!(lines, line)
+    end
+    return Streamlines(lines)
+end
