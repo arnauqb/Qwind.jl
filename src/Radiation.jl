@@ -7,33 +7,63 @@ export compute_xray_opacity,
     compute_ionization_radius,
     compute_force_multiplier,
     compute_tau_eff,
-    compute_radiation_force,
+    compute_radiation_acceleration,
+    compute_disc_radiation_field,
     xray_luminosity,
     bolometric_luminosity,
     eddington_luminosity,
     mass_accretion_rate,
-    Radiation
+    Radiation,
+    SimpleRadiation,
+    QsosedRadiation
+
 
 export NoInterp, Interp, QuadTree, NoGrid
-abstract type GridType <: Flag end
 abstract type InterpolationType <: Flag end
 struct NoInterp <: InterpolationType end
 struct Interp <: InterpolationType end
+abstract type GridType <: Flag end
 struct QuadTree <: GridType end
 struct NoGrid <: GridType end
 
-
-struct Radiation
+abstract type Radiation end
+struct SimpleRadiation <: Radiation
     bh::BlackHole
     f_uv::Float64
     f_x::Float64
-    uv_fractions::Array{Float64, 1}
+    shielding_density::Float64
+    r_x::Float64
+    r_in::Float64
+    v_th::Float64
+    function SimpleRadiation(
+        bh::BlackHole,
+        f_uv,
+        f_x,
+        shielding_density,
+        r_in,
+        temperature = 25e3,
+        mu = 1.0,
+    )
+        xray_luminosity = f_x * bolometric_luminosity(bh)
+        r_x =
+            compute_ionization_radius(xray_luminosity, shielding_density, r_in, bh.Rg)
+        v_th = compute_thermal_velocity(temperature, mu)
+        new(bh, f_uv, f_x, shielding_density, r_x, r_in, v_th)
+    end
 end
 
-xray_luminosity(radiation::Radiation) = radiation.f_x * bolometric_luminosity(radiation.bh)
-bolometric_luminosity(radiation::Radiation) = bolometric_luminosity(radiation.bh)
+struct QsosedRadiation <: Radiation
+    bh::BlackHole
+    f_x::Float64
+    uv_fractions::Array{Float64}
+end
+
+xray_luminosity(radiation::Radiation) =
+    radiation.f_x * bolometric_luminosity(radiation.bh)
+bolometric_luminosity(radiation::Radiation) =
+    bolometric_luminosity(radiation.bh)
 eddington_luminosity(radiation::Radiation) = eddington_luminosity(radiation.bh)
-mass_accretion_rate(radiation::Radiation) = mass_accretion_rate(radiation.bh)
+compute_mass_accretion_rate(radiation::Radiation) = compute_mass_accretion_rate(radiation.bh)
 
 
 ## X-Ray phyiscs
@@ -41,10 +71,31 @@ mass_accretion_rate(radiation::Radiation) = mass_accretion_rate(radiation.bh)
 """
 Ionization parameter ξ
 """
-function compute_ionization_parameter(r, z, number_density, tau_x, xray_luminosity)
-    d = sqrt(r^2 + z^2)
-    return xray_luminosity * exp(-tau_x) / (number_density * d^2)
+function compute_ionization_parameter(
+    r,
+    z,
+    number_density,
+    tau_x,
+    xray_luminosity,
+    Rg,
+)
+    d = sqrt(r^2 + z^2) * Rg
+    return max(xray_luminosity * exp(-tau_x) / (number_density * d^2), 1e-20)
 end
+compute_ionization_parameter(
+    radiation::Radiation,
+    r,
+    z,
+    number_density,
+    tau_x,
+) = compute_ionization_parameter(
+    r,
+    z,
+    number_density,
+    tau_x,
+    xray_luminosity(radiation),
+    radiation.bh.Rg
+)
 
 """
 X-Ray opacity as a function of ionization parameter.
@@ -63,12 +114,19 @@ function ionization_radius_kernel(
     r_in,
     r_x,
     target_ionization_parameter,
+    Rg,
 )
+    r_x = r_x * Rg
+    r_in = r_in * Rg
     if r_x < r_in
-        return log(xray_luminosity / (target_ionization_parameter * 1e2 * r_x^2))
+        return log(
+            xray_luminosity / (target_ionization_parameter * 1e2 * r_x^2),
+        )
     else
-        return log(xray_luminosity / (target_ionization_parameter * number_density * r_x^2)) -
-            number_density * SIGMA_T * (r_x - r_in)
+        return log(
+            xray_luminosity /
+            (target_ionization_parameter * number_density * r_x^2),
+        ) - number_density * SIGMA_T * (r_x - r_in)
     end
 end
 
@@ -91,6 +149,7 @@ function compute_ionization_radius(
     xray_luminosity,
     number_density,
     r_in,
+    Rg,
     target_ionization_parameter = 1e5;
     atol = 1e-4,
     rtol = 0,
@@ -102,9 +161,28 @@ function compute_ionization_radius(
         r_in,
         exp(t),
         target_ionization_parameter,
+        Rg,
     )
     t0 = find_zero(func, (-40, 40), Bisection(), atol = atol, rtol = rtol)
     return exp(t0)
+end
+function compute_ionization_radius(
+    radiation::SimpleRadiation,
+    number_density,
+    r_in,
+    target_ionization_parameter = 1e5;
+    atol = 1e-4,
+    rtol = 0,
+)
+    return compute_ionization_radius(
+        xray_luminosity(radiation),
+        number_density,
+        r_in,
+        radiation.bh.Rg,
+        target_ionization_parameter,
+        atol,
+        rtol,
+    )
 end
 
 """
@@ -117,26 +195,19 @@ X-Ray optical depth
 - ionization_parameter: (in cgs)
 
 """
-function compute_xray_tau(r, z, number_density, ionization_parameter, r_1 = 0.0, z_1 = 0.0)
+function compute_xray_tau(
+    r,
+    z,
+    number_density,
+    ionization_parameter,
+    Rg,
+    r_1 = 0.0,
+    z_1 = 0.0,
+)
     d = sqrt((r - r_1)^2 + (z - z_1)^2)
-    return number_density * compute_xray_opacity(ionization_parameter) * d
+    return number_density * compute_xray_opacity(ionization_parameter) * d * Rg
 end
 
-function compute_xray_tau(
-    r::Vector,
-    z::Vector,
-    number_density::Vector,
-    ionization_parameter::Vector,
-)
-    ret = 0.0
-    r1, z1 = 0.0, 0.0
-    for i = 1:length(r)
-        ret +=
-            compute_xray_tau(r[i], z[i], number_density[i], ionization_parameter[i], r1, z1)
-        r1, z1 = r[i], z[i]
-    end
-    return ret
-end
 
 """
 Risaliti & Elvis (2010) implementation of the X-Ray optical depth.
@@ -149,9 +220,17 @@ Risaliti & Elvis (2010) implementation of the X-Ray optical depth.
 - r_in : initial radius of the material(wind) (cm)
 - r_x : ionization radius (cm)
 - r_0 : initial radius of the current streamline (cm)
-- mode : RE mode
 """
-function compute_xray_tau(r, z, shielding_density, local_density, r_in, r_x, r_0; mode::RE)
+function compute_xray_tau(
+    r,
+    z,
+    shielding_density,
+    local_density,
+    r_in,
+    r_x,
+    r_0,
+    Rg
+)
     if r <= r_in
         return 0.0
     end
@@ -181,22 +260,23 @@ function compute_xray_tau(r, z, shielding_density, local_density, r_in, r_x, r_0
         end
     end
     upper_projection = 1.0 / cos(r / sqrt(r^2 + z^2))
-    return (tau_r + tau_r_0) * SIGMA_T * upper_projection
+    return (tau_r + tau_r_0) * SIGMA_T * upper_projection * Rg
 end
 
 
-function compute_xray_tau(r, z, density, p::Parameters, mode::RE)
+function compute_xray_tau(radiation::SimpleRadiation, r, z, local_density, r_0)
     return compute_xray_tau(
         r,
         z,
-        number_density_0(p.line),
-        density,
-        p.r_in,
-        p.r_x,
-        r_0(p.line),
-        RE(),
+        radiation.shielding_density,
+        local_density,
+        radiation.r_in,
+        radiation.r_x,
+        r_0,
+        radiation.bh.Rg
     )
 end
+
 
 
 ## UV Physics
@@ -223,9 +303,8 @@ Risaliti & Elvis (2010) implementation of the X-Ray optical depth.
 - r_in : initial radius of the material(wind) (cm)
 - r_x : ionization radius (cm)
 - r_0 : initial radius of the current streamline (cm)
-- mode : RE mode
 """
-function compute_uv_tau(r, z, shielding_density, local_density, r_in, r_0; mode::RE)
+function compute_uv_tau(r, z, shielding_density, local_density, r_in, r_0)
     if r <= r_in
         return 0.0
     end
@@ -240,15 +319,14 @@ function compute_uv_tau(r, z, shielding_density, local_density, r_in, r_0; mode:
     return (tau_r + tau_r_0) * SIGMA_T * upper_projection
 end
 
-function compute_uv_tau(r, z, density, p::Parameters, mode::RE)
+function compute_uv_tau(radiation::SimpleRadiation, r, z, local_density, r_0)
     return compute_uv_tau(
         r,
         z,
-        number_density_0(p.line),
-        density,
-        p.r_in,
-        r_0(p.line),
-        RE(),
+        radiation.shielding_density,
+        local_density,
+        radiation.r_in,
+        r_0,
     )
 end
 
@@ -303,9 +381,9 @@ end
 "This is the sobolev optical depth parameter for the force multiplier"
 function compute_tau_eff(number_density, dv_dr, v_th)
     if dv_dr == 0
-        return 1.
+        return 1.0
     end
-    @assert density >= 0
+    @assert number_density >= 0
     t = number_density * SIGMA_T * abs(v_th / dv_dr)
     return t
 end
@@ -316,7 +394,11 @@ Computes the analytical approximation for the force multiplier,
 from Stevens and Kallman 1990. Note that we modify it slightly to avoid
 numerical overflow.
 """
-function compute_force_multiplier(t, ionization_parameter, mode::InterpolationType)
+function compute_force_multiplier(
+    t,
+    ionization_parameter,
+    mode::InterpolationType,
+)
     @assert t >= 0
     @assert ionization_parameter >= 0
     ALPHA = 0.6
@@ -337,16 +419,24 @@ end
 compute_force_multiplier(t, ionization_parameter) =
     compute_force_multiplier(t, ionization_parameter, Interp())
 
-function compute_radiation_force(
-    integrand,
+function compute_disc_radiation_field(
+    radiation::SimpleRadiation,
     r,
     z,
-    force_multiplier,
-    M,
-    r_lims = (6.0, 1500.0),
-    phi_lims = (0.0, 2π),
+    r_lims = [6.0, 1500.0],
+    phi_lims = [0.0, π],
 )
-    res, err = integrate_2d(integrand, x_lims = r_lims, y_lims = phi_lims)
-    radiation_constant = 3 * G * M / (8π)
-    return (1 + force_multiplier) * radiation_constant * res
+    res, err = integrate_radiation_force_integrand(
+        radiation,
+        r,
+        z,
+        r_lims = r_lims,
+        phi_lims = phi_lims,
+    )
+    #radiation_constant =
+    #     2 * 3 * G * radiation.bh.M *  radiation.bh.mass_accretion_rate * z * SIGMA_E / (8π^2 * C)
+
+    radiation_constant = 3 / (8 * pi * radiation.bh.efficiency)
+    force = radiation_constant .* res
+    return force
 end

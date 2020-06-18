@@ -30,3 +30,7 @@ function nt_rel_factors(radius, spin, isco)
     factor = (A - B) / C
     return factor
 end
+
+function nt_rel_factors(radiation::Radiation, radius)
+    return nt_rel_factors(radius, radiation.bh.spin, radiation.bh.isco)
+end

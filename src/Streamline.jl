@@ -7,6 +7,8 @@ export Streamline,
     v_z,
     v_z_0,
     v_0,
+    total_velocity,
+    total_distance,
     line_width,
     number_density,
     number_density_0,
@@ -14,10 +16,11 @@ export Streamline,
     max_z,
     r_0,
     z_0,
-    r_in,
+    get_r_in,
     create_line,
     initial_radii,
     escaped,
+    failed,
     save_position!
 
 struct Streamline
@@ -34,20 +37,21 @@ struct Streamline
     ionization_parameter::Vector{Float64}
     angular_momentum::Float64
     line_width_norm::Float64
+    Rg::Float64
     function Streamline(r, z, v_r, v_z, number_density, line_width, bh_mass)
         tau_x = [0.0]
         tau_uv = [0.0]
         force_multiplier = [0.0]
         dv_dr = [0.0]
         ionization_parameter = [0.0]
-        angular_momentum = sqrt(G * bh_mass * r)
+        angular_momentum = sqrt(r)
         line_width_norm = line_width / r
         new(
             [0.0],
             [r],
             [z],
-            [v_r],
-            [v_z],
+            [v_r / C],
+            [v_z / C],
             [number_density],
             tau_x,
             tau_uv,
@@ -67,6 +71,8 @@ line_width(line::Streamline) = line.line_width_norm * r(line)
 v_r(line::Streamline) = line.v_r[end]
 v_r_0(line::Streamline) = line.v_r[1]
 v_z(line::Streamline) = line.v_z[end]
+total_velocity(line::Streamline) = sqrt.(line.v_r .^2 + line.v_z .^2)
+total_distance(line::Streamline) = sqrt.(line.r .^2 + line.z .^2)
 number_density_0(line::Streamline) = line.number_density[1]
 number_density(line::Streamline) = line.number_density[end]
 v_z_0(line::Streamline) = line.v_z[1]
@@ -86,18 +92,32 @@ function save_position!(line::Streamline, u, t)
 end
 
 function escaped(line::Streamline, bh_mass)
-    d = sqrt.(line.r .^ 2 + line.z .^ 2)
-    v_T = sqrt.(line.v_r .^ 2 + line.v_z .^ 2)
-    v_esc = sqrt.((2 * G * bh_mass) ./ d)
-    return any(v_T > v_esc)
+    d = total_distance(line)
+    v_T = total_velocity(line)
+    v_esc_values = compute_escape_velocity.(d)
+    return any(v_T .> v_esc_values)
 end
+
+function failed(line::Streamline, grid::Grid)
+    if r(line) < grid.r_max && z(line) < grid.z_max
+        return true
+    else
+        return false
+    end
+end
+
+out_of_grid(grid::Grid, line::Streamline) =
+    !(
+        (grid.r_min <= r(line) <= grid.r_max) &&
+        (grid.z_min <= z(line) <= grid.z_max)
+    )
 
 struct Streamlines
     lines::Vector{Streamline}
 end
 Base.length(iter::Streamlines) = length(iter.lines)
 initial_radii(lines::Streamlines) = [line.r[1] for line in lines.lines]
-r_in(lines::Streamlines) = lines.lines[1].r[1]
+get_r_in(lines::Streamlines) = lines.lines[1].r[1]
 max_r(lines::Streamlines) = maximum([max_r(line) for line in lines.lines])
 max_z(lines::Streamlines) = maximum([max_z(line) for line in lines.lines])
 
@@ -129,7 +149,7 @@ function Streamlines(
     for (r0, line_width) in zip(lines_range, lines_widths)
         v0 = velocity_generator(r0)
         density = density_generator(r0)
-        line = Streamline(r0, 0.0, 0.0, v0, density, line_width, bh_mass)
+        line = Streamline(r0, z_0, 0.0, v0, density, line_width, bh_mass)
         push!(lines, line)
     end
     return Streamlines(lines)

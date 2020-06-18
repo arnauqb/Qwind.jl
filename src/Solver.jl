@@ -1,22 +1,161 @@
 using DifferentialEquations
 using Sundials
-export Parameters
+export Parameters, initialize_solver, run_solver!
+import Qwind.out_of_grid
 
 struct Parameters
     line::Streamline
-    bh_mass::Float64
-    r_in::Float64
-    r_x::Float64
-    xray_luminosity::Float64
-    v_th::Float64
-    r_min::Float64
-    r_max::Float64
-    z_min::Float64
-    z_max::Float64
-    integrand::Any
-    radiation_calculator::Any
+    grid::Grid
+    radiation::Radiation
 end
 
+function initialize_solver(
+    line::Streamline,
+    params::Parameters;
+    atol = 1e-10,
+    rtol = 1e-4,
+)
+    termination_callback = DiscreteCallback(
+        termination_condition,
+        affect!,
+        save_positions = (false, false),
+    )
+    saving_callback =
+        SavingCallback(save, SavedValues(Float64, Array{Float64,1}))
+    callback_set = CallbackSet(termination_callback, saving_callback)
+    a₀ = compute_initial_acceleration(
+        params.radiation,
+        r(line),
+        z(line),
+        v_r(line),
+        v_z(line),
+        params,
+    )
+    du₀ = [v_r_0(line), v_z_0(line), a₀[1], a₀[2]]
+    u₀ = [r_0(line), z_0(line), v_r_0(line), v_z_0(line)]
+    tspan = (0.0, 1e8)
+    dae_problem =
+        create_dae_problem(params.radiation, residual!, du₀, u₀, tspan, params)
+    integrator =
+        init(dae_problem, IDA(init_all = false), callback = callback_set)
+    integrator.opts.abstol = atol
+    integrator.opts.reltol = rtol
+    return integrator
+end
+
+run_solver!(solver::Sundials.IDAIntegrator) = solve!(solver)
+out_of_grid(params::Parameters) = out_of_grid(params.grid, params.line)
+
+
+function termination_condition(u, t, integrator)
+    r, z, v_r, v_z = u
+    _, _, a_r, a_z = integrator.du
+    out_of_grid_condition = out_of_grid(integrator.p)
+    failed_condition = z < 1 && v_z < 1e-9
+    return out_of_grid_condition || failed_condition
+end
+
+
+function affect!(integrator)
+    if escaped(integrator.p.line, integrator.p.radiation.bh.M)
+        print(" \U1F4A8")
+    elseif failed(integrator.p.line, integrator.p.grid)
+        print(" \U1F4A5")
+    else
+        print(" \U2753")
+    end
+    terminate!(integrator)
+end
+
+function save(u, t, integrator)
+    r, z, v_r, v_z = u
+    save_position!(integrator.p.line, u, t)
+end
+
+function residual!(radiation::Radiation, out, du, u, p, t)
+    r, z, v_r, v_z = u
+    r_dot, z_dot, v_r_dot, v_z_dot = du
+    if r <= 0 || z <= 0 # we force it to fail
+        radiation_acceleration = [0.0 ,0.0]
+        centrifugal_term = 0.0
+        gravitational_acceleration =
+            compute_gravitational_acceleration(abs(r), abs(z), p.radiation.bh.M)
+    else
+        radiation_acceleration =
+            compute_radiation_acceleration(p.radiation, du, u, p)
+        centrifugal_term = p.line.angular_momentum^2 / r^3
+        gravitational_acceleration =
+            compute_gravitational_acceleration(r, z, p.radiation.bh.M)
+    end
+    a_r =
+        gravitational_acceleration[1] +
+        radiation_acceleration[1] +
+        centrifugal_term
+    a_z = gravitational_acceleration[2] + radiation_acceleration[2]
+    out[1] = r_dot - v_r
+    out[2] = z_dot - v_z
+    out[3] = v_r_dot - a_r
+    out[4] = v_z_dot - a_z
+end
+
+function create_dae_problem(
+    radiation::Radiation,
+    residual!,
+    du₀,
+    u₀,
+    tspan,
+    params,
+)
+    func!(out, du, u, p, t) = residual!(radiation, out, du, u, p, t)
+    return DAEProblem(
+        func!,
+        du₀,
+        u₀,
+        tspan,
+        params,
+        differential_vars = [true, true, true, true],
+    )
+end
+
+
+function compute_radiation_acceleration(radiation::SimpleRadiation, du, u, p::Parameters)
+    r, z, v_r, v_z = u
+    _, _, a_r, a_z = du
+    v_t = sqrt(v_r^2 + v_z^2)
+    a_t = sqrt(a_r^2 + a_z^2)
+    dv_dr = a_t / v_t
+    density = compute_density(r, z, v_t, p.line)
+    tau_x = compute_xray_tau(radiation, r, z, density, r_0(p.line))
+    tau_uv = compute_uv_tau(radiation, r, z, density)
+    ξ = compute_ionization_parameter(radiation, r, z, density, tau_x)
+    tau_eff = compute_tau_eff(density, dv_dr, p.radiation.v_th)
+    force_multiplier = compute_force_multiplier(tau_eff, ξ)
+    disc_radiation_field = compute_disc_radiation_field(
+        radiation,
+        r,
+        z,
+    )
+    force_radiation =
+        (1 + force_multiplier) * exp(-tau_uv) * disc_radiation_field
+    return force_radiation
+end
+
+function compute_radiation_acceleration(radiation::QsosedRadiation, du, u, p::Parameters)
+    r, z, v_r, v_z = u
+    _, _, a_r, a_z = du
+    v_t = sqrt(v_r^2 + v_z^2)
+    a_t = sqrt(a_r^2 + a_z^2)
+    dv_dr = a_t / v_t
+    density = compute_density(r, z, v_t, p.line)
+    tau_x = compute_xray_tau(radiation, r, z, density)
+    ξ = compute_ionization_parameter(radiation, r, z, density, tau_x)
+    tau_eff = compute_tau_eff(density, dv_dr, p.radiation.v_th)
+    force_multiplier = compute_force_multiplier(tau_eff, ξ)
+    disc_radiation_field =
+        compute_disc_radiation_field(radiation, r, z, radiation.bh.M)
+    force_radiation = (1 + force_multiplier) * disc_radiation_field
+    return force_radiation
+end
 
 "Updates the density of the streamline giving its current position and velocity,
 using mass conservation."
@@ -30,101 +169,33 @@ function compute_density(r, z, v_t, line::Streamline)
     return n
 end
 
-function compute_initial_acceleration(r, z, v_r, v_z, params::Parameters)
+function compute_initial_acceleration(
+    radiation::Radiation,
+    r,
+    z,
+    v_r,
+    v_z,
+    params::Parameters,
+)
     u = [r, z, v_r, v_z]
     du = [v_r, v_z, 0, 0]
-    gravitational_acceleration = compute_gravitational_acceleration(r, z, params.bh_mass)
-    radiation_acceleration = params.radiation_calculator(du, u, params)
+    gravitational_acceleration =
+        compute_gravitational_acceleration(r, z, params.radiation.bh.M)
+    radiation_acceleration =
+        compute_radiation_acceleration(radiation, du, u, params)
     centrifugal_term = params.line.angular_momentum^2 / r^3
-    isnan(centrifugal_term) ? centrifugal_term = 0 : nothing
-    a_r = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
+    a_r =
+        centrifugal_term +
+        gravitational_acceleration[1] +
+        radiation_acceleration[1]
+    a_z = gravitational_acceleration[2] + radiation_acceleration[2]
+    # second estimation
+    du = [v_r, v_z, a_r, a_z]
+    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
+    a_r =
+        centrifugal_term +
+        gravitational_acceleration[1] +
+        radiation_acceleration[1]
     a_z = gravitational_acceleration[2] + radiation_acceleration[2]
     return [a_r, a_z]
 end
-
-function radiation_calculator(du, u, p, mode::RE)
-    r, z, v_r, v_z = u
-    _, _, a_r, a_z = du
-    v_t = sqrt(v_r^2 + v_z^2)
-    a_t = sqrt(a_r^2 + a_z^2)
-    dv_dr = a_t / v_t
-    density = compute_density(r, z, v_t, p.line)
-    tau_x = compute_xray_tau(r, z, density, p, RE())
-    tau_uv = compute_uv_tau(r, z, density, p, RE())
-    ξ = compute_ionization_parameter(r, z, density, tau_x, p.xray_luminosity)
-    tau_eff = compute_tau_eff(density, dv_dr, p.v_th)
-    force_multiplier = compute_force_multiplier(tau_eff, ξ)
-    force_radiation =
-        p.radiation_calculator(p.integrand, r, z, force_multiplier, p.bh_mass)
-    return force_radiation
-end
-
-function termination_condition(u, t, integrator)
-    r, z, v_r, v_z = u
-    _, _, a_r, a_z = integrator.du
-    line = integrator.p.line
-    out_of_grid_condition = out_of_grid(integrator.p)
-    return out_of_grid_condition
-end
-
-function affect!(integrator)
-    if escaped(integrator.p.line, integrator.p.bh_mass)
-        print(" \U1F4A8")
-    elseif out_of_grid(integrator.p)
-        print(" \U2753")
-    else
-        print(" \U1F4A5")
-    end
-    terminate!(integrator)
-end
-
-function save(u, t, integrator)
-    r, z, v_r, v_z = u
-    save_position!(integrator.p.line, u, t)
-end
-
-function residual!(out, du, u, p, t)
-    r, z, v_r, v_z = u
-    r_dot, z_dot, v_r_dot, v_z_dot = du
-    gravitational_acceleration = compute_gravitational_acceleration(r, z, p.bh_mass)
-    radiation_acceleration = p.radiation_calculator(du, u, p)
-    centrifugal_term = p.line.angular_momentum^2 / r^3
-    isnan(centrifugal_term) ? centrifugal_term = 0 : nothing
-    a_r = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
-    a_z = gravitational_acceleration[2] + radiation_acceleration[2]
-    out[1] = r_dot - v_r
-    out[2] = z_dot - v_z
-    out[3] = v_r_dot - a_r
-    out[4] = v_z_dot - a_z
-end
-
-function initialize_solver(line::Streamline, params::Parameters; atol = 1e-7, rtol = 1e-3)
-    termination_callback =
-        DiscreteCallback(termination_condition, affect!, save_positions = (false, false))
-    saving_callback = SavingCallback(save, SavedValues(Float64, Array{Float64,1}))
-    callback_set = CallbackSet(termination_callback, saving_callback)
-    a₀ = compute_initial_acceleration(
-        r(line),
-        z(line),
-        v_r(line),
-        v_z(line),
-        params,
-    )
-    du₀ = [v_r_0(line), v_z_0(line), a₀[1], a₀[2]]
-    u₀ = [r_0(line), z_0(line), v_r_0(line), v_z_0(line)]
-    println(a₀)
-    tspan = (0.0, 1e8)
-    dae_problem = DAEProblem(
-        residual!,
-        du₀,
-        u₀,
-        tspan,
-        params,
-        differential_vars = [true, true, true, true],
-    )
-    integrator = init(dae_problem, IDA(init_all=true), callback = callback_set)
-    integrator.opts.abstol = atol
-    integrator.opts.reltol = rtol
-    return integrator
-end
-
