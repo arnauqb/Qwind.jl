@@ -1,4 +1,4 @@
-using Interpolations, Roots
+using Interpolations, Roots, Distances
 export compute_xray_opacity,
     compute_xray_tau,
     compute_uv_tau,
@@ -16,6 +16,7 @@ export compute_xray_opacity,
     Radiation,
     SimpleRadiation,
     QsosedRadiation
+
 
 
 export NoInterp, Interp, QuadTree, NoGrid
@@ -45,8 +46,12 @@ struct SimpleRadiation <: Radiation
         mu = 1.0,
     )
         xray_luminosity = f_x * bolometric_luminosity(bh)
-        r_x =
-            compute_ionization_radius(xray_luminosity, shielding_density, r_in, bh.Rg)
+        r_x = compute_ionization_radius(
+            xray_luminosity,
+            shielding_density,
+            r_in,
+            bh.Rg,
+        )
         v_th = compute_thermal_velocity(temperature, mu)
         new(bh, f_uv, f_x, shielding_density, r_x, r_in, v_th)
     end
@@ -63,7 +68,8 @@ xray_luminosity(radiation::Radiation) =
 bolometric_luminosity(radiation::Radiation) =
     bolometric_luminosity(radiation.bh)
 eddington_luminosity(radiation::Radiation) = eddington_luminosity(radiation.bh)
-compute_mass_accretion_rate(radiation::Radiation) = compute_mass_accretion_rate(radiation.bh)
+compute_mass_accretion_rate(radiation::Radiation) =
+    compute_mass_accretion_rate(radiation.bh)
 
 
 ## X-Ray phyiscs
@@ -94,7 +100,7 @@ compute_ionization_parameter(
     number_density,
     tau_x,
     xray_luminosity(radiation),
-    radiation.bh.Rg
+    radiation.bh.Rg,
 )
 
 """
@@ -229,7 +235,7 @@ function compute_xray_tau(
     r_in,
     r_x,
     r_0,
-    Rg
+    Rg,
 )
     if r <= r_in
         return 0.0
@@ -273,10 +279,128 @@ function compute_xray_tau(radiation::SimpleRadiation, r, z, local_density, r_0)
         radiation.r_in,
         radiation.r_x,
         r_0,
-        radiation.bh.Rg
+        radiation.bh.Rg,
     )
 end
 
+#"""
+#Computes the variation of optical depth inside a tree leaf.
+#We iterate multiple times to compute a consistent ionization parameter
+#and X-Ray optical depth
+#"""
+#function compute_xray_tau_leaf(
+#    quadtree::Cell,
+#    leaf::Cell,
+#    point,
+#    intersection,
+#    taux0,
+#    xray_luminosity,
+#    Rg,
+#)
+#    deltad = evaluate(Euclidean(), point, intersection) * Rg # cell size
+#    d = evaluate(Euclidean(), [0.0, 0.0], intersection) * Rg # distance from the center
+#    #density = interpolate_density(leaf.data.line_id, point, leaf, wind) #leaf.data[1] / leaf.data[2]
+#    deltatau = compute_tau_cell(quadtree, leaf, point, intersection, 1e2) * Rg
+#    n_eff = quadtree_effective_density(quadtree, point, intersection)
+#    xi0 = xray_luminosity / (n_eff * d^2)
+#    f(t) =
+#        t - log(xi0) + taux0 + min(40, deltatau * compute_xray_opacity(exp(t)))
+#    if f(20) < 0
+#        xi = xi0
+#    elseif f(-20) > 0
+#        xi = 1e-20
+#    else
+#        t = find_zero(f, (-20, 20), Bisection(), atol = 0, rtol = 0.1)
+#        xi = exp(t)
+#    end
+#    taux = compute_xray_opacity(xi) * deltatau
+#    return taux
+#end
+#
+#"""
+#Computes the X-Ray optical depth at a point (r,z).
+#Starting from the center, we compute the intersection to the next cell,
+#following the lightray direction (0,0) -> (r,z). At each cell,
+#we consistently compute tau_x and the ionization parameter.
+#"""
+#function compute_xray_tau(quadtree::Cell, r, z, z_0, xray_luminosity, Rg)
+#    #return 40
+#    z = max(z, get_zmin(quadtree))
+#    point1 = [0.0, z_0]
+#    #coords_list = [point1]
+#    point1leaf = findleaf(quadtree, point1)
+#    point2 = [r, z]
+#    point2leaf = findleaf(quadtree, point2)
+#    taux = 0.0
+#    if point1leaf == point2leaf
+#        #push!(coords_list, point2)
+#        taux = compute_xray_tau_leaf(
+#            quadtree,
+#            point1leaf,
+#            point1,
+#            point2,
+#            0.0,
+#            xray_luminosity,
+#            Rg,
+#        )
+#        return taux
+#    end
+#    intersection = compute_cell_intersection(point1leaf, point1, point1, point2)
+#    taux = compute_xray_tau_leaf(
+#        quadtree,
+#        point1leaf,
+#        point1,
+#        intersection,
+#        taux,
+#        xray_luminosity,
+#        Rg,
+#    )
+#    currentpoint = intersection
+#    #push!(coords_list, intersection)
+#    currentleaf = findleaf(quadtree, currentpoint)
+#    previousleaf = copy(currentleaf)
+#    while currentleaf != point2leaf
+#        intersection =
+#            compute_cell_intersection(currentleaf, currentpoint, point1, point2)
+#        #push!(coords_list, intersection)
+#        taux += compute_xray_tau_leaf(
+#            quadtree,
+#            currentleaf,
+#            currentpoint,
+#            intersection,
+#            taux,
+#            xray_luminosity,
+#            Rg,
+#        )
+#        #if taux > 40
+#        #    return 40.0
+#        #end
+#        currentpoint = intersection
+#        currentleaf = findleaf(quadtree, currentpoint)
+#        if currentleaf == previousleaf
+#            break
+#        end
+#        previousleaf = copy(currentleaf)
+#    end
+#    if currentpoint[2] < point2[2]
+#        taux += compute_xray_tau_leaf(
+#            quadtree,
+#            currentleaf,
+#            currentpoint,
+#            point2,
+#            taux,
+#            xray_luminosity,
+#            Rg,
+#        )
+#    end
+#    #push!(coords_list, point2)
+#    return taux
+#    #if return_coords
+#    #    return taux, coords_list
+#    #else
+#    #    return taux
+#    #end
+#end
 
 
 ## UV Physics

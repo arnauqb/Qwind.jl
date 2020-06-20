@@ -1,6 +1,5 @@
 using Qwind
 using Test
-using DifferentialEquations
 import Qwind.compute_radiation_acceleration
 import Qwind.compute_initial_acceleration
 import Qwind.residual!

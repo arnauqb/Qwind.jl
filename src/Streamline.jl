@@ -21,9 +21,12 @@ export Streamline,
     initial_radii,
     escaped,
     failed,
-    save_position!
+    save_position!,
+    get_current_point,
+    get_last_point
 
 struct Streamline
+    id::Int
     t::Vector{Float64}
     r::Vector{Float64}
     z::Vector{Float64}
@@ -36,17 +39,19 @@ struct Streamline
     dv_dr::Vector{Float64}
     ionization_parameter::Vector{Float64}
     angular_momentum::Float64
-    line_width_norm::Float64
+    width_norm::Float64
     Rg::Float64
-    function Streamline(r, z, v_r, v_z, number_density, line_width, bh_mass)
+    function Streamline(id, r, z, v_r, v_z, number_density, line_width, bh_mass)
         tau_x = [0.0]
         tau_uv = [0.0]
         force_multiplier = [0.0]
         dv_dr = [0.0]
         ionization_parameter = [0.0]
         angular_momentum = sqrt(r)
-        line_width_norm = line_width / r
+        width_norm = line_width / r
+        Rg = bh_mass * G / C^2
         new(
+            id,
             [0.0],
             [r],
             [z],
@@ -59,15 +64,18 @@ struct Streamline
             dv_dr,
             ionization_parameter,
             angular_momentum,
-            line_width_norm,
+            width_norm,
+            Rg,
         )
     end
 end
 
 r(line::Streamline) = line.r[end]
 z(line::Streamline) = line.z[end]
-line_width(line::Streamline, r) = line.line_width_norm * r
-line_width(line::Streamline) = line.line_width_norm * r(line)
+get_current_point(line) = [r(line), z(line)]
+get_last_point(line) = [line.r[end-1], line.z[end-1]]
+line_width(line::Streamline, r) = line.width_norm * r
+line_width(line::Streamline) = line.width_norm * r(line)
 v_r(line::Streamline) = line.v_r[end]
 v_r_0(line::Streamline) = line.v_r[1]
 v_z(line::Streamline) = line.v_z[end]
@@ -86,7 +94,7 @@ function save_position!(line::Streamline, u, t)
     r, z, v_r, v_z = u
     push!(line.t, t)
     push!(line.r, r)
-    push!(line.z, z)
+    push!(line.z, max(0,z))
     push!(line.v_r, v_r)
     push!(line.v_z, v_z)
 end
@@ -146,10 +154,10 @@ function Streamlines(
         lines_widths = diff([lines_range; r_fi + dr / 2])
     end
     lines = []
-    for (r0, line_width) in zip(lines_range, lines_widths)
+    for (i, (r0, line_width)) in enumerate(zip(lines_range, lines_widths))
         v0 = velocity_generator(r0)
         density = density_generator(r0)
-        line = Streamline(r0, z_0, 0.0, v0, density, line_width, bh_mass)
+        line = Streamline(i, r0, z_0, 0.0, v0, density, line_width, bh_mass)
         push!(lines, line)
     end
     return Streamlines(lines)

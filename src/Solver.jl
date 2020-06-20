@@ -1,19 +1,21 @@
-using DifferentialEquations
+using DiffEqBase
+using DiffEqCallbacks
 using Sundials
-export Parameters, initialize_solver, run_solver!
+export Parameters, initialize_solver, run_solver!, compute_density
 import Qwind.out_of_grid
 
 struct Parameters
     line::Streamline
     grid::Grid
     radiation::Radiation
+    windtree::WindTree
 end
 
 function initialize_solver(
     line::Streamline,
     params::Parameters;
-    atol = 1e-10,
-    rtol = 1e-4,
+    atol = 1e-8,
+    rtol = 1e-3,
 )
     termination_callback = DiscreteCallback(
         termination_condition,
@@ -51,7 +53,7 @@ function termination_condition(u, t, integrator)
     r, z, v_r, v_z = u
     _, _, a_r, a_z = integrator.du
     out_of_grid_condition = out_of_grid(integrator.p)
-    failed_condition = z < 1 && v_z < 1e-9
+    failed_condition = z < 5 && v_z < 1e-9
     return out_of_grid_condition || failed_condition
 end
 
@@ -69,14 +71,19 @@ end
 
 function save(u, t, integrator)
     r, z, v_r, v_z = u
-    save_position!(integrator.p.line, u, t)
+    line = integrator.p.line
+    save_position!(line, u, t)
+    density = compute_density(line)
+    push!(line.number_density, density)
+    #quadtree_fill_timestep(integrator.p.quadtree, line)
+    return [0.0]
 end
 
 function residual!(radiation::Radiation, out, du, u, p, t)
     r, z, v_r, v_z = u
     r_dot, z_dot, v_r_dot, v_z_dot = du
     if r <= 0 || z <= 0 # we force it to fail
-        radiation_acceleration = [0.0 ,0.0]
+        radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
         gravitational_acceleration =
             compute_gravitational_acceleration(abs(r), abs(z), p.radiation.bh.M)
@@ -118,29 +125,45 @@ function create_dae_problem(
 end
 
 
-function compute_radiation_acceleration(radiation::SimpleRadiation, du, u, p::Parameters)
+function compute_radiation_acceleration(
+    radiation::SimpleRadiation,
+    du,
+    u,
+    p::Parameters,
+)
     r, z, v_r, v_z = u
     _, _, a_r, a_z = du
     v_t = sqrt(v_r^2 + v_z^2)
     a_t = sqrt(a_r^2 + a_z^2)
     dv_dr = a_t / v_t
+    #println("r : $r z $z v_r : $v_r v_z : $v_z")
     density = compute_density(r, z, v_t, p.line)
-    tau_x = compute_xray_tau(radiation, r, z, density, r_0(p.line))
+    #tau_x = compute_xray_tau(radiation, r, z, density, r_0(p.line))
+    tau_x = compute_xray_tau(
+        p.windtree.quadtree,
+        r,
+        z,
+        0,
+        xray_luminosity(radiation),
+        p.radiation.bh.Rg,
+    )
+    #println("tau x : $tau_x")
     tau_uv = compute_uv_tau(radiation, r, z, density)
     ξ = compute_ionization_parameter(radiation, r, z, density, tau_x)
     tau_eff = compute_tau_eff(density, dv_dr, p.radiation.v_th)
     force_multiplier = compute_force_multiplier(tau_eff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(
-        radiation,
-        r,
-        z,
-    )
+    disc_radiation_field = compute_disc_radiation_field(radiation, r, z)
     force_radiation =
         (1 + force_multiplier) * exp(-tau_uv) * disc_radiation_field
     return force_radiation
 end
 
-function compute_radiation_acceleration(radiation::QsosedRadiation, du, u, p::Parameters)
+function compute_radiation_acceleration(
+    radiation::QsosedRadiation,
+    du,
+    u,
+    p::Parameters,
+)
     r, z, v_r, v_z = u
     _, _, a_r, a_z = du
     v_t = sqrt(v_r^2 + v_z^2)
@@ -160,14 +183,17 @@ end
 "Updates the density of the streamline giving its current position and velocity,
 using mass conservation."
 function compute_density(r, z, v_t, line::Streamline)
-    @assert r >= 0
-    @assert z >= 0
+    #@assert r >= 0
+    #@assert z >= 0
     d = sqrt(r^2 + z^2)
     radial = (r_0(line) / d)^2
     v_ratio = v_0(line) / v_t
     n = number_density_0(line) * radial * v_ratio
     return n
 end
+
+compute_density(line) =
+    compute_density(r(line), z(line), sqrt(v_r(line)^2 + v_z(line)^2), line)
 
 function compute_initial_acceleration(
     radiation::Radiation,
@@ -191,7 +217,8 @@ function compute_initial_acceleration(
     a_z = gravitational_acceleration[2] + radiation_acceleration[2]
     # second estimation
     du = [v_r, v_z, a_r, a_z]
-    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
+    radiation_acceleration =
+        compute_radiation_acceleration(radiation, du, u, params)
     a_r =
         centrifugal_term +
         gravitational_acceleration[1] +
