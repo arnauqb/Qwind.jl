@@ -47,13 +47,6 @@ function ==(cell1::Cell, cell2::Cell)
     return cell1.boundary == cell2.boundary
 end
 
-get_width(cell::Cell) = cell.boundary.widths[1]
-get_height(cell::Cell) = cell.boundary.widths[2]
-get_rmin(cell::Cell) = cell.boundary.origin[1]
-get_rmax(cell::Cell) = cell.boundary.origin[1] + cell.boundary.widths[1]
-get_zmin(cell::Cell) = cell.boundary.origin[2]
-get_zmax(cell::Cell) = cell.boundary.origin[2] + cell.boundary.widths[2]
-count_leaves(quadtree::Cell) = length([leaf for leaf in allleaves(quadtree)])
 
 function initialize_quadtree(r_min, r_max, z_min, z_max; vacuum_density = 1e2)
     quadtree =
@@ -143,10 +136,6 @@ function initialize_wind_tree(solvers; n_time = 10000, tau_max_std=0.01, cell_mi
         cell_min_size=cell_min_size,
         tau_max_std=tau_max_std
     )
-end
-
-function distance_to_streamline(dp, d1, d2)
-    return sqrt(d2^2 - ((d1^2 - dp^2 - d2^2) / (2dp))^2)
 end
 
 function get_density_from_tree(windtree::WindTree, r, z)

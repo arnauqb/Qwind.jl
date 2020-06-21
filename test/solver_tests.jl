@@ -111,10 +111,3 @@ end
         @test z ≈ true_solution rtol = 1e-2
     end
 end
-
-@testset "updating density" begin
-    line = Streamline(1, 2, 3, 4, 5, 6, 7)
-    v0 = sqrt(3^2 + 4^2) / C
-    @test Qwind.compute_density(10, 20, 30, line) ≈
-          number_density_0(line) * (1 / sqrt(10^2 + 20^2))^2 * (v0 / 30)
-end

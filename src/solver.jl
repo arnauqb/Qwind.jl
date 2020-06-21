@@ -1,15 +1,8 @@
 using DiffEqBase
 using DiffEqCallbacks
 using Sundials
-export Parameters, initialize_solver, run_solver!, compute_density
-import Qwind.out_of_grid
-
-struct Parameters
-    line::Streamline
-    grid::Grid
-    radiation::Radiation
-    windtree::WindTree
-end
+export initialize_solver, run_solver!, compute_density
+#import Qwind.out_of_grid
 
 function initialize_solver(
     line::Streamline,
@@ -179,21 +172,6 @@ function compute_radiation_acceleration(
     force_radiation = (1 + force_multiplier) * disc_radiation_field
     return force_radiation
 end
-
-"Updates the density of the streamline giving its current position and velocity,
-using mass conservation."
-function compute_density(r, z, v_t, line::Streamline)
-    #@assert r >= 0
-    #@assert z >= 0
-    d = sqrt(r^2 + z^2)
-    radial = (r_0(line) / d)^2
-    v_ratio = v_0(line) / v_t
-    n = number_density_0(line) * radial * v_ratio
-    return n
-end
-
-compute_density(line) =
-    compute_density(r(line), z(line), sqrt(v_r(line)^2 + v_z(line)^2), line)
 
 function compute_initial_acceleration(
     radiation::Radiation,

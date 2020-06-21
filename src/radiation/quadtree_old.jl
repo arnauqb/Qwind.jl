@@ -28,9 +28,6 @@ export CellData,
     compute_accumulative_taus,
     get_index
 
-function get_index(array, value)
-    return max(searchsortedfirst(array, value) - 1, 1)
-end
 
 struct CellData
     line_id::Array{Int,1}

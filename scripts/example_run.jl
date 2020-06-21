@@ -16,7 +16,7 @@ f_uv = 0.85
 f_x = 0.15
 shielding_density = 2e8
 r_in = 20.0
-radiation = SimpleRadiation(black_hole, f_uv, f_x, shielding_density, r_in)
+radiation = RERadiation(black_hole, f_uv, f_x, shielding_density, r_in)
 
 # create simulation grid
 r_min = 0.0
