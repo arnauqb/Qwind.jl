@@ -1,6 +1,10 @@
 name = "Qwind"
+uuid = "988db7c6-b368-4d8d-9ee1-ae26d5771fb3"
+version = "0.1.0"
 authors = ["Arnau Quera-Bofarull"]
+
 [compat]
 julia = "1.4.0"
+
 [deps]
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
