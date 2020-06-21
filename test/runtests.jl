@@ -1,7 +1,7 @@
+include("black_hole_tests.jl")
 include("grid_tests.jl")
 include("qsosed_tests.jl")
 include("radiations_tests.jl")
 include("integration_tests.jl")
 include("streamline_tests.jl")
-include("black_hole_tests.jl")
 include("solver_tests.jl")
