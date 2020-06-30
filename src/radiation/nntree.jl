@@ -10,7 +10,7 @@ struct WindKDTree
 end
 
 function create_wind_kdtree(
-    solvers;
+    integrators;
     n_time = 10000,
     tau_max_std = 0.01,
     cell_min_size = 100.0,
@@ -22,21 +22,21 @@ function create_wind_kdtree(
     v_z_dense = Float64[]
     line_width_dense = Float64[]
     density_dense = Float64[]
-    for solver in solvers
+    for integrator in integrators
         t_range =
             10 .^ range(
-                max(log10(solver.sol.t[1]), 1e-6),
-                log10(solver.sol.t[end-2]),
+                max(log10(integrator.sol.t[1]), 1e-6),
+                log10(integrator.sol.t[end-2]),
                 length = n_time,
             )
-        dense_solution = solver.sol(t_range)
+        dense_solution = integrator.sol(t_range)
         r_dense = vcat(r_dense, dense_solution[1, :])
         z_dense = vcat(z_dense, dense_solution[2, :])
         v_r_dense = vcat(v_r_dense, dense_solution[3, :])
         v_z_dense = vcat(v_z_dense, dense_solution[4, :])
         line_width_dense = vcat(
             line_width_dense,
-            dense_solution[1, :] .* solver.p.line.width_norm,
+            dense_solution[1, :] .* integrator.p.lwnorm,
         )
         v_t = @. sqrt(dense_solution[3, :]^2 + dense_solution[4, :]^2)
         density_dense = vcat(
@@ -44,8 +44,9 @@ function create_wind_kdtree(
             compute_density.(
                 dense_solution[1, :],
                 dense_solution[2, :],
-                v_t,
-                Ref(solver.p.line),
+                dense_solution[3, :],
+                dense_solution[4, :],
+                Ref(integrator.p),
             ),
         )
     end
