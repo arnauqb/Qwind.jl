@@ -53,8 +53,6 @@ end
             Rg,
             atol = 1e-2,
       )
-      println("ionization")
-      println(r_x)
       @test Qwind.ionization_radius_kernel(
             xray_lumin,
             density,

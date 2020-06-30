@@ -9,7 +9,9 @@ export initialize_integrator,
     compute_disc_radiation_field,
     compute_vt,
     compute_d,
-    failed
+    failed,
+    Parameters,
+    SavedData
 
 struct SavedData
     r::Vector{Float64}
@@ -46,6 +48,7 @@ struct Parameters
     data::SavedData
 end
 
+
 function compute_density(r, z, vr, vz, parameters::Parameters)
     return compute_density(
         r,
@@ -66,8 +69,9 @@ function initialize_integrator(
     linewidth;
     atol = 1e-8,
     rtol = 1e-3,
+    tmax = 1e8
 )
-    l0 = compute_angular_momentum(r0)
+    l0 = getl0(initial_conditions, r0)
     z0 = getz0(initial_conditions, r0)
     n0 = getn0(initial_conditions, r0)
     v0 = getv0(initial_conditions, r0)
@@ -84,7 +88,7 @@ function initialize_integrator(
     a₀ = compute_initial_acceleration(radiation, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
-    tspan = (0.0, 1e8)
+    tspan = (0.0, tmax)
     dae_problem =
         create_dae_problem(radiation, residual!, du₀, u₀, tspan, params)
     integrator =
@@ -157,7 +161,7 @@ function escaped(integrator::Sundials.IDAIntegrator)
 end
 
 function failed(integrator::Sundials.IDAIntegrator)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.z0
+    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -202,7 +206,7 @@ end
 function residual!(radiation::Radiation, out, du, u, p, t)
     r, z, vr, vz = u
     r_dot, z_dot, vr_dot, vz_dot = du
-    if r <= 0 || z <= 0 # we force it to fail
+    if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
         gravitational_acceleration =

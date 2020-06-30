@@ -1,5 +1,6 @@
 using Interpolations, Cubature
 export nt_rel_factors,
+    compute_force_multiplier,
     compute_ionization_parameter,
     compute_xray_opacity,
     Interp,

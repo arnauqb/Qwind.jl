@@ -1,5 +1,5 @@
 export InitialConditions,
-    UniformIC, CAKIC, getz0, getrin, getrfi, getn0, getv0, getnlines
+    UniformIC, CAKIC, getz0, getrin, getrfi, getn0, getv0, getnlines, getl0
 abstract type InitialConditions end
 
 struct UniformIC <: InitialConditions
@@ -29,3 +29,4 @@ getnlines(ic::UniformIC) = ic.nlines
 getz0(ic::UniformIC, r) = ic.z0
 getn0(ic::UniformIC, r) = ic.n0
 getv0(ic::UniformIC, r) = ic.v0
+getl0(ic::InitialConditions, r) = sqrt(r)

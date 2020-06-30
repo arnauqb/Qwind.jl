@@ -43,7 +43,7 @@ end
     @test compute_force_multiplier(1e-8, 1e-5) < 3000
     @test compute_force_multiplier(1e-10, 1e-5) ≈ 2300 atol = 0 rtol = 0.1
     @test compute_force_multiplier(1e-2, 1e-5) ≈ 6 atol = 0 rtol = 0.1
-    @test compute_tau_eff(1e8, 0, 1e6) == 1.0
+    @test Qwind.compute_tau_eff(1e8, 0) == 1.0
 end
 
 import Qwind.radiation_force_integrand!
