@@ -1,9 +1,10 @@
+using DrWatson
+@quickactivate "Qwind"
 using Qwind
-using Test
+
 using PyPlot
 LogNorm = matplotlib.colors.LogNorm
 using RegionTrees
-#pyplot()
 
 # create black hole
 M = 1e8 * M_SUN
@@ -15,48 +16,37 @@ black_hole = BlackHole(M, mdot, spin)
 f_uv = 0.85
 f_x = 0.15
 shielding_density = 2e8
-r_in = 20.0
-radiation = RERadiation(black_hole, f_uv, f_x, shielding_density, r_in)
+rin = 200.0
+radiation = RERadiation(black_hole, f_uv, f_x, shielding_density, rin)
 
 # create simulation grid
 r_min = 0.0
 r_max = 10000
 z_min = 0.0
 z_max = 10000
-vacuum_density = 1e2
 grid = Grid(r_min, r_max, z_min, z_max)
 
-# initialize streamlines
-r_fi = 1600
-n_lines = 80
-velocity_generator(r_0) = 5e7
-density_generator(r_0) = 2e8
-streamlines = Streamlines(
-    r_in,
-    r_fi,
-    n_lines,
-    velocity_generator,
-    density_generator,
-    black_hole.M;
-    z_0 = 1.0,
-    log_spaced = false,
-)
+# initial conditions
+z0 = 1.0
+n0 = 2e8
+v0 = 5e7 / C
+rfi = 1600
+nlines = 40
+logspaced = false
+initial_conditions = UniformIC(rin, rfi, nlines, z0, n0, v0, logspaced)
+
+# initialize itnegrators
+integrators = initialize_integrators(radiation, grid, initial_conditions, atol=1e-8, rtol=1e-3)
+
+# run integrators
+run_integrators!(integrators)
 
 # initialize quadtree
-windtree = initialize_wind_tree(FirstIter())
+#windtree = initialize_wind_tree(FirstIter())
 
 #run simulation
 
-# first iteration
-solvers = []
-for line in streamlines.lines
-    parameters = Parameters(line, grid, radiation, windtree)
-    solver = initialize_solver(line, parameters)
-    run_solver!(solver)
-    push!(solvers, solver)
-end
-
-fig, ax = plot_streamlines(streamlines.lines, xh=2000)
+fig, ax = plot_streamlines(integrators, xh=2000)
 gcf()
 
 # second iteration

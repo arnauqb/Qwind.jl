@@ -77,7 +77,7 @@ compute_ionization_parameter(
     number_density,
     tau_x,
     radiation.xray_luminosity,
-    radiation.Rg,
+    radiation.bh.Rg,
 )
 
 """
@@ -187,33 +187,6 @@ end
 compute_force_multiplier(t, ionization_parameter) =
     compute_force_multiplier(t, ionization_parameter, Interp())
 
-"""
-Computes the disc radiation field at the point (r,z) by performing
-an integral over the disc.
-
-# Parameters
-- r: radial coordinate [Rg]
-- z: height coordinate [Rg]
-- radiative_efficiency: accretion radiative efficiency
-"""
-function compute_disc_radiation_field(
-    radiation::Radiation,
-    r,
-    z,
-    radiative_efficiency,
-    r_min,
-    r_max = 1600,
-    atol = 0,
-    rtol = 1e-4,
-    norm = Cubature.INDIVIDUAL,
-    maxevals = 0,
-)
-    res, err =
-        integrate_radiation_force_integrand(radiation, r, z, r_min, r_max)
-    radiation_constant = 3 / (8 * pi * radiation.radiative_efficiency)
-    force = radiation_constant .* res
-    return force
-end
 
 """
 Integrates the radiation acceleration integrand on the disc.

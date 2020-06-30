@@ -1,3 +1,4 @@
+using RegionTrees
 export ConstantFUV, QsosedRadiation, from_quadtree, get_f_uv
 struct ContantFUV <: Flag end
 
@@ -20,7 +21,7 @@ from_quadtree(radiation::QsosedRadiation, quadtree::Cell) = QsosedRadiation(
     radiation.xray_luminosity,
     radiation.radiative_efficiency,
     quadtree,
-    radiation.Rg
+    radiation.Rg,
 )
 
 get_f_uv(radiation::QsosedRadiation, r) = searchsortednearest(radiation.f_uv, r)

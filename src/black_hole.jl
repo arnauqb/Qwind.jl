@@ -5,17 +5,22 @@ export BlackHole,
     compute_efficiency,
     compute_mass_accretion_rate,
     compute_gravitational_acceleration,
-    compute_escape_velocity
+    compute_escape_velocity,
+    compute_angular_momentum
 
 
 struct BlackHole
     M::Float64
     mdot::Float64
     spin::Float64
+    isco::Float64
+    efficiency::Float64
     Rg::Float64
     function BlackHole(M, mdot, spin)
         Rg = G * M / C^2
-        new(M, mdot, spin, Rg)
+        isco = compute_isco(spin)
+        eff = compute_efficiency(spin)
+        new(M, mdot, spin, isco, eff, Rg)
     end
 end
 
@@ -43,6 +48,7 @@ Computes the escape velocity for the given distance in units of C.
 - distance: distance from the black hole in Rg units.
 """
 compute_escape_velocity(distance) = sqrt(2 / distance)
+compute_angular_momentum(distance) = sqrt(distance) # circular orbit assumed
 
 """
 Computes the Innermost Stable Circular Orbit (ISCO) in units of Rg.
@@ -60,7 +66,7 @@ function compute_isco(spin)
     return rms
 end
 
-compute_isco(bh::BlackHole) = compute_isco(bh.spin)
+compute_isco(bh::BlackHole) = bh.isco
 
 """
 Computes the black hole accretion efficiency parameter from the isco.

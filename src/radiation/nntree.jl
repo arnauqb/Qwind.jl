@@ -48,9 +48,10 @@ function create_wind_kdtree(
                 Ref(solver.p.line),
             ),
         )
-
+    end
     kdtree = KDTree(points)
-    wind_kdtree = WindKDTree(r_dense, z_dense, line_width_dense, density_dense, kdtree)
+    wind_kdtree =
+        WindKDTree(r_dense, z_dense, line_width_dense, density_dense, kdtree)
     return wind_kdtree
 end
 
@@ -58,8 +59,8 @@ function getdensity(windkdtree::WindKDTree, r, z)
     idcs, distances = knn(windkdtree.tree, [r, z], 2)
     r1, r2 = windkdtree.r[idcs]
     z1, z2 = windkdtree.z[idcs]
-    point = [r1, z1] + [r2-r1, z2-z1] / 2
-    distance = evaluate(Euclidean(), point, [r,z])
+    point = [r1, z1] + [r2 - r1, z2 - z1] / 2
+    distance = evaluate(Euclidean(), point, [r, z])
     width = sum(windkdtree.width[idcs]) / 4 #2 of average and 2 of half width
     density = sum(windkdtree.n[idcs]) / 2
     if distance <= width #&& x < 0

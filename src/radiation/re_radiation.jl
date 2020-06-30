@@ -4,33 +4,24 @@ in the first version of Qwind (Risaliti & Elvis 2010, Quera-Bofarull et al. 2020
 """
 
 using Roots
-export RERadiation, compute_xray_tau, compute_uv_tau
+export RERadiation,
+    compute_xray_tau,
+    compute_uv_tau,
+    radiation_force_integrand!,
+    compute_disc_radiation_field
 
-struct RERadiation<: Radiation
+struct RERadiation <: Radiation
     f_uv::Float64
     xray_luminosity::Float64
     shielding_density::Float64
     r_x::Float64
     r_in::Float64
-    radiative_efficiency::Float64
-    Rg::Float64
-    function RERadiation(
-        bh::BlackHole,
-        f_uv,
-        f_x,
-        shielding_density,
-        r_in,
-        mu = 0.5,
-    )
+    bh::BlackHole
+    function RERadiation(bh::BlackHole, f_uv, f_x, shielding_density, r_in, mu = 0.5)
         bolometric_luminosity = compute_bolometric_luminosity(bh)
         xray_luminosity = f_x * bolometric_luminosity
-        r_x = compute_ionization_radius(
-            xray_luminosity,
-            shielding_density,
-            r_in,
-            bh.Rg,
-        )
-        new(f_uv, xray_luminosity, shielding_density, r_x, r_in, bh.Rg)
+        r_x = compute_ionization_radius(xray_luminosity, shielding_density, r_in, bh.Rg)
+        new(f_uv, xray_luminosity, shielding_density, r_x, r_in, bh)
     end
 end
 
@@ -45,13 +36,10 @@ function ionization_radius_kernel(
     r_x = r_x * Rg
     r_in = r_in * Rg
     if r_x < r_in
-        return log(
-            xray_luminosity / (target_ionization_parameter * 1e2 * r_x^2),
-        )
+        return log(xray_luminosity / (target_ionization_parameter * 1e2 * r_x^2))
     else
         return log(
-            xray_luminosity /
-            (target_ionization_parameter * number_density * r_x^2),
+            xray_luminosity / (target_ionization_parameter * number_density * r_x^2),
         ) - number_density * SIGMA_T * (r_x - r_in)
     end
 end
@@ -104,7 +92,7 @@ function compute_ionization_radius(
         radiation.xray_luminosity,
         number_density,
         r_in,
-        radiation.Rg,
+        radiation.bh.Rg,
         target_ionization_parameter,
         atol,
         rtol,
@@ -123,16 +111,7 @@ Risaliti & Elvis (2010) implementation of the X-Ray optical depth.
 - r_x : ionization radius (cm)
 - r_0 : initial radius of the current streamline (cm)
 """
-function compute_xray_tau(
-    r,
-    z,
-    shielding_density,
-    local_density,
-    r_in,
-    r_x,
-    r_0,
-    Rg,
-)
+function compute_xray_tau(r, z, shielding_density, local_density, r_in, r_x, r_0, Rg)
     if r <= r_in
         return 0.0
     end
@@ -214,24 +193,47 @@ function compute_uv_tau(radiation::RERadiation, r, z, local_density, r_0)
         local_density,
         radiation.r_in,
         r_0,
-        radiation.Rg
+        radiation.bh.Rg,
     )
 end
 
 """
 Radiation force integrand for the RE model.
 """
-function radiation_force_integrand!(
-    radiation::RERadiation,
-    v,
-    r_d,
-    phi_d,
-    r,
-    z,
-)
+function radiation_force_integrand!(radiation::RERadiation, v, r_d, phi_d, r, z)
     nt = nt_rel_factors(radiation, r_d)
     r_projection = (r - r_d * cos(phi_d))
     delta_sq = (r^2 + r_d^2 + z^2 - 2 * r * r_d * cos(phi_d))
     common_projection = 1.0 / (r_d^2 * delta_sq^2)
     v[:] = nt * common_projection * [r_projection, z]
+end
+
+"""
+Computes the disc radiation field at the point (r,z) by performing
+an integral over the disc.
+
+# Parameters
+- r: radial coordinate [Rg]
+- z: height coordinate [Rg]
+- radiative_efficiency: accretion radiative efficiency
+"""
+function compute_disc_radiation_field(
+    radiation::RERadiation,
+    r,
+    z,
+    radiative_efficiency,
+    r_min,
+    r_max = 1600,
+    atol = 0,
+    rtol = 1e-4,
+    norm = Cubature.INDIVIDUAL,
+    maxevals = 0,
+)
+    #println("r : $r, z : $z")
+    res, err = integrate_radiation_force_integrand(radiation, r, z, r_min, r_max)
+    radiation_constant =
+        2 * 3 * radiation.bh.mdot * radiation.f_uv * z / (8 * π * radiation.bh.efficiency)
+    force = radiation_constant .* res
+    #println("force $force")
+    return force
 end
