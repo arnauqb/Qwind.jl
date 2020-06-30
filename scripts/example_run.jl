@@ -36,7 +36,8 @@ logspaced = false
 initial_conditions = UniformIC(rin, rfi, nlines, z0, n0, v0, logspaced)
 
 # initialize itnegrators
-integrators = initialize_integrators(radiation, grid, initial_conditions, atol=1e-8, rtol=1e-3)
+integrators =
+    initialize_integrators(radiation, grid, initial_conditions, atol = 1e-8, rtol = 1e-3)
 
 # run integrators
 run_integrators!(integrators)
@@ -46,11 +47,11 @@ run_integrators!(integrators)
 
 #run simulation
 
-fig, ax = plot_streamlines(integrators, xh=2000)
+fig, ax = plot_streamlines(integrators, xh = 2000)
 gcf()
 
 # second iteration
-windtree = initialize_wind_tree(solvers, n_time=1000)
+windtree = initialize_wind_tree(integrators, n_time = 1000)
 refine_quadtree!(windtree)
 
 r_range = range(0, 1000, length = 500)
@@ -88,13 +89,13 @@ for line in streamlines.lines
     push!(solvers, solver)
 end
 
-fig, ax = plot_streamlines(streamlines.lines, yh=10000, xh=10000)
+fig, ax = plot_streamlines(streamlines.lines, yh = 10000, xh = 10000)
 gcf()
 
 
 # third iteration
 
-windtree = initialize_wind_tree(solvers, n_time=1000)
+windtree = initialize_wind_tree(solvers, n_time = 1000)
 refine_quadtree!(windtree)
 
 r_range = range(0, 1000, length = 500)
@@ -132,12 +133,12 @@ for line in streamlines.lines
     push!(solvers, solver)
 end
 
-fig, ax = plot_streamlines(streamlines.lines, yh=10000, xh=10000)
+fig, ax = plot_streamlines(streamlines.lines, yh = 10000, xh = 10000)
 gcf()
 
 # forth iteration
 
-windtree = initialize_wind_tree(solvers, n_time=1000)
+windtree = initialize_wind_tree(solvers, n_time = 1000)
 refine_quadtree!(windtree)
 
 r_range = range(0, 1000, length = 500)
@@ -175,5 +176,5 @@ for line in streamlines.lines
     push!(solvers, solver)
 end
 
-fig, ax = plot_streamlines(streamlines.lines, yh=10000, xh=10000)
+fig, ax = plot_streamlines(streamlines.lines, yh = 10000, xh = 10000)
 gcf()

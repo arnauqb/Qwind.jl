@@ -4,9 +4,6 @@ os:
   - linux
 julia:
   - 1.4
-install: 
-  - pip install -U pip
-  - pip install matplotlib
 env:
   - CODECOV_TOKEN="ae04cd54-e81f-496c-aa77-ef280b59ab0e"
 
