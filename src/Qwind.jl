@@ -29,7 +29,7 @@ include("radiation/re_radiation.jl")
 include("radiation/qsosed_radiation.jl")
 include("initial_conditions.jl")
 include("integrator.jl")
-include("plotting.jl")
+#include("plotting.jl")
 
 #include("Streamline.jl")
 ##include("QuadTree.jl")
