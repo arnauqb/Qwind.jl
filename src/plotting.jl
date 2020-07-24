@@ -2,53 +2,53 @@ using PyPlot
 LogNorm = matplotlib.colors.LogNorm
 using ColorSchemes
 using ColorSchemes: colorschemes
-export plot_grid, plot_cell, plot_streamlines, plot_density, plot_taux_grid
+export plot_grid, plot_cell, plot_streamlines, plot_density, plot_taux_grid, plot_density_grid_nn, plot_density_grid
 
-#function plot_grid(
-#    quadtree::Cell,
-#    depth,
-#    fig = nothing,
-#    ax = nothing;
-#    xl = 0,
-#    xh = 1000,
-#    yl = 0,
-#    yh = 1000,
-#)
-#    if ax === nothing
-#        fig, ax = plt.subplots()
-#    end
-#    children_list = Any[]
-#    currentchildren = Any[]
-#    for kid in quadtree.children
-#        push!(currentchildren, kid)
-#        push!(children_list, kid)
-#    end
-#    currentchildren_aux = Any[]
-#    dp = depth
-#    while dp > 0
-#        for kid in currentchildren
-#            if kid.children === nothing
-#                continue
-#            end
-#            for kid2 in kid.children
-#                push!(children_list, kid2)
-#                push!(currentchildren_aux, kid2)
-#            end
-#        end
-#        currentchildren = copy(currentchildren_aux)
-#        currentchildren_aux = []
-#        dp -= 1
-#    end
-#    for cell in children_list
-#        v = hcat(collect(vertices(cell.boundary))...)
-#        x = v[1, [1, 2, 4, 3, 1]]
-#        y = v[2, [1, 2, 4, 3, 1]]
-#        ax.plot(x, y, color = "black", alpha = 0.1)
-#    end
-#    ax.set_xlim(xl, xh)
-#    ax.set_ylim(yl, yh)
-#    return fig, ax
-#end
+function plot_grid(
+    quadtree::Cell,
+    depth,
+    fig = nothing,
+    ax = nothing;
+    xl = 0,
+    xh = 1000,
+    yl = 0,
+    yh = 1000,
+)
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
+    children_list = Any[]
+    currentchildren = Any[]
+    for kid in quadtree.children
+        push!(currentchildren, kid)
+        push!(children_list, kid)
+    end
+    currentchildren_aux = Any[]
+    dp = depth
+    while dp > 0
+        for kid in currentchildren
+            if kid.children === nothing
+                continue
+            end
+            for kid2 in kid.children
+                push!(children_list, kid2)
+                push!(currentchildren_aux, kid2)
+            end
+        end
+        currentchildren = copy(currentchildren_aux)
+        currentchildren_aux = []
+        dp -= 1
+    end
+    for cell in children_list
+        v = hcat(collect(vertices(cell.boundary))...)
+        x = v[1, [1, 2, 4, 3, 1]]
+        y = v[2, [1, 2, 4, 3, 1]]
+        ax.plot(x, y, color = "black", alpha = 0.1)
+    end
+    ax.set_xlim(xl, xh)
+    ax.set_ylim(yl, yh)
+    return fig, ax
+end
 #
 #
 function plot_streamlines(
@@ -192,3 +192,75 @@ end
 #    return plt
 #end
 #
+function plot_density_grid_nn(
+    windkdtree::WindKDTree;
+    xl = 0,
+    xh = 5000,
+    yl = 0,
+    yh = 5000,
+    nr = 500,
+    nz = 501,
+    vmin = nothing,
+    vmax = nothing,
+    fig = nothing,
+    ax = nothing
+)
+    if fig===nothing || ax ===nothing
+        fig, ax = plt.subplots()
+    end
+    grid = zeros(Float64, nr, nz)
+    r_range = range(xl, stop = xh, length = nr)
+    z_range = range(yl, stop = yh, length = nz)
+    for (i, r) in enumerate(r_range[1:end-1])
+        for (j, z) in enumerate(z_range[1:end-1])
+            grid[i, j] =
+                getdensity(windkdtree, r, z)
+        end
+    end
+    cm = ax.pcolormesh(r_range, z_range, grid', norm=LogNorm())
+    plt.colorbar(cm, ax=ax)
+    ax.set_xlabel("r [Rg]")
+    ax.set_ylabel("z [Rg]")
+    ax.set_xlim(xl, xh)
+    ax.set_ylim(yl, yh)
+    return fig, ax
+end
+
+
+function plot_density_grid(
+    quadtree::Cell;
+    xl = 0,
+    xh = 5000,
+    yl = 0,
+    yh = 5000,
+    nr = 500,
+    nz = 501,
+    vmin = nothing,
+    vmax = nothing,
+    fig = nothing,
+    ax = nothing
+)
+    if fig===nothing || ax ===nothing
+        fig, ax = plt.subplots()
+    end
+    grid = zeros(Float64, nr, nz)
+    r_range = range(xl, stop = xh, length = nr)
+    z_range = range(yl, stop = yh, length = nz)
+    for (i, r) in enumerate(r_range[1:end-1])
+        for (j, z) in enumerate(z_range[1:end-1])
+            grid[i, j] =
+                getdensity(quadtree, r, z)
+        end
+    end
+    cm = ax.pcolormesh(r_range, z_range, grid', norm=LogNorm())
+    plt.colorbar(cm, ax=ax)
+    ax.set_xlabel("r [Rg]")
+    ax.set_ylabel("z [Rg]")
+    ax.set_xlim(xl, xh)
+    ax.set_ylim(yl, yh)
+    return fig, ax
+end
+
+
+
+

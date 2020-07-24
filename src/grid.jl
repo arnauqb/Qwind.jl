@@ -1,14 +1,14 @@
 export Grid, out_of_grid
 
 struct Grid
-    r_min::Float64
-    r_max::Float64
-    z_min::Float64
-    z_max::Float64
+    rmin::Float64
+    rmax::Float64
+    zmin::Float64
+    zmax::Float64
 end
 
 function out_of_grid(grid::Grid, r, z)
-    if grid.r_min <= r <= grid.r_max && grid.z_min <= z <= grid.z_max
+    if grid.rmin <= r <= grid.rmax && grid.zmin <= z <= grid.zmax
         return false
     else
         return true

@@ -3,7 +3,7 @@ using Statistics: mean, std
 import RegionTrees: AbstractRefinery, needs_refinement, refine_data
 import Base.length
 import Base: copy, ==
-export get_density,
+export getdensity,
     create_quadtree,
     refine_quadtree!,
     create_and_refine_quadtree,
@@ -83,6 +83,7 @@ end
 
 struct QuadtreeRefinery <: AbstractRefinery
     windkdtree::WindKDTree
+    Rg::Float64
     tau_max_std::Float64
     cell_min_size::Float64
 end
@@ -116,16 +117,16 @@ function needs_refinement(refinery::QuadtreeRefinery, cell)
         end
     end
     delta_d = sqrt(sum(cell.boundary.widths .^ 2))
-    taus = densities .* delta_d * windtree.Rg * SIGMA_T
+    taus = densities .* delta_d * refinery.Rg * SIGMA_T
     refine_condition =
-        std(taus) > refinery.tau_max_std || delta_d > refinery.cell_min_size
+        std(taus) > refinery.tau_max_std && delta_d > refinery.cell_min_size
     if !refine_condition
         cell.data = mean(densities)
     end
     refine_condition
 end
 
-function refine_data(cell::Cell, refinery::QuadtreeRefinery, indices)
+function refine_data(refinery::QuadtreeRefinery, cell::Cell, indices)
     rs = range(
         cell.boundary.origin[1],
         cell.boundary.origin[1] + cell.boundary.widths[1],
@@ -148,27 +149,24 @@ end
 function refine_quadtree!(
     quadtree::Cell,
     windkdtree::WindKDTree,
+    Rg,
     tau_max_std,
     cell_min_size,
 )
-    ref = QuadtreeRefinery(windkdtree, tau_max_std, cell_min_size)
+    ref = QuadtreeRefinery(windkdtree, Rg, tau_max_std, cell_min_size)
     adaptivesampling!(quadtree, ref)
 end
 
 function create_and_refine_quadtree(
-    solvers,
+    windkdtree::WindKDTree,
+    Rg,
     tau_max_std,
     cell_min_size,
     vacuum_density = 1e2,
 )
-    windkdtree = create_wind_kdtree(
-        solvers,
-        tau_max_std = tau_max_std,
-        cell_min_size = cell_min_size,
-    )
     rmax = maximum(windkdtree.r)
     zmax = maximum(windkdtree.z)
-    quadtree = create_quadtree(0, rmax, 0, zmax, vacuum_density)
-    refine_quadtree!(quadtree, windkdtree, tau_max_std, cell_min_size)
+    quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
+    refine_quadtree!(quadtree, windkdtree, Rg, tau_max_std, cell_min_size)
     return quadtree
 end

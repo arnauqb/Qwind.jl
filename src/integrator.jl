@@ -1,5 +1,6 @@
 using DiffEqBase, DiffEqCallbacks, Sundials
 using DataStructures
+using Statistics: std, mean
 import Qwind.out_of_grid, Qwind.compute_density
 export initialize_integrator,
     initialize_integrators,
@@ -48,58 +49,46 @@ struct Parameters
     data::SavedData
 end
 
-
 function compute_density(r, z, vr, vz, parameters::Parameters)
-    return compute_density(
-        r,
-        z,
-        vr,
-        vz,
-        parameters.r0,
-        parameters.v0,
-        parameters.n0,
-    )
+    return compute_density(r, z, vr, vz, parameters.r0, parameters.v0, parameters.n0)
 end
 
 function initialize_integrator(
-    radiation::Radiation,
+    radiative_transfer::RadiativeTransfer,
     grid::Grid,
     initial_conditions::InitialConditions,
     r0,
     linewidth;
     atol = 1e-8,
     rtol = 1e-3,
-    tmax = 1e8
+    tmax = 1e8,
 )
     l0 = getl0(initial_conditions, r0)
     z0 = getz0(initial_conditions, r0)
     n0 = getn0(initial_conditions, r0)
     v0 = getv0(initial_conditions, r0)
     lwnorm = linewidth / r0
-    termination_callback = DiscreteCallback(
-        termination_condition,
-        affect!,
-        save_positions = (false, false),
-    )
+    termination_callback =
+        DiscreteCallback(termination_condition, affect!, save_positions = (false, false))
     data = SavedData()
     saving_callback = SavingCallback(save, SavedValues(Float64, Float64))
+    stalling_cb = DiscreteCallback(is_stalled, stalling_affect!, save_positions=(false, false))
+
     params = Parameters(r0, z0, v0, n0, l0, lwnorm, grid, data)
-    callback_set = CallbackSet(termination_callback, saving_callback)
-    a₀ = compute_initial_acceleration(radiation, r0, z0, 0, v0, params)
+    callback_set = CallbackSet(termination_callback, saving_callback, stalling_cb)
+    a₀ = compute_initial_acceleration(radiative_transfer, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
-    dae_problem =
-        create_dae_problem(radiation, residual!, du₀, u₀, tspan, params)
-    integrator =
-        init(dae_problem, IDA(init_all = false), callback = callback_set)
+    dae_problem = create_dae_problem(radiative_transfer, residual!, du₀, u₀, tspan, params)
+    integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
     integrator.opts.abstol = atol
     integrator.opts.reltol = rtol
     return integrator
 end
 
 function initialize_integrators(
-    radiation::Radiation,
+    radiative_transfer::RadiativeTransfer,
     grid::Grid,
     initial_conditions::InitialConditions;
     atol = 1e-8,
@@ -109,13 +98,10 @@ function initialize_integrators(
     rfi = getrfi(initial_conditions)
     nlines = getnlines(initial_conditions)
     if initial_conditions.logspaced
-        linedelimiters =
-            10 .^ range(log10(rin), log10(rfi), length = nlines + 1)
+        linedelimiters = 10 .^ range(log10(rin), log10(rfi), length = nlines + 1)
         linesrange = []
         for i = 1:nlines
-            r0 =
-                linedelimiters[i] +
-                (linedelimiters[i+1] - linedelimiters[i]) / 2.0
+            r0 = linedelimiters[i] + (linedelimiters[i+1] - linedelimiters[i]) / 2.0
             push!(linesrange, r0)
         end
         lineswidths = diff(linedelimiters)
@@ -127,7 +113,7 @@ function initialize_integrators(
     integrators = []
     for (i, (r0, linewidth)) in enumerate(zip(linesrange, lineswidths))
         integrator = initialize_integrator(
-            radiation,
+            radiative_transfer,
             grid,
             initial_conditions,
             r0,
@@ -147,11 +133,9 @@ function run_integrators!(integrators::Vector)
     end
 end
 
-compute_vt(integrator::Sundials.IDAIntegrator) =
-    sqrt(integrator.u[3]^2 + integrator.u[4]^2)
+compute_vt(integrator::Sundials.IDAIntegrator) = sqrt(integrator.u[3]^2 + integrator.u[4]^2)
 
-compute_d(integrator::Sundials.IDAIntegrator) =
-    sqrt(integrator.u[1]^2 + integrator.u[2]^2)
+compute_d(integrator::Sundials.IDAIntegrator) = sqrt(integrator.u[1]^2 + integrator.u[2]^2)
 
 out_of_grid(integrator::Sundials.IDAIntegrator) =
     out_of_grid(integrator.p.grid, integrator.u[1], integrator.u[2])
@@ -161,7 +145,7 @@ function escaped(integrator::Sundials.IDAIntegrator)
 end
 
 function failed(integrator::Sundials.IDAIntegrator)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min
+    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.zmin
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -180,6 +164,21 @@ function termination_condition(u, t, integrator)
     out_of_grid_condition = out_of_grid(integrator)
     failed_condition = failed(integrator)
     return out_of_grid_condition || failed_condition
+end
+
+function is_stalled(u, t, integrator)
+    if length(integrator.p.data.vz) < 501
+        return false
+    end
+    vz_std = std(integrator.p.data.vz[end-500:end]) / mean(integrator.p.data.vz[end-500:end])
+    println(vz_std)
+    vz_std < 0.05
+end
+
+function stalling_affect!(integrator)
+    println("STALLING!")
+    integrator.u[2] += sign(integrator.u[4]) * 5e-2 * integrator.u[2]
+    integrator.u[1] += sign(integrator.u[3]) * 5e-2 * integrator.u[1]
 end
 
 function affect!(integrator)
@@ -203,24 +202,20 @@ function save(u, t, integrator)
     return 0.0
 end
 
-function residual!(radiation::Radiation, out, du, u, p, t)
+function residual!(radiative_transfer::RadiativeTransfer, out, du, u, p, t)
     r, z, vr, vz = u
     r_dot, z_dot, vr_dot, vz_dot = du
     if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
-        gravitational_acceleration =
-            compute_gravitational_acceleration(abs(r), abs(z))
+        gravitational_acceleration = compute_gravitational_acceleration(abs(r), abs(z))
     else
         radiation_acceleration =
-            compute_radiation_acceleration(radiation, du, u, p)
+            compute_radiation_acceleration(radiative_transfer, du, u, p)
         centrifugal_term = p.l0^2 / r^3
         gravitational_acceleration = compute_gravitational_acceleration(r, z)
     end
-    ar =
-        gravitational_acceleration[1] +
-        radiation_acceleration[1] +
-        centrifugal_term
+    ar = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     out[1] = r_dot - vr
     out[2] = z_dot - vz
@@ -229,14 +224,14 @@ function residual!(radiation::Radiation, out, du, u, p, t)
 end
 
 function create_dae_problem(
-    radiation::Radiation,
+    radiative_transfer::RadiativeTransfer,
     residual!,
     du₀,
     u₀,
     tspan,
     params,
 )
-    func!(out, du, u, p, t) = residual!(radiation, out, du, u, p, t)
+    func!(out, du, u, p, t) = residual!(radiative_transfer, out, du, u, p, t)
     return DAEProblem(
         func!,
         du₀,
@@ -249,7 +244,7 @@ end
 
 
 function compute_radiation_acceleration(
-    radiation::RERadiation,
+    radiative_transfer::RERadiativeTransfer,
     du,
     u,
     p::Parameters,
@@ -260,71 +255,61 @@ function compute_radiation_acceleration(
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, p)
-    taux = compute_xray_tau(radiation, r, z, density, p.r0)
-    tauuv = compute_uv_tau(radiation, r, z, density, p.r0)
-    ξ = compute_ionization_parameter(radiation, r, z, density, taux)
+    taux = compute_xray_tau(radiative_transfer, r, z, density, p.r0)
+    tauuv = compute_uv_tau(radiative_transfer, r, z, density, p.r0)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(
-        radiation,
+        radiative_transfer,
         r,
         z,
-        radiation.bh.efficiency,
-        radiation.bh.isco,
     )
     force_radiation = (1 + forcemultiplier) * exp(-tauuv) * disc_radiation_field
     return force_radiation
 end
 
-function compute_radiation_acceleration(
-    radiation::QsosedRadiation,
-    du,
-    u,
-    p::Parameters,
-)
-    r, z, v_r, v_z = u
-    _, _, a_r, a_z = du
-    v_t = sqrt(v_r^2 + v_z^2)
-    a_t = sqrt(a_r^2 + a_z^2)
-    dv_dr = a_t / v_t
-    density = compute_density(r, z, v_t, p.line)
-    tau_x = compute_xray_tau(radiation, r, z, density)
-    ξ = compute_ionization_parameter(radiation, r, z, density, tau_x)
-    tau_eff = compute_tau_eff(density, dv_dr, p.radiation.v_th)
-    force_multiplier = compute_force_multiplier(tau_eff, ξ)
-    disc_radiation_field =
-        compute_disc_radiation_field(radiation, r, z, radiation.bh.M)
-    force_radiation = (1 + force_multiplier) * disc_radiation_field
+function compute_radiation_acceleration(radiative_transfer::AdaptiveMesh, du, u, p::Parameters)
+    r, z, vr, vz = u
+    _, _, ar, az = du
+    vt = sqrt(vr^2 + vz^2)
+    at = sqrt(ar^2 + az^2)
+    dvdr = at / vt
+    density = compute_density(r, z, vr, vz, p)
+    taux = compute_xray_tau(radiative_transfer, r, z)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    taueff = compute_tau_eff(density, dvdr)
+    forcemultiplier = compute_force_multiplier(taueff, ξ)
+    disc_radiation_field = compute_disc_radiation_field(
+        radiative_transfer,
+        r,
+        z,
+    )
+    force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end
 
 function compute_initial_acceleration(
-    radiation::Radiation,
+    radiative_transfer::RadiativeTransfer,
     r,
     z,
-    v_r,
-    v_z,
+    vr,
+    vz,
     params::Parameters,
 )
-    u = [r, z, v_r, v_z]
-    du = [v_r, v_z, 0, 0]
+    u = [r, z, vr, vz]
+    du = [vr, vz, 0, 0]
     gravitational_acceleration = compute_gravitational_acceleration(r, z)
     radiation_acceleration =
-        compute_radiation_acceleration(radiation, du, u, params)
+        compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3
-    a_r =
-        centrifugal_term +
-        gravitational_acceleration[1] +
-        radiation_acceleration[1]
-    a_z = gravitational_acceleration[2] + radiation_acceleration[2]
+    ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
+    az = gravitational_acceleration[2] + radiation_acceleration[2]
     # second estimation
-    du = [v_r, v_z, a_r, a_z]
+    du = [vr, vz, ar, az]
     radiation_acceleration =
-        compute_radiation_acceleration(radiation, du, u, params)
-    a_r =
-        centrifugal_term +
-        gravitational_acceleration[1] +
-        radiation_acceleration[1]
-    a_z = gravitational_acceleration[2] + radiation_acceleration[2]
-    return [a_r, a_z]
+        compute_radiation_acceleration(radiative_transfer, du, u, params)
+    ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
+    az = gravitational_acceleration[2] + radiation_acceleration[2]
+    return [ar, az]
 end

@@ -143,13 +143,6 @@ function get_density_from_tree(windtree::WindTree, r, z)
     r1, r2 = windtree.r[idcs]
     z1, z2 = windtree.z[idcs]
     point = [r1, z1] + [r2-r1, z2-z1] / 2
-    #d1, d2 = distances
-    #dp = evaluate(Euclidean(), [r1, z1], [r2, z2])
-    #println("r1 : $r1 z1 : $z1")
-    #println("r2 : $r2 z2 : $z2")
-    #println("d1 : $r1 d2 : $r2")
-    #println("dp : $dp")
-    #distance = distance_to_streamline(dp, d1, d2)
     distance = evaluate(Euclidean(), point, [r,z])
     width = sum(windtree.width[idcs]) / 4 #2 of average and 2 of half width
     density = sum(windtree.n[idcs]) / 2
@@ -233,106 +226,6 @@ end
 #    return ξ
 #end
 
-function compute_xray_tau_leaf(
-    quadtree::Cell,
-    leaf::Cell,
-    point,
-    intersection,
-    taux0,
-    xray_luminosity,
-    Rg,
-)
-    deltad = evaluate(Euclidean(), point, intersection) * Rg # cell size
-    d = evaluate(Euclidean(), [0.0, 0.0], intersection) * Rg # distance from the center
-    density = leaf.data
-    deltatau = density * deltad
-    xi0 = xray_luminosity / (density * d^2)
-    f(t) =
-        t - log(xi0) + taux0 + min(40, deltatau * compute_xray_opacity(exp(t)))
-    if f(20) < 0
-        xi = xi0
-    elseif f(-20) > 0
-        xi = 1e-20
-    else
-        t = find_zero(f, (-20, 20), Bisection(), atol = 0, rtol = 0.1)
-        xi = exp(t)
-    end
-    taux = compute_xray_opacity(xi) * deltatau
-    return taux
-end
-
-function compute_xray_tau(quadtree::Cell, r, z, z_0, xray_luminosity, Rg)
-    z = max(z, get_zmin(quadtree))
-    point1 = [0.0, z_0]
-    #coords_list = [point1]
-    point1leaf = findleaf(quadtree, point1)
-    point2 = [r, z]
-    point2leaf = findleaf(quadtree, point2)
-    taux = 0.0
-    if point1leaf == point2leaf
-        #push!(coords_list, point2)
-        taux = compute_xray_tau_leaf(
-            quadtree,
-            point1leaf,
-            point1,
-            point2,
-            0.0,
-            xray_luminosity,
-            Rg,
-        )
-        return taux
-    end
-    intersection = compute_cell_intersection(point1leaf, point1, point1, point2)
-    taux = compute_xray_tau_leaf(
-        quadtree,
-        point1leaf,
-        point1,
-        intersection,
-        taux,
-        xray_luminosity,
-        Rg,
-    )
-    currentpoint = intersection
-    #push!(coords_list, intersection)
-    currentleaf = findleaf(quadtree, currentpoint)
-    previousleaf = copy(currentleaf)
-    while currentleaf != point2leaf
-        intersection =
-            compute_cell_intersection(currentleaf, currentpoint, point1, point2)
-        #push!(coords_list, intersection)
-        taux += compute_xray_tau_leaf(
-            quadtree,
-            currentleaf,
-            currentpoint,
-            intersection,
-            taux,
-            xray_luminosity,
-            Rg,
-        )
-        #if taux > 40
-        #    return 40.0
-        #end
-        currentpoint = intersection
-        currentleaf = findleaf(quadtree, currentpoint)
-        if currentleaf == previousleaf
-            break
-        end
-        previousleaf = copy(currentleaf)
-    end
-    if currentpoint[2] < point2[2]
-        taux += compute_xray_tau_leaf(
-            quadtree,
-            currentleaf,
-            currentpoint,
-            point2,
-            taux,
-            xray_luminosity,
-            Rg,
-        )
-    end
-    #push!(coords_list, point2)
-    return taux
-end
 
 function compute_cell_intersection(
     cell::Cell,

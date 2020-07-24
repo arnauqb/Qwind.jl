@@ -49,7 +49,7 @@ function nt_rel_factors(radius, spin, isco)
 end
 
 function nt_rel_factors(radiation::Radiation, radius)
-    return nt_rel_factors(radius, radiation.bh.spin, radiation.bh.isco)
+    return nt_rel_factors(radius, radiation.spin, radiation.isco)
 end
 """
 Ionization parameter ξ
@@ -78,7 +78,7 @@ compute_ionization_parameter(
     number_density,
     tau_x,
     radiation.xray_luminosity,
-    radiation.bh.Rg,
+    radiation.Rg,
 )
 
 """
@@ -188,37 +188,3 @@ end
 compute_force_multiplier(t, ionization_parameter) =
     compute_force_multiplier(t, ionization_parameter, Interp())
 
-
-"""
-Integrates the radiation acceleration integrand on the disc.
-
-# Parameters
-- r : radial coordinate [Rg]
-- z : height coordinate [Rg]
--
-"""
-function integrate_radiation_force_integrand(
-    radiation::Radiation,
-    r,
-    z,
-    r_min,
-    r_max = 1600;
-    phi_min = 0.0,
-    phi_max = π,
-    atol = 0,
-    rtol = 1e-4,
-    norm = Cubature.INDIVIDUAL,
-    maxevals = 0,
-)
-    f(x, v) = radiation_force_integrand!(radiation, v, x[1], x[2], r, z)
-    return hcubature(
-        2,
-        f,
-        (r_min, phi_min),
-        (r_max, phi_max),
-        abstol = atol,
-        reltol = rtol,
-        error_norm = norm,
-        maxevals = maxevals,
-    )
-end
