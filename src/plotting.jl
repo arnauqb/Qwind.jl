@@ -46,6 +46,8 @@ function plot_grid(
         ax.plot(x, y, color = "black", alpha = 0.1)
     end
     ax.set_xlim(xl, xh)
+    ax.set_xlabel("r [Rg]")
+    ax.set_ylabel("z [Rg]")
     ax.set_ylim(yl, yh)
     return fig, ax
 end
@@ -60,13 +62,16 @@ function plot_streamlines(
     xh = 1000,
     yl = 0,
     yh = 1000,
+    colorscheme = nothing,
 )
-    color_scheme = colorschemes[:RdPu_9]
+    if colorscheme === nothing
+        colorscheme = colorschemes[:RdPu_9]
+    end
     if ax === nothing
         fig, ax = plt.subplots()
     end
     for (i, integrator) in enumerate(integrators)
-        color = get(color_scheme, i / length(integrators))
+        color = get(colorscheme, i / length(integrators))
         color = [color.r, color.g, color.b]
         #println(convert(Float64, color))
         ax.plot(
@@ -260,7 +265,3 @@ function plot_density_grid(
     ax.set_ylim(yl, yh)
     return fig, ax
 end
-
-
-
-

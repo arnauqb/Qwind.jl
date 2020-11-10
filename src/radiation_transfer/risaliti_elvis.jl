@@ -163,8 +163,8 @@ function compute_uv_tau(r, z, shielding_density, local_density, rin, r0, Rg)
         return 0.0
     end
     if r <= r0
-        tau_r = 0.0
         tau_r0 = shielding_density * (r - rin)
+        tau_r = 0.0
     else
         tau_r0 = shielding_density * (r0 - rin)
         tau_r = local_density * (r - r0)

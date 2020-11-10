@@ -21,8 +21,9 @@ black_hole = BlackHole(M, mdot, spin)
 fuv = 0.85
 fx = 0.15
 radiation = RERadiation(black_hole, fuv, fx)
+#radiation = QsosedRadiation(black_hole, 300, fx)
 
-# radiative transfer model 
+# radiative transfer model
 shielding_density = 2e8
 rin = 50.0
 radiative_transfer = RERadiativeTransfer(radiation, shielding_density, rin, black_hole.Rg)
@@ -32,7 +33,7 @@ r_min = 0.0
 r_max = 10000
 z_min = 1.0
 z_max = 10000
-grid = Grid(r_min, r_max, z_min, z_max)
+sim_grid = Grid(r_min, r_max, z_min, z_max)
 
 # initial conditions
 z0 = 1.0
@@ -43,16 +44,21 @@ nlines = 100
 logspaced = true
 initial_conditions = UniformIC(rin, rfi, nlines, z0, n0, v0, logspaced)
 
+
 ##
 # initialize itnegrators
 integrators = initialize_integrators(
     radiative_transfer,
-    grid,
+    sim_grid,
     initial_conditions,
     atol = 1e-8,
     rtol = 1e-3,
 )
 
+iterations = Dict()
+iterations[0] = integrators
+
+iterations_dict = Dict(0 => integrators)
 ##
 # run integrators
 run_integrators!(integrators)
@@ -61,32 +67,44 @@ run_integrators!(integrators)
 #fig, ax = plot_streamlines(integrators, xh = 10000, yh = 2000)
 #gcf()
 
-adaptive_mesh = AdaptiveMesh(radiation, integrators)
+# iteration 2
+radiation = QsosedRadiation(black_hole, 300, fx)
+
+tau_max_std = 0.01
+
+adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
+
+initial_conditions = CAKIC(radiation, black_hole, rin, rfi, nlines, z0, 0.03, 0.6, 0.5, logspaced)
+
+integrators = initialize_integrators(adaptive_mesh, sim_grid, initial_conditions, atol=1e-8, rtol=1e-3)
+
+iterations[1] = integrators
 
 
-##
-# plot density 
+run_integrators!(integrators)
 
+adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
 
+integrators = initialize_integrators(adaptive_mesh, sim_grid, initial_conditions, atol=1e-8, rtol=1e-3)
 
-##
-#integrators_dict = Dict()
+iterations[2] = integrators
 
-#for i in 1:10
-#    global integrators
-#    global integrators_dict
-#    # construct mesh
-#    adaptive_mesh = AdaptiveMesh(radiation, integrators)
+run_integrators!(integrators)
+
+adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
+
+# iteration 3
+
+#end
+# start iterations
+#n_iterations = 3
 #
-#    # initialize itnegrators
-#    integrators = initialize_integrators(
-#        adaptive_mesh,
-#        grid,
-#        initial_conditions,
-#        atol = 1e-8,
-#        rtol = 1e-3,
-#    )
-#    # run integrators
+#for i in 1:n_iterations
+#    global adaptive_mesh
+#    global iterations
+#    global tau_max_std
+#    integrators = initialize_integrators(adaptive_mesh, sim_grid, initial_conditions, atol=1e-8, rtol=1e-3)
+#    iterations[i] = integrators
 #    run_integrators!(integrators)
-#    integrators_dict[i] = integrators
+#    adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
 #end

@@ -36,12 +36,6 @@ struct WindTree <: Refinery
     Rg::Float64
 end
 
-"Method of the copy function for Cell type"
-function copy(cell::Cell)
-    newcell = Cell(cell.boundary, cell.data)
-    return newcell
-end
-
 "Method of the == function for the Cell type"
 function ==(cell1::Cell, cell2::Cell)
     return cell1.boundary == cell2.boundary

@@ -6,6 +6,7 @@ import Base: copy, ==
 export getdensity,
     create_quadtree,
     refine_quadtree!,
+    QuadtreeRefinery,
     create_and_refine_quadtree,
     getwidth,
     getheight,
@@ -13,9 +14,11 @@ export getdensity,
     getrmax,
     getzmin,
     getzmax,
+    getcellsize,
     getlimits,
     countleaves,
-    getdensity
+    getdensity,
+    compute_cell_optical_thickness
 
 # functions for quadtree cells
 
@@ -32,10 +35,15 @@ end
 
 getwidth(cell::Cell) = cell.boundary.widths[1]
 getheight(cell::Cell) = cell.boundary.widths[2]
+getcellsize(cell::Cell) = sqrt(sum(cell.boundary.widths .^ 2))
 getrmin(cell::Cell) = cell.boundary.origin[1]
 getrmax(cell::Cell) = cell.boundary.origin[1] + cell.boundary.widths[1]
 getzmin(cell::Cell) = cell.boundary.origin[2]
 getzmax(cell::Cell) = cell.boundary.origin[2] + cell.boundary.widths[2]
+function compute_cell_optical_thickness(cell::Cell, Rg)
+    size = getcellsize(cell)
+    return size * cell.data * SIGMA_T * Rg
+end
 getlimits(cell::Cell) =
     [getrmin(cell), getrmax(cell), getzmin(cell), getzmax(cell)]
 countleaves(quadtree::Cell) = length([leaf for leaf in allleaves(quadtree)])
@@ -74,8 +82,7 @@ function compute_cell_intersection(
 end
 
 function create_quadtree(r_min, r_max, z_min, z_max; vacuum_density = 1e2)
-    quadtree =
-        Cell(SVector(r_min, z_min), SVector(r_max, z_max), vacuum_density)
+    quadtree = Cell(SVector(r_min, z_min), SVector(r_max - r_min, z_max - z_min), vacuum_density)
     return quadtree
 end
 
@@ -116,7 +123,7 @@ function needs_refinement(refinery::QuadtreeRefinery, cell)
             push!(densities, getdensity(refinery.windkdtree, rp, zp))
         end
     end
-    delta_d = sqrt(sum(cell.boundary.widths .^ 2))
+    delta_d = getcellsize(cell)
     taus = densities .* delta_d * refinery.Rg * SIGMA_T
     refine_condition =
         std(taus) > refinery.tau_max_std && delta_d > refinery.cell_min_size
@@ -166,7 +173,8 @@ function create_and_refine_quadtree(
 )
     rmax = maximum(windkdtree.r)
     zmax = maximum(windkdtree.z)
-    quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
+    quadtree =
+        create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
     refine_quadtree!(quadtree, windkdtree, Rg, tau_max_std, cell_min_size)
     return quadtree
 end

@@ -12,7 +12,8 @@ export initialize_integrator,
     compute_d,
     failed,
     Parameters,
-    SavedData
+    SavedData,
+    is_stalled
 
 struct SavedData
     r::Vector{Float64}
@@ -128,7 +129,8 @@ end
 
 run_integrator!(integrator::Sundials.IDAIntegrator) = solve!(integrator)
 function run_integrators!(integrators::Vector)
-    for integrator in integrators
+    for (i, integrator) in enumerate(integrators)
+        println("running integrator $i of $(length(integrators))")
         run_integrator!(integrator)
     end
 end
@@ -145,7 +147,8 @@ function escaped(integrator::Sundials.IDAIntegrator)
 end
 
 function failed(integrator::Sundials.IDAIntegrator)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.zmin
+    sign_changes = countsignchanges(integrator.p.data.vz)
+    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.zmin || (sign_changes >= 2)
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -167,12 +170,12 @@ function termination_condition(u, t, integrator)
 end
 
 function is_stalled(u, t, integrator)
-    if length(integrator.p.data.vz) < 501
+    min_length = 100
+    if length(integrator.p.data.vz) <= min_length
         return false
     end
-    vz_std = std(integrator.p.data.vz[end-500:end]) / mean(integrator.p.data.vz[end-500:end])
-    println(vz_std)
-    vz_std < 0.05
+    vz_std = std(integrator.p.data.vz[end-min_length:end]) / mean(integrator.p.data.vz[end-min_length:end])
+    abs(vz_std) < 0.05
 end
 
 function stalling_affect!(integrator)
@@ -199,6 +202,8 @@ function save(u, t, integrator)
     push!(data.vr, u[3])
     push!(data.vz, u[4])
     push!(data.n, compute_density(integrator))
+    #println("---- time step -----")
+    #println(u)
     return 0.0
 end
 

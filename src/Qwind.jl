@@ -35,7 +35,7 @@ include("initial_conditions.jl")
 
 # integrator
 include("integrator.jl")
-#include("plotting.jl")
+include("plotting.jl")
 
 #include("Streamline.jl")
 ##include("QuadTree.jl")
