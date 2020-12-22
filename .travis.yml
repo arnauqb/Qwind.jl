@@ -6,8 +6,12 @@ os:
 julia:
   - 1.4
 
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install python3
+
 install:
-  - pip install qsosed
+  - python3 -m pip install qsosed
 
 notifications:
   email: false
