@@ -25,14 +25,17 @@ end
     @test Qwind.compute_cell_intersection(cell, (0, 0), (0, 0), (1, 6)) == [1 / 3, 2]
 
     # extreme cases (completely flat or vertical lines)
-    @test Qwind.compute_cell_intersection(cell, (0, 1), (0, 1), (4, 1)) == [2,1]
-    @test Qwind.compute_cell_intersection(cell, (1, 0), (1, -1), (1, 4)) == [1,2]
+    @test Qwind.compute_cell_intersection(cell, (0, 1), (0, 1), (4, 1)) == [2, 1]
+    @test Qwind.compute_cell_intersection(cell, (1, 0), (1, -1), (1, 4)) == [1, 2]
 
     cell = Cell(SVector(3, 4), SVector(2, 1), 10)
-    @test Qwind.compute_cell_intersection(cell, (13 / 3, 4), (4, 0), (4.5, 6)) ≈ [53 / 12, 5]
+    @test Qwind.compute_cell_intersection(cell, (13 / 3, 4), (4, 0), (4.5, 6)) ≈
+          [53 / 12, 5]
     @test Qwind.compute_cell_intersection(cell, (3.43, 4), (8, 0), (0, 7)) ≈ [3, 4.37625]
 end
 
 @testset "Quadtree functions" begin
-    @test Qwind.create_quadtree(1, 2, 3, 4, vacuum_density=1e3) == Cell(SVector(1, 3), SVector(1, 1), 1e3)
+    @test Qwind.create_quadtree(1, 2, 3, 4, vacuum_density = 1e3) ==
+          Cell(SVector(1, 3), SVector(1, 1), 1e3)
 end
+

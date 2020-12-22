@@ -111,7 +111,7 @@ function initialize_integrators(
         linesrange = [rin + (i + 0.5) * dr for i = 0:nlines-1]
         lineswidths = diff([linesrange; rfi + dr / 2])
     end
-    integrators = []
+    integrators = Array{Sundials.IDAIntegrator}(undef, 0)
     for (i, (r0, linewidth)) in enumerate(zip(linesrange, lineswidths))
         integrator = initialize_integrator(
             radiative_transfer,

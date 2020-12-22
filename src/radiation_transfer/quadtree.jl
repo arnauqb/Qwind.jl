@@ -3,8 +3,7 @@ using Statistics: mean, std
 import RegionTrees: AbstractRefinery, needs_refinement, refine_data
 import Base.length
 import Base: copy, ==
-export getdensity,
-    create_quadtree,
+export create_quadtree,
     refine_quadtree!,
     QuadtreeRefinery,
     create_and_refine_quadtree,
@@ -17,7 +16,7 @@ export getdensity,
     getcellsize,
     getlimits,
     countleaves,
-    getdensity,
+    get_density,
     compute_cell_optical_thickness
 
 # functions for quadtree cells
@@ -44,21 +43,15 @@ function compute_cell_optical_thickness(cell::Cell, Rg)
     size = getcellsize(cell)
     return size * cell.data * SIGMA_T * Rg
 end
-getlimits(cell::Cell) =
-    [getrmin(cell), getrmax(cell), getzmin(cell), getzmax(cell)]
+getlimits(cell::Cell) = [getrmin(cell), getrmax(cell), getzmin(cell), getzmax(cell)]
 countleaves(quadtree::Cell) = length([leaf for leaf in allleaves(quadtree)])
-getdensity(cell::Cell, r, z) = findleaf(cell, [r, z]).data
+get_density(cell::Cell, r, z) = findleaf(cell, [r, z]).data
 
 """
 Given a line defined by initialpoint and finalpoint, computes the intersection
 with the next intersection with the cell boundary from the currentpoint
 """
-function compute_cell_intersection(
-    cell::Cell,
-    currentpoint,
-    initialpoint,
-    finalpoint,
-)
+function compute_cell_intersection(cell::Cell, currentpoint, initialpoint, finalpoint)
     r, z = currentpoint
     ri, zi = initialpoint
     rf, zf = finalpoint
@@ -82,7 +75,8 @@ function compute_cell_intersection(
 end
 
 function create_quadtree(r_min, r_max, z_min, z_max; vacuum_density = 1e2)
-    quadtree = Cell(SVector(r_min, z_min), SVector(r_max - r_min, z_max - z_min), vacuum_density)
+    quadtree =
+        Cell(SVector(r_min, z_min), SVector(r_max - r_min, z_max - z_min), vacuum_density)
     return quadtree
 end
 
@@ -101,8 +95,7 @@ function getdata(cell, child_indices, Rg, windtree)
     return density
 end
 
-getdata(cell, child_indices) =
-    getdata(cell, child_indices, black_hole.Rg, windtree)
+getdata(cell, child_indices) = getdata(cell, child_indices, black_hole.Rg, windtree)
 
 
 function needs_refinement(refinery::QuadtreeRefinery, cell)
@@ -120,13 +113,12 @@ function needs_refinement(refinery::QuadtreeRefinery, cell)
     densities = []
     for rp in rs
         for zp in zs
-            push!(densities, getdensity(refinery.windkdtree, rp, zp))
+            push!(densities, get_density(refinery.windkdtree, rp, zp))
         end
     end
     delta_d = getcellsize(cell)
     taus = densities .* delta_d * refinery.Rg * SIGMA_T
-    refine_condition =
-        std(taus) > refinery.tau_max_std && delta_d > refinery.cell_min_size
+    refine_condition = std(taus) > refinery.tau_max_std && delta_d > refinery.cell_min_size
     if !refine_condition
         cell.data = mean(densities)
     end
@@ -147,7 +139,7 @@ function refine_data(refinery::QuadtreeRefinery, cell::Cell, indices)
     densities = []
     for rp in rs
         for zp in zs
-            push!(densities, getdensity(refinery.windkdtree, rp, zp))
+            push!(densities, get_density(refinery.windkdtree, rp, zp))
         end
     end
     mean(densities)
@@ -173,8 +165,7 @@ function create_and_refine_quadtree(
 )
     rmax = maximum(windkdtree.r)
     zmax = maximum(windkdtree.z)
-    quadtree =
-        create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
+    quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
     refine_quadtree!(quadtree, windkdtree, Rg, tau_max_std, cell_min_size)
     return quadtree
 end

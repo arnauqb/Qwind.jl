@@ -40,7 +40,7 @@ z0 = 1.0
 n0 = 2e8
 v0 = 5e7 / C
 rfi = 1600
-nlines = 100
+nlines = 50
 logspaced = true
 initial_conditions = UniformIC(rin, rfi, nlines, z0, n0, v0, logspaced)
 
@@ -72,26 +72,41 @@ radiation = QsosedRadiation(black_hole, 300, fx)
 
 tau_max_std = 0.01
 
-adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
+adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std = tau_max_std)
 
-initial_conditions = CAKIC(radiation, black_hole, rin, rfi, nlines, z0, 0.03, 0.6, 0.5, logspaced)
+##
 
-integrators = initialize_integrators(adaptive_mesh, sim_grid, initial_conditions, atol=1e-8, rtol=1e-3)
+initial_conditions =
+    CAKIC(radiation, black_hole, rin, rfi, nlines, z0, 0.03, 0.6, 0.5, logspaced)
+
+integrators = initialize_integrators(
+    adaptive_mesh,
+    sim_grid,
+    initial_conditions,
+    atol = 1e-8,
+    rtol = 1e-3,
+)
 
 iterations[1] = integrators
 
 
 run_integrators!(integrators)
 
-adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
+adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std = tau_max_std)
 
-integrators = initialize_integrators(adaptive_mesh, sim_grid, initial_conditions, atol=1e-8, rtol=1e-3)
+integrators = initialize_integrators(
+    adaptive_mesh,
+    sim_grid,
+    initial_conditions,
+    atol = 1e-8,
+    rtol = 1e-3,
+)
 
 iterations[2] = integrators
 
 run_integrators!(integrators)
 
-adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std=tau_max_std)
+adaptive_mesh = AdaptiveMesh(radiation, integrators, tau_max_std = tau_max_std)
 
 # iteration 3
 

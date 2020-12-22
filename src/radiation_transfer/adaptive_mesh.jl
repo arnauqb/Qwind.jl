@@ -17,10 +17,10 @@ function AdaptiveMesh(
     integrators;
     tau_max_std = 0.001,
     cell_min_size = 0.0001,
-    n_time = 10000,
+    n_timesteps = 10000,
 )
     windkdtree =
-        create_wind_kdtree(integrators, n_time, tau_max_std, cell_min_size)
+        create_wind_kdtree(integrators, n_timesteps)
     quadtree = create_and_refine_quadtree(
         windkdtree,
         radiation.Rg,

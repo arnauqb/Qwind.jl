@@ -37,14 +37,4 @@ include("initial_conditions.jl")
 include("integrator.jl")
 include("plotting.jl")
 
-#include("Streamline.jl")
-##include("QuadTree.jl")
-#include("Radiation.jl")
-#include("Qsosed.jl")
-#include("Integration.jl")
-#include("RadiativeTransfer.jl")
-#include("Solver.jl")
-#include("Plotting.jl")
-#
-
 end # module
