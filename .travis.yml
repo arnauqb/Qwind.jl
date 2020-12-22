@@ -6,13 +6,9 @@ os:
 julia:
   - 1.4
 
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install python3
-  - wget -qO- https://bootstrap.pypa.io/get-pip.py | python3
-
 install:
-  - python3 -m pip install qsosed
+  - pyenv global 3.7.1
+  - pip install --user qsosed
 
 notifications:
   email: false
