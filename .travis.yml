@@ -9,9 +9,6 @@ dist: bionic
 julia:
   - 1.4
 
-env:
-  - CODECOV_TOKEN=ae04cd54-e81f-496c-aa77-ef280b59ab0e
-
 addons:
   apt:
     sources:
@@ -31,7 +28,7 @@ notifications:
   email: false
 
 after_success:
-  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - CODECOV_TOKEN=ae04cd54-e81f-496c-aa77-ef280b59ab0e julia -e 'using Pkg; using Coverage; Codecov.submit_local(process_folder())'
 
 
 #jobs:
