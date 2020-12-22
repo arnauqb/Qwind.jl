@@ -9,7 +9,7 @@ julia:
 before_install:
   - sudo apt-get update
   - sudo apt-get install python3
-  - wget -qO- https://bootstrap.pypa.io/get-pip.py | python
+  - wget -qO- https://bootstrap.pypa.io/get-pip.py | python3
 
 install:
   - python3 -m pip install qsosed
