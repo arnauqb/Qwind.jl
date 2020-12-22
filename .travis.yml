@@ -1,20 +1,19 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
+
 os:
   - linux
 julia:
   - 1.4
-env:
-  - CODECOV_TOKEN="ae04cd54-e81f-496c-aa77-ef280b59ab0e"
+
+install:
+  - pip install qsosed
 
 notifications:
   email: false
-after_success:
-  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
-  - CODECOV_TOKEN="ae04cd54-e81f-496c-aa77-ef280b59ab0e" julia -e 'using Pkg; using Coverage; Codecov.submit_local(process_folder())'
-  #- julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
 
-codecov: true
+after_success:
+  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
 
 #jobs:
 #  allow_failures:
