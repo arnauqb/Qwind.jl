@@ -22,6 +22,7 @@ before_install:
   - sudo apt-get install python3 python3-pip python3-setuptools
   - pip3 install --upgrade pip
   - pip install qsosed
+  - pip install matplotlib
 
 notifications:
   email: false
