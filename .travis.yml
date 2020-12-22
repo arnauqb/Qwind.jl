@@ -4,15 +4,24 @@ language: julia
 os:
   - linux
 
+dist: bionic
+
 julia:
   - 1.4
-python:
-  - 3.6
 
-install:
-  - python -v
-  - python3 -v 
-  - pip install --user qsosed
+addons:
+  apt:
+    sources:
+      - deadsnakes
+    packages:
+      - python3.7
+
+before_install:
+  - sudo apt-get update
+  - sudo apt purge python2.7-minimal
+  - sudo apt-get install python3 python3-pip python3-setuptools
+  - pip3 install --upgrade pip
+  - pip install qsosed
 
 notifications:
   email: false
