@@ -4,15 +4,14 @@ language: julia
 os:
   - linux
 
-env:
-  global:
-    - PATH=/opt/python/3.7.1/bin:$PATH
-
 julia:
   - 1.4
+python:
+  - 3.6
 
 install:
-  - pyenv global 3.7.1
+  - python -v
+  - python3 -v 
   - pip install --user qsosed
 
 notifications:
