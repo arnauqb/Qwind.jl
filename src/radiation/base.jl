@@ -34,15 +34,9 @@ function nt_rel_factors(radius, spin, isco)
     y3 = -2 * cos(acos(spin) / 3)
     y = sqrt(radius)
     C = 1 - 3 / radius + 2 * spin / radius^1.5
-    B =
-        3 * (y1 - spin)^2 * log((y - y1) / (yms - y1)) /
-        (y * y1 * (y1 - y2) * (y1 - y3))
-    B +=
-        3 * (y2 - spin)^2 * log((y - y2) / (yms - y2)) /
-        (y * y2 * (y2 - y1) * (y2 - y3))
-    B +=
-        3 * (y3 - spin)^2 * log((y - y3) / (yms - y3)) /
-        (y * y3 * (y3 - y1) * (y3 - y2))
+    B = 3 * (y1 - spin)^2 * log((y - y1) / (yms - y1)) / (y * y1 * (y1 - y2) * (y1 - y3))
+    B += 3 * (y2 - spin)^2 * log((y - y2) / (yms - y2)) / (y * y2 * (y2 - y1) * (y2 - y3))
+    B += 3 * (y3 - spin)^2 * log((y - y3) / (yms - y3)) / (y * y3 * (y3 - y1) * (y3 - y2))
     A = 1 - yms / y - 3 * spin * log(y / yms) / (2 * y)
     factor = (A - B) / C
     return factor
@@ -54,32 +48,20 @@ end
 """
 Ionization parameter ξ
 """
-function compute_ionization_parameter(
-    r,
-    z,
-    number_density,
-    tau_x,
-    xray_luminosity,
-    Rg,
-)
+function compute_ionization_parameter(r, z, number_density, tau_x, xray_luminosity, Rg)
     d = sqrt(r^2 + z^2) * Rg
     return max(xray_luminosity * exp(-tau_x) / (number_density * d^2), 1e-20)
 end
 
-compute_ionization_parameter(
-    radiation::Radiation,
-    r,
-    z,
-    number_density,
-    tau_x,
-) = compute_ionization_parameter(
-    r,
-    z,
-    number_density,
-    tau_x,
-    radiation.xray_luminosity,
-    radiation.Rg,
-)
+compute_ionization_parameter(radiation::Radiation, r, z, number_density, tau_x) =
+    compute_ionization_parameter(
+        r,
+        z,
+        number_density,
+        tau_x,
+        radiation.xray_luminosity,
+        radiation.Rg,
+    )
 
 """
 X-Ray opacity as a function of ionization parameter.
@@ -163,11 +145,7 @@ Computes the analytical approximation for the force multiplier,
 from Stevens and Kallman 1990. Note that we modify it slightly to avoid
 numerical overflow.
 """
-function compute_force_multiplier(
-    t,
-    ionization_parameter,
-    mode::InterpolationType,
-)
+function compute_force_multiplier(t, ionization_parameter, mode::InterpolationType)
     @assert t >= 0
     @assert ionization_parameter >= 0
     ALPHA = 0.6

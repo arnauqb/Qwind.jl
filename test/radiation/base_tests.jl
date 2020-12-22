@@ -47,7 +47,7 @@ end
 end
 
 import Qwind.radiation_force_integrand!
-struct RadiationTest <: Radiation end
+struct RadiationTest <: RadiativeTransfer end
 
 function radiation_force_integrand!(radiation::RadiationTest, v, r_d, phi_d, r, z)
     v[1] = 2 * r_d^2 * cos(phi_d) * r

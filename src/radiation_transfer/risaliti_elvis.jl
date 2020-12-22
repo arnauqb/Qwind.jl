@@ -212,7 +212,7 @@ Integrates the radiation acceleration integrand on the disc.
 -
 """
 function integrate_radiation_force_integrand(
-    radiative_transfer::RERadiativeTransfer,
+    radiative_transfer::RadiativeTransfer,
     r,
     z,
     rmin,

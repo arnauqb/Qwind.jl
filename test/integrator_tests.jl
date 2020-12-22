@@ -3,7 +3,7 @@ using Test
 import Qwind.compute_radiation_acceleration
 import Qwind.compute_initial_acceleration
 import Qwind.residual!
-abstract type TestRadiation <: Radiation end
+abstract type TestRadiation <: RadiativeTransfer end
 struct TestRadiation1 <: TestRadiation
     bh::BlackHole
 end
@@ -46,13 +46,9 @@ function compute_initial_acceleration(
 )
     u = [r, z, v_r, v_z]
     du = [v_r, v_z, 0, 0]
-    gravitational_acceleration =
-        compute_gravitational_acceleration(r, z)
-    radiation_acceleration =
-        compute_radiation_acceleration(radiation, du, u, params)
-    a_r =
-        gravitational_acceleration[1] +
-        radiation_acceleration[1]
+    gravitational_acceleration = compute_gravitational_acceleration(r, z)
+    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
+    a_r = gravitational_acceleration[1] + radiation_acceleration[1]
     a_z = gravitational_acceleration[2] + radiation_acceleration[2]
     return [a_r, a_z]
 end
@@ -69,11 +65,11 @@ end
         0.0;
         atol = 1e-7,
         rtol = 1e-4,
-        tmax = 1e2 * C / earth.Rg
+        tmax = 1e2 * C / earth.Rg,
     )
     run_integrator!(integrator)
     analytical_solution(t) = 0.5 * earth_gravity * t^2
-    t_range = range(0, integrator.t, length=50)
+    t_range = range(0, integrator.t, length = 50)
     for t in t_range
         z_solv = integrator.sol(t)[2] - getz0(ic, 0.0)
         z_analy = analytical_solution(t)
@@ -93,11 +89,11 @@ end
         0.0;
         atol = 1e-7,
         rtol = 1e-4,
-        tmax = 1e2 * C / earth.Rg
+        tmax = 1e2 * C / earth.Rg,
     )
     run_integrator!(integrator)
     analytical_solution(t) = 0.5 * ((400 / C^2 * earth.Rg) + earth_gravity) * t^2
-    t_range = range(0, integrator.t, length=50)
+    t_range = range(0, integrator.t, length = 50)
     for t in t_range
         z_solv = integrator.sol(t)[2] - getz0(ic, 0.0)
         z_analy = analytical_solution(t)

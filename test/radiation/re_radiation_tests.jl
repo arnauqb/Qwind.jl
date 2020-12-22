@@ -7,12 +7,8 @@ using Test
             black_hole,
             0.70906799789733695,
             0.14436810902317002,
-            1e8,
-            50.0,
       )
       @test radiation.xray_luminosity ≈ 9.074006146667613e+44
-      @test radiation.shielding_density ≈ 1e8
-      @test radiation.r_in ≈ 50
 end
 
 @testset "RE X-ray optical depth" begin
@@ -37,7 +33,6 @@ end
       # r > r_0, r_in < r_0 < r_x < r
       @test compute_xray_tau(4, 3, 10, 20, 1, 3, 2, Rg) / SIGMA_T ≈
             4030 / cos(4 / 5) atol = 0 rtol = 0.1
-
 end
 
 @testset "Ionization radius" begin

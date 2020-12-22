@@ -148,7 +148,7 @@ end
 
 function failed(integrator::Sundials.IDAIntegrator)
     sign_changes = countsignchanges(integrator.p.data.vz)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.zmin || (sign_changes >= 2)
+    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || (sign_changes >= 2)
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
