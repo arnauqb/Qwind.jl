@@ -1,4 +1,10 @@
-export RERadiativeTransfer, compute_ionization_radius, compute_xray_tau, compute_uv_tau, compute_disc_radiation_field, radiation_force_integrand!
+export RERadiativeTransfer,
+    compute_ionization_radius,
+    compute_xray_tau,
+    compute_uv_tau,
+    compute_disc_radiation_field,
+    radiation_force_integrand!,
+    update_radiative_transfer
 
 struct RERadiativeTransfer <: RadiativeTransfer
     radiation::Radiation
@@ -6,10 +12,20 @@ struct RERadiativeTransfer <: RadiativeTransfer
     rin::Float64
     shielding_density::Float64
     Rg::Float64
-    function RERadiativeTransfer(radiation, shielding_density, rin, Rg)
+    function RERadiativeTransfer(radiation, shielding_density, rin)
+        Rg = radiation.Rg
         rx = compute_ionization_radius(radiation, shielding_density, rin, Rg)
         new(radiation, rx, rin, shielding_density, Rg)
     end
+end
+
+function RERadiativeTransfer(radiation::Radiation, config)
+    rc = config["radiative_transfer"]
+    return RERadiativeTransfer(radiation, rc["shielding_density"], rc["r_in"])
+end
+
+function update_radiative_transfer(rt::RERadiativeTransfer, integrators)
+    return rt
 end
 
 function ionization_radius_kernel(

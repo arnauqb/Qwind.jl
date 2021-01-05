@@ -59,21 +59,22 @@ function plot_streamlines(
     ax = nothing;
     alpha = 1.0,
     xl = 0,
-    xh = 1000,
+    xh = 2000,
     yl = 0,
-    yh = 1000,
+    yh = 2000,
     colorscheme = nothing,
 )
     if colorscheme === nothing
-        colorscheme = colorschemes[:RdPu_9]
+        colorscheme_plot = colorschemes[:RdBu]
+    else
+        colorscheme_plot = colorschemes[Symbol(colorscheme)]
     end
     if ax === nothing
         fig, ax = plt.subplots()
     end
     for (i, integrator) in enumerate(integrators)
-        color = get(colorscheme, i / length(integrators))
+        color = get(colorscheme_plot, i / length(integrators))
         color = [color.r, color.g, color.b]
-        #println(convert(Float64, color))
         ax.plot(
             integrator.p.data.r,
             integrator.p.data.z,

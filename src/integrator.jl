@@ -1,5 +1,5 @@
 using DiffEqBase, DiffEqCallbacks, Sundials
-using DataStructures
+using DataStructures, Printf
 using Statistics: std, mean
 import Qwind.out_of_grid, Qwind.compute_density
 export initialize_integrator,
@@ -130,7 +130,8 @@ end
 run_integrator!(integrator::Sundials.IDAIntegrator) = solve!(integrator)
 function run_integrators!(integrators::Vector)
     for (i, integrator) in enumerate(integrators)
-        println("running integrator $i of $(length(integrators))")
+        #print("Running integrator $(@sprintf "%03d" i) of $(length(integrators))")
+        @info "Running integrator $(@sprintf "%03d" i) of $(length(integrators))"
         run_integrator!(integrator)
     end
 end
@@ -186,11 +187,11 @@ end
 
 function affect!(integrator)
     if escaped(integrator)
-        print(" \U1F4A8")
+        println(" \U1F4A8")
     elseif failed(integrator)
-        print(" \U1F4A5")
+        println(" \U1F4A5")
     else
-        print(" \U2753")
+        println(" \U2753")
     end
     terminate!(integrator)
 end

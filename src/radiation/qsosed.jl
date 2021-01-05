@@ -41,6 +41,10 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64)
         bh.Rg,
     )
 end
+function QsosedRadiation(bh::BlackHole, config::Dict)
+    radiation_config = config["radiation"]
+    return QsosedRadiation(bh, radiation_config["nr"], radiation_config["f_x"])
+end
 
 getridx(radiation::QsosedRadiation, r) = searchsortednearest(radiation.disk_grid, r)
 getfuv(radiation::QsosedRadiation, flag::ConstantFUV) = radiation.fuv_grid[1]

@@ -24,6 +24,13 @@ struct BlackHole
     end
 end
 
+function BlackHole(config::Dict)
+    bh_config = config["black_hole"]
+    M = bh_config["M"] * M_SUN
+    return BlackHole(M, bh_config["mdot"], bh_config["spin"])
+end
+
+
 """
 Computes the Eddington luminosity for the given black hole mass.
 """
