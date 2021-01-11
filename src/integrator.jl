@@ -180,7 +180,7 @@ function is_stalled(u, t, integrator)
 end
 
 function stalling_affect!(integrator)
-    println("STALLING!")
+    @warn "STALLING!"
     integrator.u[2] += sign(integrator.u[4]) * 5e-2 * integrator.u[2]
     integrator.u[1] += sign(integrator.u[3]) * 5e-2 * integrator.u[1]
 end

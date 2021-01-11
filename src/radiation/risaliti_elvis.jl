@@ -5,7 +5,10 @@ in the first version of Qwind (Risaliti & Elvis 2010, Quera-Bofarull et al. 2020
 
 using Roots
 export RERadiation,
-    radiation_force_integrand!, compute_disc_radiation_field, compute_radiation_constant
+    radiation_force_integrand!,
+    compute_disc_radiation_field,
+    compute_radiation_constant,
+    get_fuv_mdot
 
 struct RERadiation <: Radiation
     mdot::Float64
@@ -37,4 +40,6 @@ end
 
 compute_radiation_constant(radiation::RERadiation) =
     6 * radiation.mdot * radiation.fuv / (8 * π * radiation.efficiency)
+
+get_fuv_mdot(radiation::RERadiation, r) = radiation.fuv, radiation.mdot
 

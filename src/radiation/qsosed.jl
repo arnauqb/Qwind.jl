@@ -1,6 +1,6 @@
 using RegionTrees, PyCall
 export ConstantFUV,
-    QsosedRadiation, from_quadtree, getfuv, compute_disk_temperature, getmdot, getridx
+    QsosedRadiation, from_quadtree, compute_disk_temperature, get_fuv_mdot
 struct ConstantFUV <: Flag end
 struct ConstantMdot <: Flag end
 
@@ -43,14 +43,15 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64)
 end
 function QsosedRadiation(bh::BlackHole, config::Dict)
     radiation_config = config["radiation"]
-    return QsosedRadiation(bh, radiation_config["nr"], radiation_config["f_x"])
+    return QsosedRadiation(bh, radiation_config["n_r"], radiation_config["f_x"])
 end
 
-getridx(radiation::QsosedRadiation, r) = searchsortednearest(radiation.disk_grid, r)
-getfuv(radiation::QsosedRadiation, flag::ConstantFUV) = radiation.fuv_grid[1]
-getfuv(radiation::QsosedRadiation, r) = radiation.fuv_grid[getridx(radiation, r)]
-getmdot(radiation::QsosedRadiation, flag::ConstantMdot) = radiation.mdot_grid[1]
-getmdot(radiation::QsosedRadiation, r) = radiation.mdot_grid[getridx(radiation, r)]
+function get_fuv_mdot(radiation::QsosedRadiation, r)
+    r_index = searchsortednearest(radiation.disk_grid, r)
+    f_uv = radiation.fuv_grid[r_index]
+    mdot = radiation.mdot_grid[r_index]
+    return f_uv, mdot
+end
 compute_radiation_constant(radiation::QsosedRadiation) = 6 / (8 * π * radiation.efficiency)
 
 compute_disk_temperature(radiation::QsosedRadiation, r) =

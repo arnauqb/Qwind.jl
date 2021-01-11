@@ -18,10 +18,11 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
     zmax_dense = Float64[]
     line_width_dense = Float64[]
     density_dense = Float64[]
+    @info "Getting dense solution from integrators..."
     for integrator in integrators
         t_range =
             10 .^ range(
-                max(log10(integrator.sol.t[1]), 1e-6),
+                max(log10(integrator.sol.t[1]), -6),
                 log10(integrator.sol.t[end - 2]),
                 length = n_timesteps,
             )
@@ -32,7 +33,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
         vz_dense = vcat(vz_dense, dense_solution[4, :])
         line_width_dense =
             vcat(line_width_dense, dense_solution[1, :] .* integrator.p.lwnorm)
-        v_t = @. sqrt(dense_solution[3, :] .^ 2 + dense_solution[4, :]^2)
+        v_t = @. sqrt(dense_solution[3, :]^2 + dense_solution[4, :]^2)
         density_dense = vcat(
             density_dense,
             compute_density.(
@@ -46,6 +47,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
         zmax_dense =
             vcat(zmax_dense, maximum(z_dense) .* ones(length(dense_solution[2, :])))
     end
+    @info "Done"
     return r_dense, z_dense, zmax_dense, line_width_dense, density_dense
 end
 

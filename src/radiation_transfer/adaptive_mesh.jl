@@ -14,6 +14,7 @@ struct AdaptiveMesh <: RadiativeTransfer
     void_density::Float64
     tau_max_std::Float64
     cell_min_size::Float64
+    n_timesteps::Int64
 end
 
 function AdaptiveMesh(
@@ -26,12 +27,11 @@ function AdaptiveMesh(
 )
     if integrators === nothing
         windkdtree = nothing
-        quadtree = nothing
     else
         windkdtree = create_wind_kdtree(integrators, n_timesteps)
-        quadtree =
-            create_and_refine_quadtree(windkdtree, radiation.Rg, tau_max_std, cell_min_size)
     end
+    quadtree =
+        create_and_refine_quadtree(windkdtree, radiation.Rg, tau_max_std, cell_min_size, void_density)
     return AdaptiveMesh(
         radiation,
         windkdtree,
@@ -39,22 +39,31 @@ function AdaptiveMesh(
         void_density,
         tau_max_std,
         cell_min_size,
+        n_timesteps
     )
 end
 
 function AdaptiveMesh(radiation::Radiation, config::Dict)
-    rt_config = config["radiative_transfer"]
-    return AdaptiveMesh(radiation, nothing)
+    rtc = config["radiative_transfer"]
+    return AdaptiveMesh(
+        radiation,
+        nothing,
+        void_density = rtc["void_density"],
+        tau_max_std = rtc["tau_max_std"],
+        cell_min_size = rtc["cell_min_size"],
+        n_timesteps = rtc["n_timesteps"],
+    )
 end
 
 function update_radiative_transfer(rt::AdaptiveMesh, integrators)
+    @info "Updating radiative transfer... "
     return AdaptiveMesh(
         rt.radiation,
         integrators,
-        rt.void_density,
-        rt.tau_max_std,
-        rt.cell_min_size,
-        rt.n_timesteps,
+        void_density=rt.void_density,
+        tau_max_std=rt.tau_max_std,
+        cell_min_size=rt.cell_min_size,
+        n_timesteps=rt.n_timesteps,
     )
 end
 
@@ -243,9 +252,10 @@ function radiation_force_integrand!(
 )
     nt = nt_rel_factors(adaptive_mesh.radiation, rd)
     tauuv = compute_uv_tau(adaptive_mesh.quadtree, rd, r, z, adaptive_mesh.radiation.Rg)
-    ridx = getridx(adaptive_mesh.radiation, rd)
-    fuv = adaptive_mesh.radiation.fuv_grid[ridx]
-    mdot = adaptive_mesh.radiation.mdot_grid[ridx]
+    fuv, mdot = get_fuv_mdot(adaptive_mesh.radiation, rd)
+    #ridx = getridx(adaptive_mesh.radiation, rd)
+    #fuv = adaptive_mesh.radiation.fuv_grid[ridx]
+    #mdot = adaptive_mesh.radiation.mdot_grid[ridx]
     r_projection = (r - rd * cos(phid))
     delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta_sq^2)
@@ -412,7 +422,7 @@ function compute_disc_radiation_field(
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
 )
-    println("r : $r,\t z : $z")
+    #println("r : $r,\t z : $z")
     res, err = integrate_radiation_force_integrand(
         radiative_transfer,
         r,
@@ -426,6 +436,6 @@ function compute_disc_radiation_field(
     )
     radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
     force = z * radiation_constant .* res
-    println("force $force")
+    #println("force $force")
     return force
 end

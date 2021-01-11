@@ -24,6 +24,7 @@ include("tables.jl")
 include("thermodynamics.jl")
 # radiation
 include("radiation/base.jl")
+include("radiation/disk.jl")
 include("radiation/qsosed.jl")
 include("radiation/risaliti_elvis.jl")
 # radiation transfer

@@ -18,13 +18,18 @@ function parse_data(integrators)
     return ret
 end
 
-function run_iterations(radiative_transfer, grid, initial_conditions, config)
+function run_iterations!(
+    iterations_dict,
+    radiative_transfer,
+    grid,
+    initial_conditions,
+    config,
+)
     save_path = config["integrator"]["save_path"]
     mkpath(save_path)
     # iterations
-    iterations_dict = Dict()
     n_iterations = config["integrator"]["n_iterations"]
-    for it in 1:n_iterations
+    for it = 1:n_iterations
         @info "Starting iteration $it of $n_iterations"
         iterations_dict[it] = Dict()
         integrators = initialize_integrators(
@@ -42,7 +47,6 @@ function run_iterations(radiative_transfer, grid, initial_conditions, config)
         output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
         CSV.write(output_path, df)
     end
-    return iterations_dict
 end
 
 
@@ -61,4 +65,6 @@ initial_conditions =
     @eval $(Symbol(config["initial_conditions"]["mode"]))(radiation, black_hole, config)
 
 
-iterations_dict = run_iterations(radiative_transfer, grid, initial_conditions, config)
+iterations_dict = Dict()
+iterations_dict =
+    run_iterations!(iterations_dict, radiative_transfer, grid, initial_conditions, config)

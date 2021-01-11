@@ -157,15 +157,20 @@ function refine_quadtree!(
 end
 
 function create_and_refine_quadtree(
-    windkdtree::WindKDTree,
+    windkdtree::Union{WindKDTree, Nothing},
     Rg,
     tau_max_std,
     cell_min_size,
     vacuum_density = 1e2,
 )
+    @info "Creating and refining quadtree..."
+    if windkdtree === nothing
+        return Cell(SVector(0,0), SVector(1,1), vacuum_density)
+    end
     rmax = maximum(windkdtree.r)
     zmax = maximum(windkdtree.z)
     quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
     refine_quadtree!(quadtree, windkdtree, Rg, tau_max_std, cell_min_size)
+    @info "Done"
     return quadtree
 end
