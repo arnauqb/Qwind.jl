@@ -71,7 +71,7 @@ end
 
 getz0(ic::CAKIC, r0) = ic.z0
 getn0(ic::CAKIC, r0) = cak_density(ic.radiation, ic.bh, r0, ic.K)
-getv0(ic::CAKIC, r0) = compute_thermal_velocity(compute_disk_temperature(ic.radiation, r0))
+getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
 
 const ALPHA = 0.6
 export cak_surface_mloss,
@@ -80,7 +80,7 @@ export cak_surface_mloss,
 "Nozzle function defined in Pereyra et al. (2004) (Paper I)"
 function cak_nozzle_function(radiation::QsosedRadiation, bh::BlackHole, z, r_0)
     x = z[1] / r_0
-    T = compute_disk_temperature(radiation, r_0)
+    T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(25e3) * C
     M = bh.M
     R0 = r_0 * bh.Rg
@@ -93,7 +93,7 @@ function cak_nozzle_function(radiation::QsosedRadiation, bh::BlackHole, z, r_0)
 end
 
 function cak_characteristic_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0, K = 0.03)
-    T = compute_disk_temperature(radiation, r_0)
+    T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(25e3) * C
     M = bh.M
     R0 = r_0 * bh.Rg
@@ -121,7 +121,7 @@ function cak_density(radiation::QsosedRadiation, bh::BlackHole, r_0, K = nothing
         K = 0.03
     end
     Sigma = cak_surface_mloss(radiation, bh, r_0, K)
-    T = compute_disk_temperature(radiation, r_0)
+    T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(T) * C
     return Sigma / b / M_P
 end

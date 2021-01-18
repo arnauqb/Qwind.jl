@@ -73,7 +73,8 @@ function initialize_integrator(
         DiscreteCallback(termination_condition, affect!, save_positions = (false, false))
     data = SavedData()
     saving_callback = SavingCallback(save, SavedValues(Float64, Float64))
-    stalling_cb = DiscreteCallback(is_stalled, stalling_affect!, save_positions=(false, false))
+    stalling_cb =
+        DiscreteCallback(is_stalled, stalling_affect!, save_positions = (false, false))
 
     params = Parameters(r0, z0, v0, n0, l0, lwnorm, grid, data)
     callback_set = CallbackSet(termination_callback, saving_callback, stalling_cb)
@@ -102,13 +103,13 @@ function initialize_integrators(
         linedelimiters = 10 .^ range(log10(rin), log10(rfi), length = nlines + 1)
         linesrange = []
         for i = 1:nlines
-            r0 = linedelimiters[i] + (linedelimiters[i+1] - linedelimiters[i]) / 2.0
+            r0 = linedelimiters[i] + (linedelimiters[i + 1] - linedelimiters[i]) / 2.0
             push!(linesrange, r0)
         end
         lineswidths = diff(linedelimiters)
     else
         dr = (rfi - rin) / nlines
-        linesrange = [rin + (i + 0.5) * dr for i = 0:nlines-1]
+        linesrange = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
         lineswidths = diff([linesrange; rfi + dr / 2])
     end
     integrators = Array{Sundials.IDAIntegrator}(undef, 0)
@@ -149,7 +150,9 @@ end
 
 function failed(integrator::Sundials.IDAIntegrator)
     sign_changes = countsignchanges(integrator.p.data.vz)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || (sign_changes >= 2)
+    integrator.u[1] < 0.0 ||
+        integrator.u[2] < integrator.p.grid.z_min ||
+        (sign_changes >= 2)
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -175,7 +178,9 @@ function is_stalled(u, t, integrator)
     if length(integrator.p.data.vz) <= min_length
         return false
     end
-    vz_std = std(integrator.p.data.vz[end-min_length:end]) / mean(integrator.p.data.vz[end-min_length:end])
+    vz_std =
+        std(integrator.p.data.vz[(end - min_length):end]) /
+        mean(integrator.p.data.vz[(end - min_length):end])
     abs(vz_std) < 0.05
 end
 
@@ -203,8 +208,6 @@ function save(u, t, integrator)
     push!(data.vr, u[3])
     push!(data.vz, u[4])
     push!(data.n, compute_density(integrator))
-    #println("---- time step -----")
-    #println(u)
     return 0.0
 end
 
@@ -266,16 +269,17 @@ function compute_radiation_acceleration(
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(
-        radiative_transfer,
-        r,
-        z,
-    )
+    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
     force_radiation = (1 + forcemultiplier) * exp(-tauuv) * disc_radiation_field
     return force_radiation
 end
 
-function compute_radiation_acceleration(radiative_transfer::AdaptiveMesh, du, u, p::Parameters)
+function compute_radiation_acceleration(
+    radiative_transfer::AdaptiveMesh,
+    du,
+    u,
+    p::Parameters,
+)
     r, z, vr, vz = u
     _, _, ar, az = du
     vt = sqrt(vr^2 + vz^2)
@@ -286,11 +290,7 @@ function compute_radiation_acceleration(radiative_transfer::AdaptiveMesh, du, u,
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(
-        radiative_transfer,
-        r,
-        z,
-    )
+    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
     force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end

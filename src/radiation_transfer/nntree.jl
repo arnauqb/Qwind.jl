@@ -66,7 +66,7 @@ function create_wind_kdtree(integrators::Array{Sundials.IDAIntegrator}, n_timest
 end
 
 function get_closest_points(windkdtree::WindKDTree, r, z, k = 1)
-    idcs, distances = knn(windkdtree.tree, [r, z], k)
+    idcs, distances = knn(windkdtree.tree, [r, z], k, true)
     rc = windkdtree.r[idcs]
     zc = windkdtree.z[idcs]
     zmaxc = windkdtree.zmax[idcs]
@@ -92,7 +92,7 @@ function get_density(windkdtree::WindKDTree, r, z)
     point = [r1, z1] + [r2 - r1, z2 - z1] / 2
     distance = evaluate(Euclidean(), point, [r, z])
     width = (width1 + width2) / 4 # 2 of average and 2 of half width
-    density = (n1 + n2) / 2
+    density = n1 #(n1 + n2) / 2
     if distance <= width #&& x < 0
         return density
     else

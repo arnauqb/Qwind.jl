@@ -1,5 +1,5 @@
 using Interpolations, Cubature
-export nt_rel_factors,
+export disk_nt_rel_factors,
     compute_force_multiplier,
     compute_ionization_parameter,
     compute_xray_opacity,
@@ -12,8 +12,8 @@ struct NoInterp <: InterpolationType end
 struct Interp <: InterpolationType end
 
 
-function nt_rel_factors(radiation::Radiation, radius)
-    return nt_rel_factors(radius, radiation.spin, radiation.isco)
+function disk_nt_rel_factors(radiation::Radiation, radius)
+    return disk_nt_rel_factors(radius, radiation.spin, radiation.isco)
 end
 """
 Ionization parameter ξ

@@ -212,7 +212,7 @@ function radiation_force_integrand!(
     r,
     z,
 )
-    nt = nt_rel_factors(radiative_transfer.radiation, rd)
+    nt = disk_nt_rel_factors(radiative_transfer.radiation, rd)
     r_projection = (r - rd * cos(phid))
     delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta_sq^2)

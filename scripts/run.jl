@@ -18,37 +18,6 @@ function parse_data(integrators)
     return ret
 end
 
-function run_iterations!(
-    iterations_dict,
-    radiative_transfer,
-    grid,
-    initial_conditions,
-    config,
-)
-    save_path = config["integrator"]["save_path"]
-    mkpath(save_path)
-    # iterations
-    n_iterations = config["integrator"]["n_iterations"]
-    for it = 1:n_iterations
-        @info "Starting iteration $it of $n_iterations"
-        iterations_dict[it] = Dict()
-        integrators = initialize_integrators(
-            radiative_transfer,
-            grid,
-            initial_conditions,
-            atol = config["integrator"]["atol"],
-            rtol = config["integrator"]["rtol"],
-        )
-        iterations_dict[it]["integrators"] = integrators
-        iterations_dict[it]["radiative_transfer"] = radiative_transfer
-        run_integrators!(integrators)
-        radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
-        df = parse_data(integrators)
-        output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
-        CSV.write(output_path, df)
-    end
-end
-
 
 config = YAML.load_file("scripts/config.yaml")
 
@@ -66,5 +35,27 @@ initial_conditions =
 
 
 iterations_dict = Dict()
-iterations_dict =
-    run_iterations!(iterations_dict, radiative_transfer, grid, initial_conditions, config)
+
+save_path = config["integrator"]["save_path"]
+mkpath(save_path)
+# iterations
+n_iterations = config["integrator"]["n_iterations"]
+for it = 1:n_iterations
+    @info "Starting iteration $it of $n_iterations"
+    iterations_dict[it] = Dict()
+    integrators = initialize_integrators(
+        radiative_transfer,
+        grid,
+        initial_conditions,
+        atol = config["integrator"]["atol"],
+        rtol = config["integrator"]["rtol"],
+    )
+    iterations_dict[it]["integrators"] = integrators
+    iterations_dict[it]["radiative_transfer"] = radiative_transfer
+    run_integrators!(integrators)
+    radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
+    df = parse_data(integrators)
+    output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
+    CSV.write(output_path, df)
+end
+

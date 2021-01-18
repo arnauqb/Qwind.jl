@@ -1,7 +1,7 @@
 black_hole:
   M: 1e8 # solar masses
   mdot: 0.5 # Eddington units
-  spin: 0.0 # spin parameter [0,1)
+  spin: 0.0 # spin parameter (-1,1)
 
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
@@ -11,7 +11,7 @@ radiation:
 radiative_transfer:
   mode: AdaptiveMesh
   void_density: 1e2
-  tau_max_std: 0.01
+  tau_max_std: 0.001
   cell_min_size: 0.001
   n_timesteps: 10000
 
@@ -23,16 +23,29 @@ grid:
   z_max: 10000
 
 initial_conditions:
-  mode: CAKIC 
-  launch_range: [10, 2000]
-  n_lines: 50
+  mode: UniformIC 
+  launch_range: [6, 2000]
+  n_lines: 60
   log_spaced: true
   z_0: 1.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.5
-  #n_0: 2e8 # cm^-3
-  #v_0: 5e7 # cm / s
+  n_0: 2e8 # cm^-3
+  v_0: 5e7 # cm / s
+
+
+  #initial_conditions:
+  #  mode: CAKIC 
+  #  launch_range: [6, 2000]
+  #  n_lines: 60
+  #  log_spaced: true
+  #  z_0: 1.0 # Rg
+  #  K: 0.03
+  #  alpha: 0.6
+  #  mu: 0.5
+  #  #n_0: 2e8 # cm^-3
+  #  #v_0: 5e7 # cm / s
 
 integrator:
   n_iterations: 3

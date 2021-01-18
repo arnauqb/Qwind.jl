@@ -38,4 +38,3 @@ end
     @test Qwind.create_quadtree(1, 2, 3, 4, vacuum_density = 1e3) ==
           Cell(SVector(1, 3), SVector(1, 1), 1e3)
 end
-

@@ -1,4 +1,3 @@
-# imports
 ##
 using DrWatson
 @quickactivate "Qwind"
@@ -18,15 +17,15 @@ black_hole = BlackHole(M, mdot, spin)
 
 # create radiation model
 ##
-fuv = 0.85
+#fuv = 0.85
 fx = 0.15
-radiation = RERadiation(black_hole, fuv, fx)
-#radiation = QsosedRadiation(black_hole, 300, fx)
+#radiation = RERadiation(black_hole, fuv, fx)
+radiation = QsosedRadiation(black_hole, 300, fx)
 
 # radiative transfer model
 shielding_density = 2e8
 rin = 50.0
-radiative_transfer = RERadiativeTransfer(radiation, shielding_density, rin, black_hole.Rg)
+radiative_transfer = RERadiativeTransfer(radiation, shielding_density, rin)
 
 # create simulation grid
 r_min = 0.0
@@ -46,7 +45,6 @@ initial_conditions = UniformIC(rin, rfi, nlines, z0, n0, v0, logspaced)
 
 
 ##
-# initialize itnegrators
 integrators = initialize_integrators(
     radiative_transfer,
     sim_grid,
@@ -60,7 +58,6 @@ iterations[0] = integrators
 
 iterations_dict = Dict(0 => integrators)
 ##
-# run integrators
 run_integrators!(integrators)
 
 # plot lines

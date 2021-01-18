@@ -30,8 +30,13 @@ function AdaptiveMesh(
     else
         windkdtree = create_wind_kdtree(integrators, n_timesteps)
     end
-    quadtree =
-        create_and_refine_quadtree(windkdtree, radiation.Rg, tau_max_std, cell_min_size, void_density)
+    quadtree = create_and_refine_quadtree(
+        windkdtree,
+        radiation.Rg,
+        tau_max_std,
+        cell_min_size,
+        void_density,
+    )
     return AdaptiveMesh(
         radiation,
         windkdtree,
@@ -39,7 +44,7 @@ function AdaptiveMesh(
         void_density,
         tau_max_std,
         cell_min_size,
-        n_timesteps
+        n_timesteps,
     )
 end
 
@@ -60,10 +65,10 @@ function update_radiative_transfer(rt::AdaptiveMesh, integrators)
     return AdaptiveMesh(
         rt.radiation,
         integrators,
-        void_density=rt.void_density,
-        tau_max_std=rt.tau_max_std,
-        cell_min_size=rt.cell_min_size,
-        n_timesteps=rt.n_timesteps,
+        void_density = rt.void_density,
+        tau_max_std = rt.tau_max_std,
+        cell_min_size = rt.cell_min_size,
+        n_timesteps = rt.n_timesteps,
     )
 end
 
@@ -153,9 +158,9 @@ function compute_xray_tau(quadtree::Cell, r, z, r0, z0, xray_luminosity, Rg)
             xray_luminosity,
             Rg,
         )
-        #if taux > 40
-        #    return 40.0
-        #end
+        if taux > 40
+            return 40.0
+        end
         currentpoint = intersection
         currentleaf = findleaf(quadtree, currentpoint)
         if currentleaf == previousleaf
@@ -175,7 +180,7 @@ function compute_xray_tau(quadtree::Cell, r, z, r0, z0, xray_luminosity, Rg)
         )
     end
     #push!(coords_list, point2)
-    return taux
+    return taux#, coords_list
 end
 
 compute_xray_tau(adaptive_mesh::RadiativeTransfer, r, z, r0 = 0, z0 = 0) = compute_xray_tau(
@@ -250,12 +255,9 @@ function radiation_force_integrand!(
     r,
     z,
 )
-    nt = nt_rel_factors(adaptive_mesh.radiation, rd)
+    nt = disk_nt_rel_factors(adaptive_mesh.radiation, rd)
     tauuv = compute_uv_tau(adaptive_mesh.quadtree, rd, r, z, adaptive_mesh.radiation.Rg)
     fuv, mdot = get_fuv_mdot(adaptive_mesh.radiation, rd)
-    #ridx = getridx(adaptive_mesh.radiation, rd)
-    #fuv = adaptive_mesh.radiation.fuv_grid[ridx]
-    #mdot = adaptive_mesh.radiation.mdot_grid[ridx]
     r_projection = (r - rd * cos(phid))
     delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta_sq^2)
@@ -403,6 +405,7 @@ function integrate_radiation_force_integrand(
         maxevals = maxevals,
     )
 end
+
 """
 Computes the disc radiation field at the point (r,z) by performing
 an integral over the disc.

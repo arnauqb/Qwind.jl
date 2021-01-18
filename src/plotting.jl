@@ -9,10 +9,10 @@ function plot_grid(
     depth,
     fig = nothing,
     ax = nothing;
-    xl = 0,
-    xh = 1000,
-    yl = 0,
-    yh = 1000,
+    xl = nothing,
+    xh = nothing,
+    yl = nothing,
+    yh = nothing,
 )
     if ax === nothing
         fig, ax = plt.subplots()
@@ -45,12 +45,17 @@ function plot_grid(
         y = v[2, [1, 2, 4, 3, 1]]
         ax.plot(x, y, color = "black", alpha = 0.1)
     end
-    ax.set_xlim(xl, xh)
     ax.set_xlabel("r [Rg]")
     ax.set_ylabel("z [Rg]")
-    ax.set_ylim(yl, yh)
+    if xl !== nothing 
+        ax.set_xlim(xl, xh)
+    end
+    if yl !== nothing 
+        ax.set_ylim(yl, yh)
+    end
     return fig, ax
 end
+
 #
 #
 function plot_streamlines(
@@ -65,7 +70,7 @@ function plot_streamlines(
     colorscheme = nothing,
 )
     if colorscheme === nothing
-        colorscheme_plot = colorschemes[:RdBu]
+        colorscheme_plot = colorschemes[:RdBu_9]
     else
         colorscheme_plot = colorschemes[Symbol(colorscheme)]
     end
@@ -90,41 +95,42 @@ function plot_streamlines(
     ax.set_ylim(yl, yh)
     return fig, ax
 end
-#
-#function plot_density(
-#    quadtree::Cell;
-#    xl = 0,
-#    xh = 5000,
-#    yl = 0,
-#    yh = 5000,
-#    grid = true,
-#    depth = 4,
-#    nr = 500,
-#    nz = 501,
-#    vmin = nothing,
-#    vmax = nothing,
-#    fig = nothing,
-#    ax = nothing,
-#)
-#    if ax === nothing
-#        fig, ax = plt.subplots()
-#    end
-#    grid_den = zeros(nr, nz)
-#    r_range = range(xl, stop = xh, length = nr)
-#    z_range = range(yl, stop = yh, length = nz)
-#    for (i, r) in enumerate(r_range[1:end-1])
-#        for (j, z) in enumerate(z_range[1:end-1])
-#            grid_den[i, j] = findleaf(quadtree, [r, z]).data
-#        end
-#    end
-#    cm = ax.pcolormesh(r_range, z_range, grid_den', norm = LogNorm())
-#    plt.colorbar(cm, ax = ax)
-#    ax.set_xlabel("r [Rg]")
-#    ax.set_ylabel("z [Rg]")
-#    ax.set_xlim(xl, xh)
-#    ax.set_ylim(yl, yh)
-#    return fig, ax
-#end
+
+function plot_density(
+    quadtree::Cell;
+    xl = 0,
+    xh = 5000,
+    yl = 0,
+    yh = 5000,
+    grid = true,
+    depth = 4,
+    nr = 500,
+    nz = 501,
+    vmin = nothing,
+    vmax = nothing,
+    fig = nothing,
+    ax = nothing,
+)
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
+    grid_den = zeros(nr, nz)
+    r_range = range(xl, stop = xh, length = nr)
+    z_range = range(yl, stop = yh, length = nz)
+    for (i, r) in enumerate(r_range[1:end-1])
+        for (j, z) in enumerate(z_range[1:end-1])
+            grid_den[i, j] = get_density(quadtree, r, z)
+        end
+    end
+    cm = ax.pcolormesh(r_range, z_range, grid_den', norm = LogNorm())
+    plt.colorbar(cm, ax = ax)
+    ax.set_xlabel("r [Rg]")
+    ax.set_ylabel("z [Rg]")
+    ax.set_xlim(xl, xh)
+    ax.set_ylim(yl, yh)
+    return fig, ax
+end
+
 #
 #function plot_density(
 #    windtree::WindTree;

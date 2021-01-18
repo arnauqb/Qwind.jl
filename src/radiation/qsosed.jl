@@ -1,6 +1,6 @@
 using RegionTrees, PyCall
 export ConstantFUV,
-    QsosedRadiation, from_quadtree, compute_disk_temperature, get_fuv_mdot
+    QsosedRadiation, from_quadtree, get_fuv_mdot
 struct ConstantFUV <: Flag end
 struct ConstantMdot <: Flag end
 
@@ -9,7 +9,6 @@ struct QsosedRadiation <: Radiation
     fuv_grid::Vector{Float64}
     mdot_grid::Vector{Float64}
     xray_luminosity::Float64
-    sed::PyObject
     efficiency::Float64
     spin::Float64
     isco::Float64
@@ -17,24 +16,21 @@ struct QsosedRadiation <: Radiation
 end
 
 function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64)
-    qsosed_python = pyimport("qsosed")
-    sed = qsosed_python.SED(M = bh.M / M_SUN, mdot = bh.mdot, number_bins_fractions = nr)
     rmin = bh.isco
     rmax = 1400
-    disk_grid, uv_fractions = sed.compute_uv_fractions(
-        inner_radius = rmin,
-        outer_radius = rmax,
-        return_all = false,
-        log_spaced = true,
-    )
+    disk_grid = 10 .^ range(log10(rmin), log10(rmax), length=nr)
+    uvf = uv_fractions(bh, disk_grid)
+    uvf = ones(len(uvf))
+    if any(isnan.(uvf))
+        error("UV fractions contain NaN, check radiation and boundaries")
+    end
     mdot_grid = bh.mdot .* ones(length(disk_grid))
     xray_luminosity = fx * compute_bolometric_luminosity(bh)
     return QsosedRadiation(
         disk_grid,
-        uv_fractions,
+        uvf,
         mdot_grid,
         xray_luminosity,
-        sed,
         bh.efficiency,
         bh.spin,
         bh.isco,
@@ -53,6 +49,3 @@ function get_fuv_mdot(radiation::QsosedRadiation, r)
     return f_uv, mdot
 end
 compute_radiation_constant(radiation::QsosedRadiation) = 6 / (8 * π * radiation.efficiency)
-
-compute_disk_temperature(radiation::QsosedRadiation, r) =
-    radiation.sed.disk_nt_temperature4(r)^(1.0 / 4.0)

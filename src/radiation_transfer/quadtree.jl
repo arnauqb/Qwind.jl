@@ -85,7 +85,8 @@ end
 struct QuadtreeRefinery <: AbstractRefinery
     windkdtree::WindKDTree
     Rg::Float64
-    tau_max_std::Float64
+    atol::Float64
+    rtol::Float64
     cell_min_size::Float64
 end
 
@@ -97,6 +98,16 @@ end
 
 getdata(cell, child_indices) = getdata(cell, child_indices, black_hole.Rg, windtree)
 
+function does_tau_need_refinement(taus; atol, rtol)
+    mean_tau = mean(taus)
+    std_tau = std(taus)
+    normalized_std = std_tau / mean_tau
+    if normalized_std > rtol && std_tau > atol
+        return true
+    else
+        return false
+    end
+end
 
 function needs_refinement(refinery::QuadtreeRefinery, cell)
     r, z = cell.boundary.origin + cell.boundary.widths / 2
@@ -118,11 +129,16 @@ function needs_refinement(refinery::QuadtreeRefinery, cell)
     end
     delta_d = getcellsize(cell)
     taus = densities .* delta_d * refinery.Rg * SIGMA_T
-    refine_condition = std(taus) > refinery.tau_max_std && delta_d > refinery.cell_min_size
+    #does_tau_vary = std(taus) > refinery.tau_max_std
+    #
+    does_tau_vary =
+        does_tau_need_refinement(taus, atol = refinery.atol, rtol = refinery.rtol) #(std(taus) / mean(taus)) > refinery.tau_max_std
+    is_cell_big_enough = delta_d > refinery.cell_min_size
+    refine_condition = does_tau_vary && is_cell_big_enough
     if !refine_condition
         cell.data = mean(densities)
     end
-    refine_condition
+    return refine_condition
 end
 
 function refine_data(refinery::QuadtreeRefinery, cell::Cell, indices)
@@ -142,35 +158,37 @@ function refine_data(refinery::QuadtreeRefinery, cell::Cell, indices)
             push!(densities, get_density(refinery.windkdtree, rp, zp))
         end
     end
-    mean(densities)
+    return mean(densities)
 end
 
 function refine_quadtree!(
     quadtree::Cell,
     windkdtree::WindKDTree,
     Rg,
-    tau_max_std,
+    atol,
+    rtol,
     cell_min_size,
 )
-    ref = QuadtreeRefinery(windkdtree, Rg, tau_max_std, cell_min_size)
+    ref = QuadtreeRefinery(windkdtree, Rg, atol, rtol, cell_min_size)
     adaptivesampling!(quadtree, ref)
 end
 
 function create_and_refine_quadtree(
-    windkdtree::Union{WindKDTree, Nothing},
+    windkdtree::Union{WindKDTree,Nothing};
     Rg,
-    tau_max_std,
+    atol,
+    rtol,
     cell_min_size,
     vacuum_density = 1e2,
 )
-    @info "Creating and refining quadtree..."
     if windkdtree === nothing
-        return Cell(SVector(0,0), SVector(1,1), vacuum_density)
+        return Cell(SVector(0, 0), SVector(1, 1), vacuum_density)
     end
     rmax = maximum(windkdtree.r)
     zmax = maximum(windkdtree.z)
     quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
-    refine_quadtree!(quadtree, windkdtree, Rg, tau_max_std, cell_min_size)
+    @info "Refining quadtree..."
+    refine_quadtree!(quadtree, windkdtree, Rg, atol, rtol, cell_min_size)
     @info "Done"
     return quadtree
 end

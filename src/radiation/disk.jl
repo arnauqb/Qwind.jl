@@ -10,7 +10,8 @@ export BlackBody,
     disk_nt_rel_factors,
     disk_flux,
     disk_temperature,
-    uv_fraction
+    uv_fraction,
+    uv_fractions
 
 struct BlackBody
     T::Float64
@@ -121,13 +122,23 @@ function disk_flux(bh::BlackHole, r)
     return 3 * G * bh.M * Mdot / (8 * π * (r * bh.Rg)^3) * NT_factors
 end
 
+"""
+Computes the temperature of the disk at a radius r (in units of Rg).
+"""
 function disk_temperature(bh::BlackHole, r)
     flux = disk_flux(bh, r)
     return (flux / SIGMA_SB)^(1/4)
 end
 
 function uv_fraction(bh::BlackHole, r)
+    if r <= bh.isco
+        return 0
+    end
     temperature = disk_temperature(bh, r)
     bb = BlackBody(temperature)
     return spectral_band_fraction(bb, UV_LOW_KEV, UV_HIGH_KEV)
+end
+
+function uv_fractions(bh::BlackHole, radius_range)
+    return uv_fraction.(Ref(bh), radius_range)
 end
