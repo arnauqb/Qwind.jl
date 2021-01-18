@@ -72,6 +72,9 @@ function get_closest_points(windkdtree::WindKDTree, r, z, k = 1)
     zmaxc = windkdtree.zmax[idcs]
     widthc = windkdtree.width[idcs]
     nc = windkdtree.n[idcs]
+    if k == 1
+        return (x->x[1]).([rc, zc, zmaxc, widthc, nc])
+    end
     return rc, zc, zmaxc, widthc, nc
 end
 
@@ -83,16 +86,28 @@ Then we compute the point halfway between them. If the distance to the point
 is smaller than the width of the line at those points, then it returns the mean
 density between the two points. Otherwise, it returns an exponential decay.
 """
+#function get_density(windkdtree::WindKDTree, r, z)
+#    (r1, r2), (z1, z2), (zmax1, zmax2), (width1, width2), (n1, n2) =
+#        get_closest_points(windkdtree, r, z, 2)
+#    if z > max(zmax1, zmax2)
+#        return 1e2
+#    end
+#    point = [r1, z1] + [r2 - r1, z2 - z1] / 2
+#    distance = evaluate(Euclidean(), point, [r, z])
+#    width = (width1 + width2) / 4 # 2 of average and 2 of half width
+#    density = n1 (n1 + n2) / 2
+#    if distance <= width #&& x < 0
+#        return density
+#    else
+#        return 1e2 #max(density * exp(-(distance - width)^2), 1e2)
+#    end
+#end
 function get_density(windkdtree::WindKDTree, r, z)
-    (r1, r2), (z1, z2), (zmax1, zmax2), (width1, width2), (n1, n2) =
-        get_closest_points(windkdtree, r, z, 2)
-    if z > max(zmax1, zmax2)
+    rc, zc, zmax, width, density = get_closest_points(windkdtree, r, z, 1)
+    if z > zmax
         return 1e2
     end
-    point = [r1, z1] + [r2 - r1, z2 - z1] / 2
-    distance = evaluate(Euclidean(), point, [r, z])
-    width = (width1 + width2) / 4 # 2 of average and 2 of half width
-    density = n1 #(n1 + n2) / 2
+    distance = evaluate(Euclidean(), [rc, zc], [r, z])
     if distance <= width #&& x < 0
         return density
     else

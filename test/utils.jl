@@ -4,7 +4,7 @@ constant_density(r, z) = 1e8 * ones(length(r))
 linear_density(r, z) = 1e8 .* (r + 2 * z)
 powerlaw_density_1(r, z) = 1e8 ./ (r + z)
 powerlaw_density_2(r, z) = 1e8 .* (r + z)
-exponential_density(r, z) = 1e8 .* exp.(-(r + z) / 100)
+exponential_density(r, z) = 1e8 .* exp.(-(r + z) / 20)
 density_functions = [
     constant_density,
     linear_density,
@@ -23,7 +23,7 @@ function create_test_quadtree(
     width_range=nothing,
 )
     bh = BlackHole(1e8 * M_SUN, 0.5, 0)
-    zmax = 1e6 * ones(length(r_range))
+    zmax = maximum(z_range) * ones(length(r_range))
     if width_range === nothing
         width_range = 300 .* ones(length(zmax))
     end

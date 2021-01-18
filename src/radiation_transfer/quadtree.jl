@@ -39,12 +39,29 @@ getrmin(cell::Cell) = cell.boundary.origin[1]
 getrmax(cell::Cell) = cell.boundary.origin[1] + cell.boundary.widths[1]
 getzmin(cell::Cell) = cell.boundary.origin[2]
 getzmax(cell::Cell) = cell.boundary.origin[2] + cell.boundary.widths[2]
+getcenter(cell::Cell) = cell.boundary.origin + cell.boundary.widths / 2
+function is_out(cell::Cell, r, z)
+    rmin, zmin = cell.boundary.origin
+    rmax, zmax = cell.boundary.origin + cell.boundary.widths
+    if r > rmax || z > zmax || r < rmin || z < zmin
+        return true
+    else
+        return false
+    end
+end
 function compute_cell_optical_thickness(cell::Cell, Rg)
     size = getcellsize(cell)
     return size * cell.data * SIGMA_T * Rg
 end
 getlimits(cell::Cell) = [getrmin(cell), getrmax(cell), getzmin(cell), getzmax(cell)]
 countleaves(quadtree::Cell) = length([leaf for leaf in allleaves(quadtree)])
+function get_density(cell::Cell, r, z)
+    if is_out(cell, r, z)
+        return 1e2
+    else
+        return findleaf(cell, [r,z]).data
+    end
+end
 get_density(cell::Cell, r, z) = findleaf(cell, [r, z]).data
 
 """
@@ -90,15 +107,16 @@ struct QuadtreeRefinery <: AbstractRefinery
     cell_min_size::Float64
 end
 
-function getdata(cell, child_indices, Rg, windtree)
-    r, z = quadtree.boundary.origin + quadtree.boundary.widths / 2
-    density = get_density_from_tree(windtree, r, z)
-    return density
-end
+#function getdata(cell, child_indices, Rg, windtree)
+#    r, z = quadtree.boundary.origin + quadtree.boundary.widths / 2
+#    density = get_density_from_tree(windtree, r, z)
+#    return density
+#end
 
-getdata(cell, child_indices) = getdata(cell, child_indices, black_hole.Rg, windtree)
+#getdata(cell, child_indices) = getdata(cell, child_indices, black_hole.Rg, windtree)
 
 function does_tau_need_refinement(taus; atol, rtol)
+    taus = filter(!isinf, (filter(!isnan, taus)))
     mean_tau = mean(taus)
     std_tau = std(taus)
     normalized_std = std_tau / mean_tau
@@ -184,8 +202,8 @@ function create_and_refine_quadtree(
     if windkdtree === nothing
         return Cell(SVector(0, 0), SVector(1, 1), vacuum_density)
     end
-    rmax = maximum(windkdtree.r)
-    zmax = maximum(windkdtree.z)
+    rmax = maximum(windkdtree.r) + maximum(windkdtree.width)
+    zmax = maximum(windkdtree.z) + maximum(windkdtree.width)
     quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
     @info "Refining quadtree..."
     refine_quadtree!(quadtree, windkdtree, Rg, atol, rtol, cell_min_size)
