@@ -20,7 +20,6 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64)
     rmax = 1400
     disk_grid = 10 .^ range(log10(rmin), log10(rmax), length=nr)
     uvf = uv_fractions(bh, disk_grid)
-    uvf = ones(len(uvf))
     if any(isnan.(uvf))
         error("UV fractions contain NaN, check radiation and boundaries")
     end

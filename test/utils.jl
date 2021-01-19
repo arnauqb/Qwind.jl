@@ -1,5 +1,3 @@
-export create_test_quadtree
-
 constant_density(r, z) = 1e8 * ones(length(r))
 linear_density(r, z) = 1e8 .* (r + 2 * z)
 powerlaw_density_1(r, z) = 1e8 ./ (r + z)
@@ -13,6 +11,21 @@ density_functions = [
     exponential_density,
 ]
 
+function create_test_bh()
+    bh = BlackHole(1e8 * M_SUN, 0.5, 0)
+    bh
+end
+
+function create_test_kdtree(density_function; r_range, z_range, width_range)
+    zmax = maximum(z_range) * ones(length(r_range))
+    if width_range === nothing
+        width_range = 300 .* ones(length(zmax))
+    end
+    density = density_function(r_range, z_range)
+    kdtree = create_wind_kdtree(r_range, z_range, zmax, width_range, density)
+    kdtree
+end
+
 function create_test_quadtree(
     density_function;
     r_range,
@@ -20,15 +33,15 @@ function create_test_quadtree(
     atol = 5e-4,
     rtol = 1e-3,
     cell_min_size = 1e-6,
-    width_range=nothing,
+    width_range = nothing,
 )
-    bh = BlackHole(1e8 * M_SUN, 0.5, 0)
-    zmax = maximum(z_range) * ones(length(r_range))
-    if width_range === nothing
-        width_range = 300 .* ones(length(zmax))
-    end
-    density = density_function(r_range, z_range)
-    kdtree = create_wind_kdtree(r_range, z_range, zmax, width_range, density)
+    kdtree = create_test_kdtree(
+        density_function,
+        r_range = r_range,
+        z_range = z_range,
+        width_range = width_range,
+    )
+    bh = create_test_bh()
     quadtree = create_and_refine_quadtree(
         kdtree,
         Rg = bh.Rg,
@@ -36,5 +49,5 @@ function create_test_quadtree(
         rtol = rtol,
         cell_min_size = cell_min_size,
     )
-    return quadtree, kdtree, bh
+    return quadtree
 end

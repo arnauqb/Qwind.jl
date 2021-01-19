@@ -62,7 +62,6 @@ function get_density(cell::Cell, r, z)
         return findleaf(cell, [r,z]).data
     end
 end
-get_density(cell::Cell, r, z) = findleaf(cell, [r, z]).data
 
 """
 Given a line defined by initialpoint and finalpoint, computes the intersection

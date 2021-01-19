@@ -11,8 +11,9 @@ struct AdaptiveMesh <: RadiativeTransfer
     radiation::Radiation
     windkdtree::Union{WindKDTree,Nothing}
     quadtree::Union{Cell,Nothing}
-    void_density::Float64
-    tau_max_std::Float64
+    vacuum_density::Float64
+    atol::Float64
+    rtol::Float64
     cell_min_size::Float64
     n_timesteps::Int64
 end
@@ -20,8 +21,9 @@ end
 function AdaptiveMesh(
     radiation::Radiation,
     integrators;
-    void_density = 1e2,
-    tau_max_std = 0.001,
+    vacuum_density= 1e2,
+    atol = 1e-4,
+    rtol = 1e-3,
     cell_min_size = 0.0001,
     n_timesteps = 10000,
 )
@@ -32,17 +34,19 @@ function AdaptiveMesh(
     end
     quadtree = create_and_refine_quadtree(
         windkdtree,
-        radiation.Rg,
-        tau_max_std,
-        cell_min_size,
-        void_density,
+        Rg=radiation.Rg,
+        atol=atol,
+        rtol=rtol,
+        cell_min_size=cell_min_size,
+        vacuum_density=vacuum_density,
     )
     return AdaptiveMesh(
         radiation,
         windkdtree,
         quadtree,
-        void_density,
-        tau_max_std,
+        vacuum_density,
+        atol,
+        rtol,
         cell_min_size,
         n_timesteps,
     )
@@ -53,8 +57,9 @@ function AdaptiveMesh(radiation::Radiation, config::Dict)
     return AdaptiveMesh(
         radiation,
         nothing,
-        void_density = rtc["void_density"],
-        tau_max_std = rtc["tau_max_std"],
+        vacuum_density = rtc["vacuum_density"],
+        atol = rtc["atol"],
+        rtol = rtc["rtol"],
         cell_min_size = rtc["cell_min_size"],
         n_timesteps = rtc["n_timesteps"],
     )
@@ -65,8 +70,9 @@ function update_radiative_transfer(rt::AdaptiveMesh, integrators)
     return AdaptiveMesh(
         rt.radiation,
         integrators,
-        void_density = rt.void_density,
-        tau_max_std = rt.tau_max_std,
+        vacuum_density = rt.vacuum_density,
+        atol = rt.atol,
+        rtol =rt.rtol,
         cell_min_size = rt.cell_min_size,
         n_timesteps = rt.n_timesteps,
     )
