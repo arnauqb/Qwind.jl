@@ -59,7 +59,7 @@ function get_density(cell::Cell, r, z)
     if is_out(cell, r, z)
         return 1e2
     else
-        return findleaf(cell, [r,z]).data
+        return findleaf(cell, [r, z]).data
     end
 end
 
@@ -106,14 +106,6 @@ struct QuadtreeRefinery <: AbstractRefinery
     cell_min_size::Float64
 end
 
-#function getdata(cell, child_indices, Rg, windtree)
-#    r, z = quadtree.boundary.origin + quadtree.boundary.widths / 2
-#    density = get_density_from_tree(windtree, r, z)
-#    return density
-#end
-
-#getdata(cell, child_indices) = getdata(cell, child_indices, black_hole.Rg, windtree)
-
 function does_tau_need_refinement(taus; atol, rtol)
     taus = filter(!isinf, (filter(!isnan, taus)))
     mean_tau = mean(taus)
@@ -126,30 +118,28 @@ function does_tau_need_refinement(taus; atol, rtol)
     end
 end
 
-function needs_refinement(refinery::QuadtreeRefinery, cell)
-    r, z = cell.boundary.origin + cell.boundary.widths / 2
+function sample_densities_in_cell(cell::Cell, windkdtree::WindKDTree, nr=10, nz=10)
     rs = range(
         cell.boundary.origin[1],
         cell.boundary.origin[1] + cell.boundary.widths[1],
-        length = 10,
+        length = nr,
     )
     zs = range(
         cell.boundary.origin[2],
         cell.boundary.origin[2] + cell.boundary.widths[2],
-        length = 10,
+        length = nz,
     )
-    densities = []
-    for rp in rs
-        for zp in zs
-            push!(densities, get_density(refinery.windkdtree, rp, zp))
-        end
-    end
+    points = hcat(rs, zs)'
+    densities = get_density_points(windkdtree, points)
+    return densities
+end
+
+function needs_refinement(refinery::QuadtreeRefinery, cell)
+    densities = sample_densities_in_cell(cell, refinery.windkdtree)
     delta_d = getcellsize(cell)
     taus = densities .* delta_d * refinery.Rg * SIGMA_T
-    #does_tau_vary = std(taus) > refinery.tau_max_std
-    #
     does_tau_vary =
-        does_tau_need_refinement(taus, atol = refinery.atol, rtol = refinery.rtol) #(std(taus) / mean(taus)) > refinery.tau_max_std
+        does_tau_need_refinement(taus, atol = refinery.atol, rtol = refinery.rtol) 
     is_cell_big_enough = delta_d > refinery.cell_min_size
     refine_condition = does_tau_vary && is_cell_big_enough
     if !refine_condition
@@ -159,23 +149,7 @@ function needs_refinement(refinery::QuadtreeRefinery, cell)
 end
 
 function refine_data(refinery::QuadtreeRefinery, cell::Cell, indices)
-    rs = range(
-        cell.boundary.origin[1],
-        cell.boundary.origin[1] + cell.boundary.widths[1],
-        length = 10,
-    )
-    zs = range(
-        cell.boundary.origin[2],
-        cell.boundary.origin[2] + cell.boundary.widths[2],
-        length = 10,
-    )
-    densities = []
-    for rp in rs
-        for zp in zs
-            push!(densities, get_density(refinery.windkdtree, rp, zp))
-        end
-    end
-    return mean(densities)
+    return mean(sample_densities_in_cell(cell, refinery.windkdtree))
 end
 
 function refine_quadtree!(
