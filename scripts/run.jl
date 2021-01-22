@@ -41,8 +41,8 @@ iterations_dict = Dict()
 save_path = config["integrator"]["save_path"]
 mkpath(save_path)
 # iterations
-n_iterations = 1 #config["integrator"]["n_iterations"]
-for it = 1:n_iterations
+n_iterations = config["integrator"]["n_iterations"]
+for it in 1:n_iterations
     @info "Starting iteration $it of $n_iterations"
     iterations_dict[it] = Dict()
     integrators = initialize_integrators(
@@ -55,10 +55,10 @@ for it = 1:n_iterations
     iterations_dict[it]["integrators"] = integrators
     iterations_dict[it]["radiative_transfer"] = radiative_transfer
     run_integrators!(integrators)
-    @profile radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
-    df = parse_data(integrators)
-    output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
-    CSV.write(output_path, df)
-    pprof()
+    @info "Integration of iteration $it ended!"
+    #@profile radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
+    radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
+    df = parse_data(integrators);
+    output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv";
+    CSV.write(output_path, df);
 end
-

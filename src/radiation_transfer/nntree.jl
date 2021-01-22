@@ -1,11 +1,17 @@
 using NearestNeighbors, Distances, Sundials
 export create_wind_kdtree,
-    get_density, WindKDTree, get_closest_points, get_closest_point, get_density_points
+    get_density,
+    WindKDTree,
+    get_closest_points,
+    get_closest_point,
+    get_density_points,
+    is_point_outside_wind
 
 struct WindKDTree
     r::Vector{Float64}
     z::Vector{Float64}
     zmax::Vector{Float64}
+    z0::Vector{Float64}
     width::Vector{Float64}
     n::Vector{Float64}
     tree::KDTree
@@ -17,16 +23,31 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
     vr_dense = Float64[]
     vz_dense = Float64[]
     zmax_dense = Float64[]
+    z0_dense = Float64[]
     line_width_dense = Float64[]
     density_dense = Float64[]
     @info "Getting dense solution from integrators..."
     for integrator in integrators
+        integration_time = unique(integrator.sol.t)
+        tmin = integration_time[2]
+        tmax = integration_time[end-1]
+        if tmax <= tmin
+            continue
+        end
         t_range =
             10 .^ range(
-                log10(integrator.sol.t[2]),
-                log10(integrator.sol.t[end - 2]),
+                log10(tmin),
+                log10(tmax),
                 length = n_timesteps,
             )
+        i = 1
+        while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
+            t_range = t_range[1:end-i]
+            i += 1
+        end
+        if length(t_range) == 0
+            continue
+        end
         dense_solution = integrator.sol(t_range)
         r_dense = vcat(r_dense, dense_solution[1, :])
         z_dense = vcat(z_dense, dense_solution[2, :])
@@ -45,35 +66,42 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
                 Ref(integrator.p),
             ),
         )
-        zmax_dense =
-            vcat(zmax_dense, maximum(z_dense) .* ones(length(dense_solution[2, :])))
+        zmax_dense = vcat(
+            zmax_dense,
+            maximum(dense_solution[2, :]) .* ones(length(dense_solution[2, :])),
+        )
+        z0_dense = vcat(
+            z0_dense,
+            dense_solution[2, 1] .* ones(length(dense_solution[2, :])),
+        )
     end
     @info "Done"
-    return r_dense, z_dense, zmax_dense, line_width_dense, density_dense
+    return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
 end
 
-function create_wind_kdtree(r, z, zmax, width, density)
+function create_wind_kdtree(r, z, zmax, z0, width, density)
     points = hcat(r, z)'
     points = convert(Array{Float64,2}, points)
     kdtree = KDTree(points)
-    wind_kdtree = WindKDTree(r, z, zmax, width, density, kdtree)
+    wind_kdtree = WindKDTree(r, z, zmax, z0, width, density, kdtree)
     return wind_kdtree
 end
 
 function create_wind_kdtree(integrators::Array{Sundials.IDAIntegrator}, n_timesteps = 10000)
-    r, z, zmax, width, density =
+    r, z, zmax, z0, width, density=
         get_dense_solution_from_integrators(integrators, n_timesteps)
-    return create_wind_kdtree(r, z, zmax, width, density)
+    return create_wind_kdtree(r, z, zmax, z0, width, density)
 end
 
 function get_closest_point(windkdtree::WindKDTree, r, z)
-    idcs, distances = nn(windkdtree.tree, [r, z])
+    idcs, distance = nn(windkdtree.tree, [r, z])
     rc = windkdtree.r[idcs]
     zc = windkdtree.z[idcs]
     zmaxc = windkdtree.zmax[idcs]
+    z0c = windkdtree.z0[idcs]
     widthc = windkdtree.width[idcs]
     nc = windkdtree.n[idcs]
-    return rc, zc, zmaxc, widthc, nc
+    return rc, zc, zmaxc, z0c, widthc, nc, distance
 end
 
 function get_closest_points(windkdtree::WindKDTree, points)
@@ -81,35 +109,37 @@ function get_closest_points(windkdtree::WindKDTree, points)
     rc = windkdtree.r[idcs]
     zc = windkdtree.z[idcs]
     zmaxc = windkdtree.zmax[idcs]
+    z0c = windkdtree.z0[idcs]
     widthc = windkdtree.width[idcs]
     nc = windkdtree.n[idcs]
-    return rc, zc, zmaxc, widthc, nc, distances
+    return rc, zc, zmaxc, z0c, widthc, nc, distances
 end
 
 
+function is_point_outside_wind(z, zmax, z0, distance, width)
+    if (z > zmax) || (distance > width) || (z < z0)
+        return true
+    else
+        return false
+    end
+end
+
 """
-Gets density at the point [r,z] using the windtree WindTree.
-We first get the two closest points belonging to a streamline to [r,z].
-Then we compute the point halfway between them. If the distance to the point
-is smaller than the width of the line at those points, then it returns the mean
-density between the two points. Otherwise, it returns an exponential decay.
 """
 function get_density(windkdtree::WindKDTree, r, z)
-    rc, zc, zmax, width, density = get_closest_point(windkdtree, r, z)
-    if z > zmax
+    rc, zc, zmax, z0, width, density, distance = get_closest_point(windkdtree, r, z)
+    if is_point_outside_wind(z, zmax, z0, distance, width)
         return 1e2
-    end
-    distance = evaluate(Euclidean(), [rc, zc], [r, z])
-    if distance <= width #&& x < 0
-        return density
     else
-        return 1e2 #max(density * exp(-(distance - width)^2), 1e2)
+        return density
     end
 end
 
+
 function get_density_points(windkdtree::WindKDTree, points)
-    rc, zc, zmax, width, density, distances = get_closest_points(windkdtree, points)
-    mask = (zc .> zmax) .* (distances .> width)
+    rc, zc, zmax, z0, width, density, distances = get_closest_points(windkdtree, points)
+    z = points[2, :]
+    mask = is_point_outside_wind.(z, zmax, z0, distances, width) #(z .> zmax) || (distances .> width)
     density[mask] .= 1e2
     density
 end

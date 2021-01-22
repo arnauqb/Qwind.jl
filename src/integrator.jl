@@ -13,7 +13,8 @@ export initialize_integrator,
     failed,
     Parameters,
     SavedData,
-    is_stalled
+    is_stalled,
+    escaped
 
 struct SavedData
     r::Vector{Float64}
@@ -131,7 +132,6 @@ end
 run_integrator!(integrator::Sundials.IDAIntegrator) = solve!(integrator)
 function run_integrators!(integrators::Vector)
     for (i, integrator) in enumerate(integrators)
-        #print("Running integrator $(@sprintf "%03d" i) of $(length(integrators))")
         @info "Running integrator $(@sprintf "%03d" i) of $(length(integrators))"
         run_integrator!(integrator)
     end
@@ -192,10 +192,13 @@ end
 
 function affect!(integrator)
     if escaped(integrator)
-        println(" \U1F4A8")
+        @info "Line escaped!"
+        #println(" \U1F4A8")
     elseif failed(integrator)
-        println(" \U1F4A5")
+        @info "Line failed!"
+        #println(" \U1F4A5")
     else
+        @info "Line stalled!"
         println(" \U2753")
     end
     terminate!(integrator)

@@ -81,7 +81,8 @@ function compute_cell_intersection(cell::Cell, currentpoint, initialpoint, final
     ri == rf ? lambda_r = Inf : lambda_r = (cell_r_boundary - r) / (rf - ri)
     zi == zf ? lambda_z = Inf : lambda_z = (cell_z_boundary - z) / (zf - zi)
     lambda = min(lambda_r, lambda_z)
-    intersection = [r, z] + lambda .* [rf - ri, zf - zi]
+    #intersection = [r, z] + lambda .* [rf - ri, zf - zi]
+    intersection = [r + lambda * (rf-ri), z + lambda * (zf - zi)]
     try
         @assert lambda >= 0.0
     catch
@@ -118,17 +119,22 @@ function does_tau_need_refinement(taus; atol, rtol)
     end
 end
 
-function sample_densities_in_cell(cell::Cell, windkdtree::WindKDTree, nr=10, nz=10)
+function sample_densities_in_cell(cell::Cell, windkdtree::WindKDTree, n=100)
     rs = range(
         cell.boundary.origin[1],
         cell.boundary.origin[1] + cell.boundary.widths[1],
-        length = nr,
+        length = n,
     )
-    zs = range(
-        cell.boundary.origin[2],
-        cell.boundary.origin[2] + cell.boundary.widths[2],
-        length = nz,
+    zs = 10 .^ range(
+        max(log10(cell.boundary.origin[2]), 1e-6),
+        log10(cell.boundary.origin[2] + cell.boundary.widths[2]),
+        length = n,
     )
+    #zs = range(
+    #    cell.boundary.origin[2],
+    #    cell.boundary.origin[2] + cell.boundary.widths[2],
+    #    length = n,
+    #)
     points = hcat(rs, zs)'
     densities = get_density_points(windkdtree, points)
     return densities
@@ -176,7 +182,7 @@ function create_and_refine_quadtree(
         return Cell(SVector(0, 0), SVector(1, 1), vacuum_density)
     end
     rmax = maximum(windkdtree.r) + maximum(windkdtree.width)
-    zmax = maximum(windkdtree.z) + maximum(windkdtree.width)
+    zmax = maximum(windkdtree.z) #+ maximum(windkdtree.width)
     quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
     @info "Refining quadtree..."
     refine_quadtree!(quadtree, windkdtree, Rg, atol, rtol, cell_min_size)

@@ -2,7 +2,13 @@ using PyPlot
 LogNorm = matplotlib.colors.LogNorm
 using ColorSchemes
 using ColorSchemes: colorschemes
-export plot_grid, plot_cell, plot_streamlines, plot_density, plot_taux_grid, plot_density_grid_nn, plot_density_grid
+export plot_grid,
+    plot_cell,
+    plot_streamlines,
+    plot_density,
+    plot_taux_grid,
+    plot_density_grid_nn,
+    plot_density_grid
 
 function plot_grid(
     quadtree::Cell,
@@ -47,17 +53,15 @@ function plot_grid(
     end
     ax.set_xlabel("r [Rg]")
     ax.set_ylabel("z [Rg]")
-    if xl !== nothing 
+    if xl !== nothing
         ax.set_xlim(xl, xh)
     end
-    if yl !== nothing 
+    if yl !== nothing
         ax.set_ylim(yl, yh)
     end
     return fig, ax
 end
 
-#
-#
 function plot_streamlines(
     integrators,
     fig = nothing,
@@ -67,7 +71,9 @@ function plot_streamlines(
     xh = 2000,
     yl = 0,
     yh = 2000,
+    linewidth=1,
     colorscheme = nothing,
+    color = nothing, 
 )
     if colorscheme === nothing
         colorscheme_plot = colorschemes[:RdBu_9]
@@ -78,15 +84,20 @@ function plot_streamlines(
         fig, ax = plt.subplots()
     end
     for (i, integrator) in enumerate(integrators)
-        color = get(colorscheme_plot, i / length(integrators))
-        color = [color.r, color.g, color.b]
+        if color === nothing
+            color_toplot = get(colorscheme_plot, i / length(integrators))
+            color_toplot = [color_toplot.r, color_toplot.g, color_toplot.b]
+        else
+            color_toplot = color
+        end
         ax.plot(
             integrator.p.data.r,
             integrator.p.data.z,
             "o-",
-            color = color,
+            color = color_toplot,
             alpha = alpha,
-            markersize = 0.2,
+            markersize = 1,
+            linewidth=linewidth,
         )
     end
     ax.set_xlabel("r [Rg]")
@@ -117,8 +128,8 @@ function plot_density(
     grid_den = zeros(nr, nz)
     r_range = range(xl, stop = xh, length = nr)
     z_range = range(yl, stop = yh, length = nz)
-    for (i, r) in enumerate(r_range[1:end-1])
-        for (j, z) in enumerate(z_range[1:end-1])
+    for (i, r) in enumerate(r_range[1:(end - 1)])
+        for (j, z) in enumerate(z_range[1:(end - 1)])
             grid_den[i, j] = get_density(quadtree, r, z)
         end
     end
@@ -215,22 +226,21 @@ function plot_density_grid_nn(
     vmin = nothing,
     vmax = nothing,
     fig = nothing,
-    ax = nothing
+    ax = nothing,
 )
-    if fig===nothing || ax ===nothing
+    if fig === nothing || ax === nothing
         fig, ax = plt.subplots()
     end
     grid = zeros(Float64, nr, nz)
     r_range = range(xl, stop = xh, length = nr)
     z_range = range(yl, stop = yh, length = nz)
-    for (i, r) in enumerate(r_range[1:end-1])
-        for (j, z) in enumerate(z_range[1:end-1])
-            grid[i, j] =
-                getdensity(windkdtree, r, z)
+    for (i, r) in enumerate(r_range[1:(end - 1)])
+        for (j, z) in enumerate(z_range[1:(end - 1)])
+            grid[i, j] = get_density(windkdtree, r, z)
         end
     end
-    cm = ax.pcolormesh(r_range, z_range, grid', norm=LogNorm())
-    plt.colorbar(cm, ax=ax)
+    cm = ax.pcolormesh(r_range, z_range, grid', norm = LogNorm(vmin = vmin, vmax = vmax))
+    plt.colorbar(cm, ax = ax)
     ax.set_xlabel("r [Rg]")
     ax.set_ylabel("z [Rg]")
     ax.set_xlim(xl, xh)
@@ -250,22 +260,21 @@ function plot_density_grid(
     vmin = nothing,
     vmax = nothing,
     fig = nothing,
-    ax = nothing
+    ax = nothing,
 )
-    if fig===nothing || ax ===nothing
+    if fig === nothing || ax === nothing
         fig, ax = plt.subplots()
     end
     grid = zeros(Float64, nr, nz)
     r_range = range(xl, stop = xh, length = nr)
     z_range = range(yl, stop = yh, length = nz)
-    for (i, r) in enumerate(r_range[1:end-1])
-        for (j, z) in enumerate(z_range[1:end-1])
-            grid[i, j] =
-                getdensity(quadtree, r, z)
+    for (i, r) in enumerate(r_range[1:(end - 1)])
+        for (j, z) in enumerate(z_range[1:(end - 1)])
+            grid[i, j] = get_density(quadtree, r, z)
         end
     end
-    cm = ax.pcolormesh(r_range, z_range, grid', norm=LogNorm())
-    plt.colorbar(cm, ax=ax)
+    cm = ax.pcolormesh(r_range, z_range, grid', norm = LogNorm())
+    plt.colorbar(cm, ax = ax)
     ax.set_xlabel("r [Rg]")
     ax.set_ylabel("z [Rg]")
     ax.set_xlim(xl, xh)
