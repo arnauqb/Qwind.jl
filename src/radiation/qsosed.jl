@@ -1,8 +1,5 @@
 using RegionTrees, PyCall
-export ConstantFUV,
     QsosedRadiation, from_quadtree, get_fuv_mdot
-struct ConstantFUV <: Flag end
-struct ConstantMdot <: Flag end
 
 struct QsosedRadiation <: Radiation
     disk_grid::Vector{Float64}

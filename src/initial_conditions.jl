@@ -2,7 +2,6 @@ using Roots
 using Optim: optimize, Brent
 export InitialConditions,
     UniformIC, CAKIC, getz0, getrin, getrfi, getn0, getv0, getnlines, getl0
-abstract type InitialConditions end
 
 getl0(ic::InitialConditions, r) = sqrt(r)
 getrin(ic::InitialConditions) = ic.rin

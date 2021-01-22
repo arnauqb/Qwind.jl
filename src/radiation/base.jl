@@ -3,13 +3,8 @@ export disk_nt_rel_factors,
     compute_force_multiplier,
     compute_ionization_parameter,
     compute_xray_opacity,
-    Interp,
-    NoInterp,
     integrate_radiation_force_integrand
 
-abstract type InterpolationType <: Flag end
-struct NoInterp <: InterpolationType end
-struct Interp <: InterpolationType end
 
 
 function disk_nt_rel_factors(radiation::Radiation, radius)
@@ -62,11 +57,11 @@ force_multiplier_k_log_interpolator = extrapolate(
     ),
     Flat(),
 )
-compute_force_multiplier_k(ionization_parameter, mode::Interp) =
+compute_force_multiplier_k(ionization_parameter, mode::FMInterp) =
     force_multiplier_k_log_interpolator(log10(ionization_parameter))
 compute_force_multiplier_k(ionization_parameter) =
-    compute_force_multiplier_k(ionization_parameter, Interp())
-function compute_force_multiplier_k(ionization_parameter, mode::NoInterp)
+    compute_force_multiplier_k(ionization_parameter, FMInterp())
+function compute_force_multiplier_k(ionization_parameter, mode::FMNoInterp)
     k = 0.03 + 0.385 * exp(-1.4 * ionization_parameter^0.6)
     return k
 end
@@ -83,12 +78,12 @@ force_multiplier_eta_log_interpolator = extrapolate(
     ),
     Flat(),
 )
-compute_force_multiplier_eta(ionization_parameter, mode::Interp) =
+compute_force_multiplier_eta(ionization_parameter, mode::FMInterp) =
     10 .^ force_multiplier_eta_log_interpolator(log10(ionization_parameter))
 compute_force_multiplier_eta(ionization_parameter) =
-    compute_force_multiplier_eta(ionization_parameter, Interp())
+    compute_force_multiplier_eta(ionization_parameter, FMInterp())
 
-function compute_force_multiplier_eta(ionization_parameter, mode::NoInterp)
+function compute_force_multiplier_eta(ionization_parameter, mode::FMNoInterp)
     if (log10(ionization_parameter) < 0.5)
         aux = 6.9 * exp(0.16 * ionization_parameter^0.4)
         eta_max = 10^aux
@@ -115,7 +110,7 @@ Computes the analytical approximation for the force multiplier,
 from Stevens and Kallman 1990. Note that we modify it slightly to avoid
 numerical overflow.
 """
-function compute_force_multiplier(t, ionization_parameter, mode::InterpolationType)
+function compute_force_multiplier(t, ionization_parameter, mode::FMInterpolationType)
     @assert t >= 0
     @assert ionization_parameter >= 0
     ALPHA = 0.6
@@ -134,5 +129,5 @@ function compute_force_multiplier(t, ionization_parameter, mode::InterpolationTy
 end
 
 compute_force_multiplier(t, ionization_parameter) =
-    compute_force_multiplier(t, ionization_parameter, Interp())
+    compute_force_multiplier(t, ionization_parameter, FMInterp())
 
