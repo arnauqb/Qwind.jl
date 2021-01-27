@@ -1,6 +1,6 @@
-export searchsortednearest, countsignchanges
+export searchsorted_nearest, searchsorted_first, countsignchanges, remove_close_elements
 
-function searchsortednearest(a,x)
+function searchsorted_nearest(a,x)
    idx = searchsortedfirst(a,x)
    if (idx==1); return idx; end
    if (idx>length(a)); return length(a); end
@@ -10,6 +10,14 @@ function searchsortednearest(a,x)
    else
       return idx-1
    end
+end
+
+function searchsorted_first(a,x, direction=1)
+   idx = searchsortedfirst(a,x)
+   if (idx>length(a)); return length(a); end
+   if a[idx] == x; return idx; end
+   if (idx==1); return 1; end
+   return idx - (direction + 1) / 2
 end
 
 function countsignchanges(array::Vector{Float64})
@@ -25,4 +33,24 @@ function countsignchanges(array::Vector{Float64})
       end
    end
    return counter
+end
+
+function remove_close_elements(args...; digits=4)
+    ret = [[array[1] for array in args]]
+    ret = hcat(ret...)
+    for i in 2:length(args[1])
+        noinsert = 0
+        toinsert = zeros(length(args))
+        for (j, array) in enumerate(args)
+            element = trunc(array[i], digits=digits)
+            if element in ret[j,:]
+                noinsert += 1
+            end
+            toinsert[j] = element
+        end
+        if noinsert < length(args)
+            ret = hcat(ret, toinsert)
+        end
+    end
+    return [ret[i,:] for i in 1:length(args)]
 end

@@ -100,7 +100,7 @@ end
 # Quadtree refinement
 
 struct QuadtreeRefinery <: AbstractRefinery
-    windkdtree::WindKDTree
+    density_interpolator::DensityInterpolator
     Rg::Float64
     atol::Float64
     rtol::Float64
@@ -119,29 +119,29 @@ function does_tau_need_refinement(taus; atol, rtol)
     end
 end
 
-function sample_densities_in_cell(cell::Cell, windkdtree::WindKDTree, n=100)
+function sample_densities_in_cell(cell::Cell, density_interpolator::DensityInterpolator, n=250)
     rs = range(
         cell.boundary.origin[1],
         cell.boundary.origin[1] + cell.boundary.widths[1],
         length = n,
     )
-    zs = 10 .^ range(
-        max(log10(cell.boundary.origin[2]), 1e-6),
-        log10(cell.boundary.origin[2] + cell.boundary.widths[2]),
-        length = n,
-    )
-    #zs = range(
-    #    cell.boundary.origin[2],
-    #    cell.boundary.origin[2] + cell.boundary.widths[2],
+    #zs = 10 .^ range(
+    #    max(log10(cell.boundary.origin[2]), 1e-6),
+    #    log10(cell.boundary.origin[2] + cell.boundary.widths[2]),
     #    length = n,
     #)
+    zs = range(
+        cell.boundary.origin[2],
+        cell.boundary.origin[2] + cell.boundary.widths[2],
+        length = n,
+    )
     points = hcat(rs, zs)'
-    densities = get_density_points(windkdtree, points)
+    densities = get_density_points(density_interpolator, points)
     return densities
 end
 
 function needs_refinement(refinery::QuadtreeRefinery, cell)
-    densities = sample_densities_in_cell(cell, refinery.windkdtree)
+    densities = sample_densities_in_cell(cell, refinery.density_interpolator)
     delta_d = getcellsize(cell)
     taus = densities .* delta_d * refinery.Rg * SIGMA_T
     does_tau_vary =
@@ -155,37 +155,37 @@ function needs_refinement(refinery::QuadtreeRefinery, cell)
 end
 
 function refine_data(refinery::QuadtreeRefinery, cell::Cell, indices)
-    return mean(sample_densities_in_cell(cell, refinery.windkdtree))
+    return mean(sample_densities_in_cell(cell, refinery.density_interpolator))
 end
 
 function refine_quadtree!(
     quadtree::Cell,
-    windkdtree::WindKDTree,
+    density_interpolator::DensityInterpolator,
     Rg,
     atol,
     rtol,
     cell_min_size,
 )
-    ref = QuadtreeRefinery(windkdtree, Rg, atol, rtol, cell_min_size)
+    ref = QuadtreeRefinery(density_interpolator, Rg, atol, rtol, cell_min_size)
     adaptivesampling!(quadtree, ref)
 end
 
 function create_and_refine_quadtree(
-    windkdtree::Union{WindKDTree,Nothing};
+    density_interpolator::Union{DensityInterpolator, Nothing};
     Rg,
     atol,
     rtol,
     cell_min_size,
     vacuum_density = 1e2,
 )
-    if windkdtree === nothing
+    if density_interpolator === nothing
         return Cell(SVector(0, 0), SVector(1, 1), vacuum_density)
     end
-    rmax = maximum(windkdtree.r) + maximum(windkdtree.width)
-    zmax = maximum(windkdtree.z) #+ maximum(windkdtree.width)
+    rmax = r_max(density_interpolator)
+    zmax = z_max(density_interpolator)
     quadtree = create_quadtree(0.0, rmax, 0.0, zmax, vacuum_density = vacuum_density)
     @info "Refining quadtree..."
-    refine_quadtree!(quadtree, windkdtree, Rg, atol, rtol, cell_min_size)
+    refine_quadtree!(quadtree, density_interpolator, Rg, atol, rtol, cell_min_size)
     @info "Done"
     return quadtree
 end

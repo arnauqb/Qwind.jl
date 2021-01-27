@@ -1,12 +1,8 @@
-export AdaptiveMesh,
-    compute_xray_tau,
-    compute_uv_tau,
-    compute_disc_radiation_field,
-    update_radiative_transfer
+export AdaptiveMesh, compute_xray_tau, compute_uv_tau, update_radiative_transfer
 
 struct AdaptiveMesh <: RadiativeTransfer
     radiation::Radiation
-    windkdtree::Union{WindKDTree,Nothing}
+    windkdtree::Union{KDTree,Nothing}
     quadtree::Union{Cell,Nothing}
     vacuum_density::Float64
     atol::Float64
@@ -117,13 +113,13 @@ compute_xray_tau_leaf(adaptive_mesh::AdaptiveMesh, leaf::Cell, point, intersecti
 function compute_xray_tau(quadtree::Cell, r, z, r0, z0, xray_luminosity, Rg)
     z = max(z, getzmin(quadtree))
     point1 = [r0, z0]
-    coords_list = [point1]
+    #coords_list = [point1]
     point1leaf = findleaf(quadtree, point1)
     point2 = [r, z]
     point2leaf = findleaf(quadtree, point2)
     taux = 0.0
     if point1leaf == point2leaf
-        push!(coords_list, point2)
+        #push!(coords_list, point2)
         taux = compute_xray_tau_leaf(
             quadtree,
             point1leaf,
@@ -146,12 +142,12 @@ function compute_xray_tau(quadtree::Cell, r, z, r0, z0, xray_luminosity, Rg)
         Rg,
     )
     currentpoint = intersection
-    push!(coords_list, intersection)
+    #push!(coords_list, intersection)
     currentleaf = findleaf(quadtree, currentpoint)
     previousleaf = copy(currentleaf)
     while currentleaf != point2leaf
         intersection = compute_cell_intersection(currentleaf, currentpoint, point1, point2)
-        push!(coords_list, intersection)
+        #push!(coords_list, intersection)
         taux += compute_xray_tau_leaf(
             quadtree,
             currentleaf,
@@ -182,11 +178,11 @@ function compute_xray_tau(quadtree::Cell, r, z, r0, z0, xray_luminosity, Rg)
             Rg,
         )
     end
-    push!(coords_list, point2)
-    return taux, coords_list
+    #push!(coords_list, point2)
+    return taux#, coords_list
 end
 
-compute_xray_tau(adaptive_mesh::RadiativeTransfer, r, z, r0 = 0, z0 = 0) = compute_xray_tau(
+compute_xray_tau(adaptive_mesh::AdaptiveMesh, r, z, r0 = 0, z0 = 0) = compute_xray_tau(
     adaptive_mesh.quadtree,
     r,
     z,
@@ -246,201 +242,5 @@ function compute_uv_tau(quadtree::Cell, rd, r, z, Rg, maxtau = 50, z0 = 0.0)
     return tauuv
 end
 
-"""
-Radiation force integrand for the RE model.
-"""
-function radiation_force_integrand!(
-    adaptive_mesh::AdaptiveMesh,
-    integration_type::IntegrationFromCenter,
-    v,
-    rd,
-    phid,
-    r,
-    z,
-)
-    nt = disk_nt_rel_factors(adaptive_mesh.radiation, rd)
-    tauuv = compute_uv_tau(adaptive_mesh.quadtree, rd, r, z, adaptive_mesh.radiation.Rg)
-    fuv, mdot = get_fuv_mdot(adaptive_mesh.radiation, rd)
-    r_projection = (r - rd * cos(phid))
-    delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
-    common_projection = 1.0 / (rd^2 * delta_sq^2)
-    v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z]
-end
-
-function radiation_force_integrand!(
-    adaptive_mesh::AdaptiveMesh,
-    integration_type::IntegrationFromStreamline,
-    v,
-    p,
-    psi,
-    r,
-    z,
-)
-    cosψ = cos(psi)
-    rd = sqrt(r^2 + p^2 - 2 * p * r * cosψ)
-    if rd <= 6.0 || rd > 1600.0
-        v[1] = 0.0
-        v[2] = 0.0
-        return
-    end
-    nt = disk_nt_rel_factors(adaptive_mesh.radiation, rd)
-    fuv, mdot = get_fuv_mdot(adaptive_mesh.radiation, rd)
-    delta2 = p^2 + z^2
-    tauuv = compute_uv_tau(
-        adaptive_mesh.quadtree,
-        rd,
-        r,
-        z,
-        adaptive_mesh.radiation.Rg,
-    )
-    tauuv = tauuv / sqrt((r - rd)^2 + z^2) * sqrt(delta2)
-    common_part = nt * mdot * fuv * p / delta2^2 / rd^3 * exp(-tauuv)
-    v[1] = common_part * p * cosψ
-    v[2] = common_part
-end
-
-#function integrate_fromstreamline(
-#    r,
-#    z,
-#    wind::WindStruct;
-#    include_tau_uv = true,
-#    maxevals = 0,
-#)
-#    rgsigma = wind.bh.R_g * SIGMA_T
-#    maxtau = 20 / rgsigma
-#    r_max = wind.config["disk"]["outer_radius"]
-#    xmin = (0.0, 0.0)
-#    #xmax = (r+r_max, pi)
-#    #xmax = (r+r_max, pi)#
-#    xmax = (500, pi)#(min(max(10, z * 100), 1000), pi)
-#    if include_tau_uv
-#        (val, err) = hcubature(
-#            2,
-#            (x, v) -> integrate_fromstreamline_kernel(
-#                v,
-#                x[1],
-#                x[2],
-#                r,
-#                z,
-#                wind,
-#                r_max,
-#                rgsigma,
-#                maxtau,
-#            ),
-#            xmin,
-#            xmax,
-#            reltol = wind.config["radiation"]["integral_rtol"],
-#            abstol = 0, #abs(maximum(grav)/100),
-#            maxevals = maxevals,
-#            error_norm = Cubature.L1,
-#        )
-#    else
-#        (val, err) = hcubature(
-#            2,
-#            (x, v) -> integrate_fromstreamline_notau_kernel(
-#                v,
-#                x[1],
-#                x[2],
-#                r,
-#                z,
-#                wind,
-#                r_max,
-#            ),
-#            xmin,
-#            xmax,
-#            reltol = wind.config["radiation"]["integral_rtol"],
-#            abstol = 0.0,
-#            maxevals = maxevals,
-#            error_norm = Cubature.L1,
-#        )
-#    end
-#    return [2 * z, 2 * z^2] .* val
-#end
-
-
-
-"""
-Integrates the radiation acceleration integrand on the disc.
-
-# Parameters
-- r : radial coordinate [Rg]
-- z : height coordinate [Rg]
--
-"""
-function integrate_radiation_force_integrand(
-    radiative_transfer::AdaptiveMesh,
-    r,
-    z,
-    rmin,
-    rmax = 1600;
-    phi_min = 0.0,
-    phi_max = π,
-    atol = 0,
-    rtol = 1e-4,
-    norm = Cubature.INDIVIDUAL,
-    maxevals = 50000,
-    zmax_fromstreamline = 1e-4,
-)
-    if z < zmax_fromstreamline
-        return [0.0, 0.0], [0.0, 0.0]
-        #integration_type = IntegrationFromStreamline()
-    else
-        integration_type = IntegrationFromCenter()
-    end
-    f(x, v) = radiation_force_integrand!(
-        radiative_transfer,
-        integration_type,
-        v,
-        x[1],
-        x[2],
-        r,
-        z,
-    )
-    return hcubature(
-        2,
-        f,
-        (rmin, phi_min),
-        (rmax, phi_max),
-        abstol = atol,
-        reltol = rtol,
-        error_norm = norm,
-        maxevals = maxevals,
-    )
-end
-
-"""
-Computes the disc radiation field at the point (r,z) by performing
-an integral over the disc.
-
-# Parameters
-- r: radial coordinate [Rg]
-- z: height coordinate [Rg]
-- radiative_efficiency: accretion radiative efficiency
-"""
-function compute_disc_radiation_field(
-    radiative_transfer::AdaptiveMesh,
-    r,
-    z;
-    rmax = 1600,
-    atol = 0,
-    rtol = 5e-3,
-    norm = Cubature.INDIVIDUAL,
-    maxevals = 10000,
-)
-    #println("r : $r,\t z : $z")
-    res, err = integrate_radiation_force_integrand(
-        radiative_transfer,
-        r,
-        z,
-        radiative_transfer.radiation.isco,
-        rmax,
-        atol = atol,
-        rtol = rtol,
-        norm = norm,
-        maxevals = maxevals,
-    )
-    radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
-    force = z * radiation_constant .* res
-    #println("force $force")
-    return force
-end
+compute_uv_tau(rt::AdaptiveMesh, rd, r, z, maxtau = 50, z0 = 0.0) =
+    compute_uv_tau(rt.quadtree, rd, r, z, rt.radiation.Rg, maxtau, z0)

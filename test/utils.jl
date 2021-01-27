@@ -51,3 +51,19 @@ function create_test_quadtree(
     )
     return quadtree
 end
+
+unzip(a) = map(x->getfield.(a, x), fieldnames(eltype(a)))
+
+function remove_close_elements(args...; digits=4)
+    ret = [array[1] for array in args]
+    for i in 2:length(args[1])
+        for (j, array) in enumerate(args)
+            element = trunc(array[i], digits=digits)
+            if ret[i-1, j] == element 
+                continue
+            else
+                ret[i, j] = element
+            end
+        end
+    end
+end

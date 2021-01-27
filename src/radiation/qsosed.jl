@@ -1,5 +1,4 @@
-using RegionTrees, PyCall
-    QsosedRadiation, from_quadtree, get_fuv_mdot
+export QsosedRadiation, from_quadtree, get_fuv_mdot
 
 struct QsosedRadiation <: Radiation
     disk_grid::Vector{Float64}
@@ -39,7 +38,7 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
 end
 
 function get_fuv_mdot(radiation::QsosedRadiation, r)
-    r_index = searchsortednearest(radiation.disk_grid, r)
+    r_index = searchsorted_nearest(radiation.disk_grid, r)
     f_uv = radiation.fuv_grid[r_index]
     mdot = radiation.mdot_grid[r_index]
     return f_uv, mdot

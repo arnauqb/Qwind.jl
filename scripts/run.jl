@@ -4,6 +4,8 @@ using RegionTrees, DataFrames, CSV, YAML, Printf
 using Qwind
 using Profile
 using PProf
+using PyPlot
+LogNorm = matplotlib.colors.LogNorm
 
 function parse_data(integrators)
     fields = ["r", "z", "vr", "vz"]
@@ -20,6 +22,36 @@ function parse_data(integrators)
     return ret
 end
 
+function plot_smoothed_grid(smoothed_grid; vmin=1e2, vmax=1e9)
+    fig, ax = plt.subplots()
+    cm = ax.pcolormesh(
+        smoothed_grid.r_range,
+        smoothed_grid.z_range,
+        smoothed_grid.grid',
+        norm = LogNorm(vmin, vmax),
+    )
+    plt.colorbar(cm, ax = ax)
+end
+
+function plot_tau_x_grid(radiative_transfer; vmin=1e2, vmax=1e9)
+    fig, ax = plt.subplots()
+    r_range = range(0, 1000, length=250)
+    z_range = range(0, 1000, length=250)
+    tau_x_grid = 1e2 * ones((length(r_range), length(z_range)))
+    for (i, r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            tau_x_grid[i,j] = compute_xray_tau(radiative_transfer, r, z)
+        end
+    end
+    cm = ax.pcolormesh(
+        r_range,
+        z_range,
+        tau_x_grid',
+        norm = LogNorm(vmin, vmax),
+    )
+    plt.colorbar(cm, ax = ax)
+end
+
 
 config = YAML.load_file("scripts/config.yaml")
 
@@ -30,7 +62,7 @@ radiation = @eval $(Symbol(config["radiation"]["mode"]))(black_hole, config)
 radiative_transfer =
     @eval $(Symbol(config["radiative_transfer"]["mode"]))(radiation, config)
 
-grid = Grid(config)
+grid = Rectangular(config)
 
 initial_conditions =
     @eval $(Symbol(config["initial_conditions"]["mode"]))(radiation, black_hole, config)
@@ -56,7 +88,6 @@ for it in 1:n_iterations
     iterations_dict[it]["radiative_transfer"] = radiative_transfer
     run_integrators!(integrators)
     @info "Integration of iteration $it ended!"
-    #@profile radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
     radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
     df = parse_data(integrators);
     output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv";

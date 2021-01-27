@@ -12,9 +12,9 @@ export plot_grid,
 
 function plot_grid(
     quadtree::Cell,
-    depth,
+    depth;
     fig = nothing,
-    ax = nothing;
+    ax = nothing,
     xl = nothing,
     xh = nothing,
     yl = nothing,
@@ -216,7 +216,7 @@ end
 #end
 #
 function plot_density_grid_nn(
-    windkdtree::WindKDTree;
+    windkdtree::KDTree;
     xl = 0,
     xh = 5000,
     yl = 0,

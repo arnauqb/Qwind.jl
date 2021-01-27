@@ -14,7 +14,8 @@ export initialize_integrator,
     Parameters,
     SavedData,
     is_stalled,
-    escaped
+    escaped,
+    get_dense_solution_from_integrators
 
 struct SavedData
     r::Vector{Float64}
@@ -76,7 +77,6 @@ function initialize_integrator(
     saving_callback = SavingCallback(save, SavedValues(Float64, Float64))
     stalling_cb =
         DiscreteCallback(is_stalled, stalling_affect!, save_positions = (false, false))
-
     params = Parameters(r0, z0, v0, n0, l0, lwnorm, grid, data)
     callback_set = CallbackSet(termination_callback, saving_callback, stalling_cb)
     a₀ = compute_initial_acceleration(radiative_transfer, r0, z0, 0, v0, params)
@@ -278,7 +278,7 @@ function compute_radiation_acceleration(
 end
 
 function compute_radiation_acceleration(
-    radiative_transfer::AdaptiveMesh,
+    radiative_transfer::RadiativeTransfer,
     du,
     u,
     p::Parameters,
@@ -321,4 +321,66 @@ function compute_initial_acceleration(
     ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     return [ar, az]
+end
+
+function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
+    r_dense = Float64[]
+    z_dense = Float64[]
+    vr_dense = Float64[]
+    vz_dense = Float64[]
+    zmax_dense = Float64[]
+    z0_dense = Float64[]
+    line_width_dense = Float64[]
+    density_dense = Float64[]
+    @info "Getting dense solution from integrators..."
+    for integrator in integrators
+        integration_time = unique(integrator.sol.t)
+        tmin = integration_time[2]
+        tmax = integration_time[end-1]
+        if tmax <= tmin
+            continue
+        end
+        t_range =
+            10 .^ range(
+                log10(tmin),
+                log10(tmax),
+                length = n_timesteps,
+            )
+        i = 1
+        while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
+            t_range = t_range[1:end-i]
+            i += 1
+        end
+        if length(t_range) == 0
+            continue
+        end
+        dense_solution = integrator.sol(t_range)
+        r_dense = vcat(r_dense, dense_solution[1, :])
+        z_dense = vcat(z_dense, dense_solution[2, :])
+        vr_dense = vcat(vr_dense, dense_solution[3, :])
+        vz_dense = vcat(vz_dense, dense_solution[4, :])
+        line_width_dense =
+            vcat(line_width_dense, dense_solution[1, :] .* integrator.p.lwnorm)
+        v_t = @. sqrt(dense_solution[3, :]^2 + dense_solution[4, :]^2)
+        density_dense = vcat(
+            density_dense,
+            compute_density.(
+                dense_solution[1, :],
+                dense_solution[2, :],
+                dense_solution[3, :],
+                dense_solution[4, :],
+                Ref(integrator.p),
+            ),
+        )
+        zmax_dense = vcat(
+            zmax_dense,
+            maximum(dense_solution[2, :]) .* ones(length(dense_solution[2, :])),
+        )
+        z0_dense = vcat(
+            z0_dense,
+            dense_solution[2, 1] .* ones(length(dense_solution[2, :])),
+        )
+    end
+    @info "Done"
+    return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
 end

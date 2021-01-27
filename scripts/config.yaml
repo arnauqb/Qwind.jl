@@ -9,23 +9,26 @@ radiation:
   n_r: 100
 
 radiative_transfer:
-  mode: AdaptiveMesh
+  mode: RegularGrid
   vacuum_density: 1e2
   atol: 1e-2
   rtol: 1e-2
-  cell_min_size: 1e-6
+  kernel_size: 2
+  nr: 250
+  nz: 250
+  #cell_min_size: 1e-6
   n_timesteps: 10000
 
 grid:
   # units of Rg
   r_min: 0.0
-  r_max: 10000
+  r_max: 5000
   z_min: 0.0
-  z_max: 10000
+  z_max: 5000
 
 initial_conditions:
-  mode: CAKIC
-  launch_range: [6, 2000]
+  mode: UniformIC #CAKIC
+  launch_range: [6, 1000]
   n_lines: 120
   log_spaced: true
   z_0: 0 # Rg

@@ -1,15 +1,15 @@
-export Grid, out_of_grid
+export Rectangular, out_of_grid
 
-struct Grid
+struct Rectangular <: Grid
     r_min::Float64
     r_max::Float64
     z_min::Float64
     z_max::Float64
 end
 
-function Grid(config)
+function Rectangular(config)
     gc = config["grid"]
-    return Grid(gc["r_min"], gc["r_max"], gc["z_min"], gc["z_max"])
+    return Rectangular(gc["r_min"], gc["r_max"], gc["z_min"], gc["z_max"])
 end
 
 function out_of_grid(grid::Grid, r, z)
