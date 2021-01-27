@@ -132,4 +132,72 @@ using Test
         @test iterate(gi) === nothing
     end
 
+    @testset "Paths ends outside grid bottom left" begin
+        gi = GridIterator(r_range, z_range, 0.5, 0.5, -1.0, -0.5)
+        y(x) = (0.25 + x) / 1.5
+        x(y) = 1.5y - 0.25
+        expected_points = [[0.5, 0.5], [0, y(0)], [-1, -0.5]]
+        for (i, point) in enumerate(gi)
+            @test point ≈ expected_points[i]
+        end
+        @test iterate(gi) === nothing
+    end
+
+    @testset "Paths end outside grid bottom right" begin
+        gi = GridIterator(r_range, z_range, 8, 1, 10.69, -1.19)
+        y(x) = (20.19 - 2.19x) / 2.69
+        x(y) = (20.19 - 2.69y) / 2.19
+        expected_points = reverse([
+            [10.69, -1.19],
+            [x(0), 0.0],
+            [9, y(9)],
+            [x(0.5), 0.5],
+            [8.5, y(8.5)],
+            [8, 1],
+        ])
+        for (i, point) in enumerate(gi)
+            @test point ≈ expected_points[i] rtol = 0.01
+        end
+        @test iterate(gi) === nothing
+    end
+
+    @testset "Paths ends outside grid top right" begin
+        gi = GridIterator(r_range, z_range, 9.46, 9.32, 11.99, 11.36)
+        x(y) = (-4.26 + 2.53y) / 2.04
+        y(x) = (-4.26 - 2.04x) / (-2.53)
+        expected_points = reverse([
+            [11.99, 11.36],
+            [10, y(10)],
+            [x(9.5), 9.5],
+            [9.5, y(9.5)],
+            [9.46, 9.32],
+        ])
+        for (i, point) in enumerate(gi)
+            @test point ≈ expected_points[i] rtol = 0.005
+        end
+        @test iterate(gi) === nothing
+    end
+
+    @testset "Paths ends outside grid top left" begin
+        gi = GridIterator(r_range, z_range, 3.2, 8.84, -1.63, 10.96)
+        x(y) = (49.49 - 4.83y) / 2.12
+        y(x) = (49.49 - 2.12x) / 4.83
+        expected_points = reverse([
+            [-1.63, 10.96],
+            [0.5, y(0.5)],
+            [1, y(1)],
+            [1.5, y(1.5)],
+            [x(9.5), 9.5],
+            [2, y(2)],
+            [2.5, y(2.5)],
+            [x(9), 9],
+            [3, y(3)],
+            [3.2, 8.84],
+        ])
+        for (i, point) in enumerate(gi)
+            @test point ≈ expected_points[i] rtol = 0.01
+        end
+        @test iterate(gi) === nothing
+    end
+
 end

@@ -11,6 +11,31 @@ end
 
 get_time_to_intersection(x, xi, xf) = abs((x - xi) / (xf - xi))
 
+function get_intersection_with_grid(r, z, r_range, z_range, ri, rf, zi, zf; from_outside)
+    lambda_r = Inf
+    lambda_z = Inf
+    if r < r_range[1]
+        lambda_r = get_time_to_intersection(r_range[1], ri, rf)
+    elseif r > r_range[end]
+        lambda_r = get_time_to_intersection(r_range[end], ri, rf)
+    end
+    if z < r_range[1]
+        lambda_z = get_time_to_intersection(z_range[1], zi, zf)
+    elseif z > z_range[end]
+        lambda_z = get_time_to_intersection(z_range[end], zi, zf)
+    end
+    if from_outside
+        lambda = max(lambda_r, lambda_z)
+    else
+        lambda = min(lambda_r, lambda_z)
+    end
+    if lambda != Inf
+        r = ri + lambda * (rf - ri)
+        z = zi + lambda * (zf - zi)
+    end
+    return r, z
+end
+
 mutable struct GridIterator <: CellIterator
     r_range::Vector{Float64}
     z_range::Vector{Float64}
@@ -25,26 +50,32 @@ mutable struct GridIterator <: CellIterator
     state::Int
     finished::Bool
     function GridIterator(r_range, z_range, ri, zi, rf, zf)
-        if point_outside_grid(r_range, z_range, ri, zi) && point_outside_grid(r_range, z_range, rf, zf)
+        if point_outside_grid(r_range, z_range, ri, zi) &&
+           point_outside_grid(r_range, z_range, rf, zf)
             return new(r_range, z_range, ri, zf, rf, zf, 1, 1, 1, 1, 1, true)
         end
-        lambda_r = Inf
-        lambda_z = Inf
-        if ri < r_range[1]
-            lambda_r = get_time_to_intersection(r_range[1], ri, rf)
-        elseif ri > r_range[end]
-            lambda_r = get_time_to_intersection(r_range[end], ri, rf)
-        end
-        if zi < r_range[1]
-            lambda_z = get_time_to_intersection(z_range[1], zi, zf)
-        elseif zi > z_range[end]
-            lambda_z = get_time_to_intersection(z_range[end], zi, zf)
-        end
-        lambda = max(lambda_r, lambda_z)
-        if lambda != Inf
-            ri = ri + lambda * (rf-ri)
-            zi = zi + lambda * (zf-zi)
-        end
+        ri, zi = get_intersection_with_grid(
+            ri,
+            zi,
+            r_range,
+            z_range,
+            ri,
+            rf,
+            zi,
+            zf,
+            from_outside = true,
+        )
+        rf, zf = get_intersection_with_grid(
+            rf,
+            zf,
+            r_range,
+            z_range,
+            ri,
+            rf,
+            zi,
+            zf,
+            from_outside = false,
+        )
         direction_r = sign(rf - ri)
         direction_z = sign(zf - zi)
         current_r_idx = searchsorted_first(r_range, ri, direction_r)
@@ -168,7 +199,9 @@ function compute_xray_tau(
     for current_point in iterator
         distance_from_source = evaluate(Euclidean(), initial_point, current_point) * Rg
         intersection_size = evaluate(Euclidean(), previous_point, current_point) * Rg
-        cell_density = get_density(density_interpolator, current_point[1], current_point[2])
+        cell_density =
+            get_density(density_interpolator, previous_point[1], previous_point[2])
+        previous_point = current_point
         ret += compute_xray_tau_cell(
             intersection_size,
             distance_from_source,
@@ -192,13 +225,13 @@ function compute_uv_tau(density_interpolator::DensityInterpolator, ri, zi, rf, z
         rf,
         zf,
     )
-    initial_point = [ri, zi]
-    #println("r_idx $(iterator.current_r_idx) z_id $(iterator.current_z_idx)")
     previous_point = [current_r(iterator), current_z(iterator)]
     ret = 0
     for current_point in iterator
         intersection_size = evaluate(Euclidean(), previous_point, current_point) * Rg
-        cell_density = get_density(density_interpolator, current_point[1], current_point[2])
+        cell_density =
+            get_density(density_interpolator, previous_point[1], previous_point[2])
+        previous_point = current_point
         ret += compute_uv_tau_cell(intersection_size, cell_density)
         if ret > 40
             return ret

@@ -35,7 +35,7 @@ function SmoothedGrid(
     vacuum_density = 1e2,
 )
     if kdtree === nothing
-        return SmoothedGrid([0.0], [0.0], [0.0], vacuum_density)
+        return SmoothedGrid([0.0, 1.0], [0.0, 1.0], zeros((2,2)), vacuum_density)
     end
     max_width = maximum(kdtree.width)
     r_min = max(6, minimum(kdtree.r) - max_width)
