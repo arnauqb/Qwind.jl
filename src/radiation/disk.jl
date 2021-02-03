@@ -9,6 +9,7 @@ export BlackBody,
     radiance,
     disk_nt_rel_factors,
     disk_flux,
+    disk_flux_norel,
     disk_temperature,
     uv_fraction,
     uv_fractions
@@ -120,6 +121,11 @@ function disk_flux(bh::BlackHole, r)
     Mdot = compute_mass_accretion_rate(bh)
     NT_factors = disk_nt_rel_factors(bh, r)
     return 3 * G * bh.M * Mdot / (8 * π * (r * bh.Rg)^3) * NT_factors
+end
+
+function disk_flux_norel(bh::BlackHole, r)
+    Mdot = compute_mass_accretion_rate(bh)
+    return 3 * G * bh.M * Mdot / (8 * π * (r * bh.Rg)^3)
 end
 
 """

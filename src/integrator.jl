@@ -1,47 +1,54 @@
 using DiffEqBase, DiffEqCallbacks, Sundials
 using DataStructures, Printf
 using Statistics: std, mean
+using Distributed
 import Qwind.out_of_grid, Qwind.compute_density
+import Base.push!
 export initialize_integrator,
     initialize_integrators,
     run_integrator!,
     run_integrators!,
+    run_integrators_parallel!,
+    get_initial_radii_and_linewidths,
     compute_density,
     compute_disc_radiation_field,
     compute_vt,
     compute_d,
     failed,
     Parameters,
-    SavedData,
     is_stalled,
     escaped,
+    get_dense_solution_from_integrator,
     get_dense_solution_from_integrators
 
-struct SavedData
-    r::Vector{Float64}
-    z::Vector{Float64}
-    vr::Vector{Float64}
-    vz::Vector{Float64}
-    n::Vector{Float64}
-    ar::Vector{Float64}
-    az::Vector{Float64}
-    fm::Vector{Float64}
-    xi::Vector{Float64}
+function make_save_data(line_id = -1)
+    ret = Dict{Symbol,Any}(:line_id => line_id)
+    keys = [
+        :r,
+        :z,
+        :vr,
+        :vz,
+        :n,
+        :ar,
+        :az,
+        :fm,
+        :xi,
+        :dvdr,
+        :disc_radiation_field_r,
+        :disc_radiation_field_z,
+        :xi,
+        :taueff,
+        :taux,
+        :tauuv,
+    ]
+    for key in keys
+        ret[key] = Float64[]
+    end
+    return ret
 end
 
-SavedData() = SavedData(
-    Float64[],
-    Float64[],
-    Float64[],
-    Float64[],
-    Float64[],
-    Float64[],
-    Float64[],
-    Float64[],
-    Float64[],
-)
-
 struct Parameters
+    line_id::Int
     r0::Float64
     z0::Float64
     v0::Float64
@@ -49,7 +56,7 @@ struct Parameters
     l0::Float64
     lwnorm::Float64
     grid::Grid
-    data::SavedData
+    data::Any
 end
 
 function compute_density(r, z, vr, vz, parameters::Parameters)
@@ -65,19 +72,28 @@ function initialize_integrator(
     atol = 1e-8,
     rtol = 1e-3,
     tmax = 1e8,
+    line_id = -1,
+    save_path = nothing,
 )
     l0 = getl0(initial_conditions, r0)
     z0 = getz0(initial_conditions, r0)
     n0 = getn0(initial_conditions, r0)
     v0 = getv0(initial_conditions, r0)
     lwnorm = linewidth / r0
-    termination_callback =
-        DiscreteCallback(termination_condition, affect!, save_positions = (false, false))
-    data = SavedData()
-    saving_callback = SavingCallback(save, SavedValues(Float64, Float64))
+    termination_callback = DiscreteCallback(
+        termination_condition,
+        integrator -> affect!(integrator, save_path),
+        save_positions = (false, false),
+    )
+    data = make_save_data(line_id)
+    saved_data = SavedValues(Float64, Float64)
+    saving_callback = SavingCallback(
+        (u, t, integrator) -> save(u, t, integrator, radiative_transfer, line_id),
+        saved_data,
+    )
     stalling_cb =
         DiscreteCallback(is_stalled, stalling_affect!, save_positions = (false, false))
-    params = Parameters(r0, z0, v0, n0, l0, lwnorm, grid, data)
+    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data)
     callback_set = CallbackSet(termination_callback, saving_callback, stalling_cb)
     a₀ = compute_initial_acceleration(radiative_transfer, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
@@ -90,31 +106,47 @@ function initialize_integrator(
     return integrator
 end
 
+function get_initial_radii_and_linewidths(initial_conditions::InitialConditions, Rg)
+    rin = getrin(initial_conditions)
+    rfi = getrfi(initial_conditions)
+    nlines = getnlines(initial_conditions)
+    if nlines == "auto"
+        lines_range, lines_widths = compute_lines_range(initial_conditions, rin, rfi, Rg)
+    else
+        if initial_conditions.logspaced
+            linedelimiters = 10 .^ range(log10(rin), log10(rfi), length = nlines + 1)
+            lines_range = []
+            for i = 1:nlines
+                r0 = linedelimiters[i] + (linedelimiters[i + 1] - linedelimiters[i]) / 2.0
+                push!(lines_range, r0)
+            end
+            lines_widths = diff(linedelimiters)
+        else
+            dr = (rfi - rin) / nlines
+            lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
+            lines_widths = diff([lines_range; rfi + dr / 2])
+        end
+    end
+    return lines_range, lines_widths
+end
+
 function initialize_integrators(
     radiative_transfer::RadiativeTransfer,
     grid::Grid,
     initial_conditions::InitialConditions;
     atol = 1e-8,
     rtol = 1e-3,
+    save_path = nothing,
 )
-    rin = getrin(initial_conditions)
-    rfi = getrfi(initial_conditions)
-    nlines = getnlines(initial_conditions)
-    if initial_conditions.logspaced
-        linedelimiters = 10 .^ range(log10(rin), log10(rfi), length = nlines + 1)
-        linesrange = []
-        for i = 1:nlines
-            r0 = linedelimiters[i] + (linedelimiters[i + 1] - linedelimiters[i]) / 2.0
-            push!(linesrange, r0)
-        end
-        lineswidths = diff(linedelimiters)
-    else
-        dr = (rfi - rin) / nlines
-        linesrange = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
-        lineswidths = diff([linesrange; rfi + dr / 2])
+    lines_range, lines_widths = get_initial_radii_and_linewidths(
+        initial_conditions,
+        radiative_transfer.radiation.Rg,
+    )
+    if isfile(save_path)
+        rm(save_path)
     end
-    integrators = Array{Sundials.IDAIntegrator}(undef, 0)
-    for (i, (r0, linewidth)) in enumerate(zip(linesrange, lineswidths))
+    integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
+    for (i, (r0, linewidth)) in enumerate(zip(lines_range, lines_widths))
         integrator = initialize_integrator(
             radiative_transfer,
             grid,
@@ -123,10 +155,38 @@ function initialize_integrators(
             linewidth,
             atol = atol,
             rtol = rtol,
+            line_id = i,
+            save_path = save_path,
         )
-        push!(integrators, integrator)
+        integrators[i] = integrator
     end
     return integrators
+end
+
+function create_and_run_integrator(
+    radiative_transfer::RadiativeTransfer,
+    grid::Grid,
+    initial_conditions::InitialConditions;
+    r0,
+    linewidth,
+    line_id,
+    atol,
+    rtol,
+    save_path,
+)
+    integrator = initialize_integrator(
+        radiative_transfer,
+        grid,
+        initial_conditions,
+        r0,
+        linewidth,
+        atol = atol,
+        rtol = rtol,
+        line_id = line_id,
+        save_path = save_path,
+    )
+    solve!(integrator)
+    return integrator
 end
 
 run_integrator!(integrator::Sundials.IDAIntegrator) = solve!(integrator)
@@ -149,10 +209,12 @@ function escaped(integrator::Sundials.IDAIntegrator)
 end
 
 function failed(integrator::Sundials.IDAIntegrator)
-    sign_changes = countsignchanges(integrator.p.data.vz)
+    sign_changes1 = countsignchanges(integrator.p.data[:vz])
+    #sign_changes2 = countsignchanges(diff(integrator.p.data[:vz]), 1e-4)
     integrator.u[1] < 0.0 ||
         integrator.u[2] < integrator.p.grid.z_min ||
-        (sign_changes >= 2)
+        (sign_changes1 >= 2)
+        #(sign_changes2 >= 2)
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -175,12 +237,12 @@ end
 
 function is_stalled(u, t, integrator)
     min_length = 100
-    if length(integrator.p.data.vz) <= min_length
+    if length(integrator.p.data[:vz]) <= min_length
         return false
     end
     vz_std =
-        std(integrator.p.data.vz[(end - min_length):end]) /
-        mean(integrator.p.data.vz[(end - min_length):end])
+        std(integrator.p.data[:vz][(end - min_length):end]) /
+        mean(integrator.p.data[:vz][(end - min_length):end])
     abs(vz_std) < 0.05
 end
 
@@ -190,27 +252,80 @@ function stalling_affect!(integrator)
     integrator.u[1] += sign(integrator.u[3]) * 5e-2 * integrator.u[1]
 end
 
-function affect!(integrator)
+function affect!(integrator, save_path)
     if escaped(integrator)
-        @info "Line escaped!"
+        @info "Line $(integrator.p.line_id) escaped!"
         #println(" \U1F4A8")
     elseif failed(integrator)
-        @info "Line failed!"
+        @info "Line $(integrator.p.line_id) failed!"
         #println(" \U1F4A5")
     else
-        @info "Line stalled!"
-        println(" \U2753")
+        @info "Line $(integrator.p.line_id) stalled!"
+        #println(" \U2753")
     end
     terminate!(integrator)
 end
 
-function save(u, t, integrator)
+function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     data = integrator.p.data
-    push!(data.r, u[1])
-    push!(data.z, u[2])
-    push!(data.vr, u[3])
-    push!(data.vz, u[4])
-    push!(data.n, compute_density(integrator))
+    r, z, vr, vz = u
+    _, _, ar, az = integrator.du
+    vt = sqrt(vr^2 + vz^2)
+    at = sqrt(ar^2 + az^2)
+    dvdr = at / vt
+    density = compute_density(r, z, vr, vz, integrator.p)
+    taux = compute_xray_tau(radiative_transfer, r, z)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    taueff = compute_tau_eff(density, dvdr)
+    forcemultiplier = compute_force_multiplier(taueff, ξ)
+    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
+    push!(data[:r], r)
+    push!(data[:z], z)
+    push!(data[:vr], vr)
+    push!(data[:vz], vz)
+    push!(data[:ar], ar)
+    push!(data[:az], az)
+    push!(data[:n], density)
+    push!(data[:dvdr], dvdr)
+    push!(data[:taux], taux)
+    push!(data[:xi], ξ)
+    push!(data[:taueff], taueff)
+    push!(data[:fm], forcemultiplier)
+    push!(data[:disc_radiation_field_r], disc_radiation_field[1])
+    push!(data[:disc_radiation_field_z], disc_radiation_field[2])
+    return 0.0
+end
+
+function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, line_id)
+    data = integrator.p.data
+    r, z, vr, vz = u
+    _, _, ar, az = integrator.du
+    vt = sqrt(vr^2 + vz^2)
+    at = sqrt(ar^2 + az^2)
+    dvdr = at / vt
+    Rg = radiative_transfer.radiation.Rg
+    density = compute_density(r, z, vr, vz, integrator.p)
+    taux = compute_xray_tau(radiative_transfer, r, z, density, integrator.p.r0)
+    tauuv = compute_uv_tau(radiative_transfer, r, z, density, integrator.p.r0)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    taueff = compute_tau_eff(density, dvdr)
+    forcemultiplier = compute_force_multiplier(taueff, ξ)
+    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
+    push!(data[:r], r)
+    push!(data[:z], z)
+    push!(data[:vr], vr)
+    push!(data[:vz], vz)
+    push!(data[:ar], ar)
+    push!(data[:az], az)
+    push!(data[:n], density)
+    push!(data[:dvdr], dvdr)
+    push!(data[:taux], taux)
+    push!(data[:tauuv], tauuv)
+    push!(data[:xi], ξ)
+    push!(data[:taueff], taueff)
+    push!(data[:fm], forcemultiplier)
+    push!(data[:disc_radiation_field_r], disc_radiation_field[1])
+    push!(data[:disc_radiation_field_z], disc_radiation_field[2])
     return 0.0
 end
 
@@ -323,64 +438,70 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
+function get_dense_solution_from_integrator(integrator, n_timesteps = 10000)
+    integration_time = unique(integrator.sol.t)
+    tmin = integration_time[2]
+    tmax = integration_time[end - 1]
+    if tmax <= tmin
+        return [], [], [], [], [], []
+    end
+    t_range = 10 .^ range(log10(tmin), log10(tmax), length = n_timesteps)
+    i = 1
+    while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
+        t_range = t_range[1:(end - i)]
+        i += 1
+    end
+    if length(t_range) == 0
+        return [], [], [], [], [], []
+    end
+    dense_solution = integrator.sol(t_range)
+    r_dense = dense_solution[1, :]
+    z_dense = dense_solution[2, :]
+    line_width_dense = dense_solution[1, :] .* integrator.p.lwnorm
+    density_dense =
+        compute_density.(
+            dense_solution[1, :],
+            dense_solution[2, :],
+            dense_solution[3, :],
+            dense_solution[4, :],
+            Ref(integrator.p),
+        )
+    zmax_dense = maximum(dense_solution[2, :]) .* ones(length(dense_solution[2, :]))
+    z0_dense = dense_solution[2, 1] .* ones(length(dense_solution[2, :]))
+    return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
+end
+
 function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
     r_dense = Float64[]
     z_dense = Float64[]
-    vr_dense = Float64[]
-    vz_dense = Float64[]
     zmax_dense = Float64[]
     z0_dense = Float64[]
     line_width_dense = Float64[]
     density_dense = Float64[]
     @info "Getting dense solution from integrators..."
     for integrator in integrators
-        integration_time = unique(integrator.sol.t)
-        tmin = integration_time[2]
-        tmax = integration_time[end-1]
-        if tmax <= tmin
-            continue
-        end
-        t_range =
-            10 .^ range(
-                log10(tmin),
-                log10(tmax),
-                length = n_timesteps,
-            )
-        i = 1
-        while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
-            t_range = t_range[1:end-i]
-            i += 1
-        end
-        if length(t_range) == 0
-            continue
-        end
-        dense_solution = integrator.sol(t_range)
-        r_dense = vcat(r_dense, dense_solution[1, :])
-        z_dense = vcat(z_dense, dense_solution[2, :])
-        vr_dense = vcat(vr_dense, dense_solution[3, :])
-        vz_dense = vcat(vz_dense, dense_solution[4, :])
-        line_width_dense =
-            vcat(line_width_dense, dense_solution[1, :] .* integrator.p.lwnorm)
-        v_t = @. sqrt(dense_solution[3, :]^2 + dense_solution[4, :]^2)
-        density_dense = vcat(
-            density_dense,
-            compute_density.(
-                dense_solution[1, :],
-                dense_solution[2, :],
-                dense_solution[3, :],
-                dense_solution[4, :],
-                Ref(integrator.p),
-            ),
-        )
-        zmax_dense = vcat(
-            zmax_dense,
-            maximum(dense_solution[2, :]) .* ones(length(dense_solution[2, :])),
-        )
-        z0_dense = vcat(
-            z0_dense,
-            dense_solution[2, 1] .* ones(length(dense_solution[2, :])),
-        )
+        rp, zp, zmaxp, z0p, lwp, densityp =
+            get_dense_solution_from_integrator(integrator, n_timesteps)
+        r_dense = vcat(r_dense, rp)
+        z_dense = vcat(z_dense, zp)
+        zmax_dense = vcat(zmax_dense, zmaxp)
+        z0_dense = vcat(z0_dense, z0p)
+        line_width_dense = vcat(line_width_dense, lwp)
+        density_dense = vcat(density_dense, densityp)
     end
     @info "Done"
     return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
+end
+
+function compute_lines_range(ic::InitialConditions, rin, rfi, Rg)
+    rc = rin
+    lines_range = []
+    lines_widths = []
+    while rc < rfi
+        delta_r = 1 / (SIGMA_T * Rg * 100 * getn0(ic, rc))
+        push!(lines_range, rc + delta_r / 2)
+        push!(lines_widths, delta_r)
+        rc += delta_r
+    end
+    return lines_range, lines_widths
 end

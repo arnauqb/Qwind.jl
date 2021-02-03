@@ -19,16 +19,16 @@ struct UniformIC <: InitialConditions
 end
 
 function UniformIC(radiation, black_hole, config)
-    icc = config["initial_conditions"]
-    rin, rfi = icc["launch_range"]
+    icc = config[:initial_conditions]
+    rin, rfi = icc[:launch_range]
     return UniformIC(
         rin,
         rfi,
-        icc["n_lines"],
-        icc["z_0"],
-        icc["n_0"],
-        icc["v_0"] / C,
-        icc["log_spaced"],
+        icc[:n_lines],
+        icc[:z_0],
+        icc[:n_0],
+        icc[:v_0] / C,
+        icc[:log_spaced],
     )
 end
 
@@ -43,7 +43,7 @@ struct CAKIC <: InitialConditions
     bh::BlackHole
     rin::Float64
     rfi::Float64
-    nlines::Int64
+    nlines::Union{Int64, String}
     z0::Float64
     K::Float64
     alpha::Float64
@@ -52,19 +52,19 @@ struct CAKIC <: InitialConditions
 end
 
 function CAKIC(radiation, black_hole, config)
-    icc = config["initial_conditions"]
-    rin, rfi = icc["launch_range"]
+    icc = config[:initial_conditions]
+    rin, rfi = icc[:launch_range]
     return CAKIC(
         radiation,
         black_hole,
         rin,
         rfi,
-        icc["n_lines"],
-        icc["z_0"],
-        icc["K"],
-        icc["alpha"],
-        icc["mu"],
-        icc["log_spaced"],
+        icc[:n_lines],
+        icc[:z_0],
+        icc[:K],
+        icc[:alpha],
+        icc[:mu],
+        icc[:log_spaced],
     )
 end
 

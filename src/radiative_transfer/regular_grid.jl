@@ -1,59 +1,32 @@
+using Qwind
 export RegularGrid, compute_uv_tau, compute_xray_tau
 
 struct RegularGrid <: RadiativeTransfer
     radiation::Radiation
-    kdtree::Union{KDTree,Nothing}
     density_interpolator::Union{DensityInterpolator,Nothing}
-    vacuum_density::Float64
-    atol::Float64
-    rtol::Float64
-    nr::Int
-    nz::Int
-    n_timesteps::Int
 end
 
 function RegularGrid(
     radiation::Radiation,
-    integrators;
-    vacuum_density = 1e2,
-    atol = 1e-4,
-    rtol = 1e-3,
-    kernel_size = 1,
-    nr = 500,
-    nz = 501,
-    n_timesteps = 10000,
+    integrators,
+    density_interpolator_type::DataType;
+    kwargs...
 )
-    if integrators === nothing
-        kdtree = nothing
-    else
-        kdtree = create_wind_kdtree(integrators, n_timesteps)
-    end
-    smoothed_grid = SmoothedGrid(kdtree, nr = nr, nz = nz, kernel_size = kernel_size)
-    return RegularGrid(
+    interpolator = density_interpolator_type(integrators; kwargs...)
+    return new(
         radiation,
-        kdtree,
-        smoothed_grid,
-        vacuum_density,
-        atol,
-        rtol,
-        nr,
-        nz,
-        n_timesteps,
+        interpolator,
     )
 end
 
 function RegularGrid(radiation::Radiation, config::Dict)
-    rtc = config["radiative_transfer"]
+    rtc = config[:radiative_transfer]
+    intc = rtc[:density_interpolator]
+    intc_type = pop!(intc, :type)
+    interpolator = getfield(Qwind, Symbol(intc_type))(nothing; intc...)
     return RegularGrid(
         radiation,
-        nothing,
-        vacuum_density = rtc["vacuum_density"],
-        atol = rtc["atol"],
-        rtol = rtc["rtol"],
-        kernel_size = rtc["kernel_size"],
-        nr = rtc["nr"],
-        nz = rtc["nz"],
-        n_timesteps = rtc["n_timesteps"],
+        interpolator,
     )
 end
 
@@ -62,16 +35,8 @@ get_density(regular_grid::RegularGrid, r, z) =
 
 function update_radiative_transfer(rt::RegularGrid, integrators)
     @info "Updating radiative transfer... "
-    return RegularGrid(
-        rt.radiation,
-        integrators,
-        vacuum_density = rt.vacuum_density,
-        atol = rt.atol,
-        rtol = rt.rtol,
-        nr = rt.nr,
-        nz = rt.nz,
-        n_timesteps = rt.n_timesteps,
-    )
+    new_interp = update_density_interpolator(rt.density_interpolator, integrators)
+    return RegularGrid(rt.radiation, new_interp)
 end
 
 compute_xray_tau(regular_grid::RegularGrid, ri, zi, rf, zf, xray_luminosity, Rg) =

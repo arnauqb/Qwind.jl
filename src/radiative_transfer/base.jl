@@ -19,8 +19,6 @@ function radiation_force_integrand!(
         r,
         z,
     )
-    #println("rd $rd r $r z $z tau_uv $tauuv")
-    #tauuv = 1.0
     fuv, mdot = get_fuv_mdot(radiative_transfer.radiation, rd)
     r_projection = (r - rd * cos(phid))
     delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
@@ -48,6 +46,7 @@ function radiation_force_integrand!(
     fuv, mdot = get_fuv_mdot(rt.radiation, rd)
     delta2 = p^2 + z^2
     tauuv = compute_uv_tau(rt, rd, r, z)
+    #println("rd $rd r $r z $z tau_uv $tauuv")
     tauuv = tauuv / sqrt((r - rd)^2 + z^2) * sqrt(delta2)
     common_part = nt * mdot * fuv * p / delta2^2 / rd^3 * exp(-tauuv)
     v[1] = common_part * p * cosψ
@@ -118,11 +117,11 @@ function compute_disc_radiation_field(
     z;
     rmax = 1600,
     atol = 0,
-    rtol = 5e-3,
+    rtol = 1e-2,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
 )
-    println("r : $r,\t z : $z")
+    #println("r : $r,\t z : $z")
     res, err = integrate_radiation_force_integrand(
         radiative_transfer,
         r,
@@ -136,6 +135,6 @@ function compute_disc_radiation_field(
     )
     radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
     force = z * radiation_constant .* res
-    println("force $force")
+    #println("force $force")
     return force
 end

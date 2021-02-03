@@ -20,8 +20,9 @@ struct RERadiativeTransfer <: RadiativeTransfer
 end
 
 function RERadiativeTransfer(radiation::Radiation, config)
-    rc = config["radiative_transfer"]
-    return RERadiativeTransfer(radiation, rc["shielding_density"], rc["r_in"])
+    println(config)
+    rc = config[:radiative_transfer]
+    return RERadiativeTransfer(radiation, rc[:shielding_density], rc[:r_in])
 end
 
 function update_radiative_transfer(rt::RERadiativeTransfer, integrators)
@@ -212,7 +213,7 @@ function radiation_force_integrand!(
     r,
     z,
 )
-    nt = disk_nt_rel_factors(radiative_transfer.radiation, rd)
+    nt = 1 #disk_nt_rel_factors(radiative_transfer.radiation, rd)
     r_projection = (r - rd * cos(phid))
     delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta_sq^2)
@@ -267,11 +268,10 @@ function compute_disc_radiation_field(
     z,
     rmax = 1600,
     atol = 0.0,
-    rtol = 1e-4,
+    rtol = 1e-2,
     norm = Cubature.INDIVIDUAL,
-    maxevals = 0,
+    maxevals = 10000,
 )
-    #println("r : $r, z : $z")
     res, err = integrate_radiation_force_integrand(
         radiative_transfer,
         r,
@@ -285,6 +285,5 @@ function compute_disc_radiation_field(
     )
     radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
     force = z * radiation_constant .* res
-    #println("force $force")
     return force
 end

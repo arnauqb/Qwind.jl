@@ -34,12 +34,12 @@ struct RERadiation <: Radiation
 end
 
 function RERadiation(bh::BlackHole, config::Dict)
-    radiation_config = config["radiation"]
-    return RERadiation(bh, radiation_config["f_uv"], radiation_config["f_x"])
+    radiation_config = config[:radiation]
+    return RERadiation(bh, radiation_config[:f_uv], radiation_config[:f_x])
 end
 
 compute_radiation_constant(radiation::RERadiation) =
-    6 * radiation.mdot * radiation.fuv / (8 * π * radiation.efficiency)
+    3 * radiation.mdot * radiation.fuv / (π * radiation.efficiency)
 
 get_fuv_mdot(radiation::RERadiation, r) = radiation.fuv, radiation.mdot
 

@@ -33,8 +33,8 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64)
     )
 end
 function QsosedRadiation(bh::BlackHole, config::Dict)
-    radiation_config = config["radiation"]
-    return QsosedRadiation(bh, radiation_config["n_r"], radiation_config["f_x"])
+    radiation_config = config[:radiation]
+    return QsosedRadiation(bh, radiation_config[:n_r], radiation_config[:f_x])
 end
 
 function get_fuv_mdot(radiation::QsosedRadiation, r)
@@ -43,4 +43,4 @@ function get_fuv_mdot(radiation::QsosedRadiation, r)
     mdot = radiation.mdot_grid[r_index]
     return f_uv, mdot
 end
-compute_radiation_constant(radiation::QsosedRadiation) = 6 / (8 * π * radiation.efficiency)
+compute_radiation_constant(radiation::QsosedRadiation) = 3 / (π * radiation.efficiency)

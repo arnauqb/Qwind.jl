@@ -6,30 +6,29 @@ black_hole:
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
   f_x: 0.15
-  n_r: 100
+  n_r: 1000
 
 radiative_transfer:
   mode: RegularGrid
-  vacuum_density: 1e2
-  atol: 1e-2
-  rtol: 1e-2
-  kernel_size: 2
-  nr: 250
-  nz: 250
-  #cell_min_size: 1e-6
-  n_timesteps: 10000
+  density_interpolator: 
+    type: SmoothedGrid
+    vacuum_density: 1e2
+    n_timesteps: 10000
+    kernel_size: 10
+    nr: 50
+    nz: 51
 
 grid:
   # units of Rg
-  r_min: 0.0
-  r_max: 5000
+  r_min: 6.0
+  r_max: 10000
   z_min: 0.0
-  z_max: 5000
+  z_max: 10000
 
 initial_conditions:
-  mode: UniformIC #CAKIC
-  launch_range: [6, 1000]
-  n_lines: 120
+  mode: CAKIC #UniformIC
+  launch_range: [200, 1000]
+  n_lines: auto #128
   log_spaced: true
   z_0: 0 # Rg
   K: 0.03
@@ -39,20 +38,8 @@ initial_conditions:
   v_0: 5e7 # cm / s
 
 
-  #initial_conditions:
-  #  mode: CAKIC 
-  #  launch_range: [6, 2000]
-  #  n_lines: 60
-  #  log_spaced: true
-  #  z_0: 1.0 # Rg
-  #  K: 0.03
-  #  alpha: 0.6
-  #  mu: 0.5
-  #  #n_0: 2e8 # cm^-3
-  #  #v_0: 5e7 # cm / s
-
 integrator:
-  n_iterations: 10
+  n_iterations: 2
   atol: 1e-6
   rtol: 1e-3
-  save_path: results
+  save_path: "reults_tests_kernel_10_rin50"

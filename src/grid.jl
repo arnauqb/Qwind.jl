@@ -8,8 +8,8 @@ struct Rectangular <: Grid
 end
 
 function Rectangular(config)
-    gc = config["grid"]
-    return Rectangular(gc["r_min"], gc["r_max"], gc["z_min"], gc["z_max"])
+    gc = config[:grid]
+    return Rectangular(gc[:r_min], gc[:r_max], gc[:z_min], gc[:z_max])
 end
 
 function out_of_grid(grid::Grid, r, z)

@@ -67,18 +67,19 @@ function plot_streamlines(
     fig = nothing,
     ax = nothing;
     alpha = 1.0,
-    xl = 0,
-    xh = 2000,
-    yl = 0,
-    yh = 2000,
+    xl = nothing,
+    xh = nothing,
+    yl = nothing,
+    yh = nothing,
     linewidth=1,
+    linestyle="o-",
     colorscheme = nothing,
     color = nothing, 
 )
     if colorscheme === nothing
         colorscheme_plot = colorschemes[:RdBu_9]
     else
-        colorscheme_plot = colorschemes[Symbol(colorscheme)]
+        colorscheme_plot = colorscheme #colorschemes[Symbol(colorscheme)]
     end
     if ax === nothing
         fig, ax = plt.subplots()
@@ -91,9 +92,9 @@ function plot_streamlines(
             color_toplot = color
         end
         ax.plot(
-            integrator.p.data.r,
-            integrator.p.data.z,
-            "o-",
+            integrator.p.data[:r],
+            integrator.p.data[:z],
+            linestyle,
             color = color_toplot,
             alpha = alpha,
             markersize = 1,
@@ -102,8 +103,12 @@ function plot_streamlines(
     end
     ax.set_xlabel("r [Rg]")
     ax.set_ylabel("z [Rg]")
-    ax.set_xlim(xl, xh)
-    ax.set_ylim(yl, yh)
+    if xl !== nothing && xh !== nothing
+        ax.set_xlim(xl, xh)
+    end
+    if yl !== nothing && yh !== nothing
+        ax.set_ylim(yl, yh)
+    end
     return fig, ax
 end
 

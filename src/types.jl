@@ -1,20 +1,14 @@
 # general pieces of a model
 
-export DensityInterpolator 
+export DensityInterpolator, GridInterpolator
 
 abstract type Radiation end
 abstract type RadiativeTransfer end
 abstract type DensityInterpolator end
+abstract type GridInterpolator <: DensityInterpolator end
+abstract type NNInterpolator <: DensityInterpolator end
 abstract type InitialConditions end
 abstract type Grid end
-
-struct Model
-    grid::Grid
-    bh::BlackHole
-    rad::Radiation
-    rt::RadiativeTransfer
-    ic::InitialConditions
-end
 
 # Disk integration modes
 abstract type IntegrationType end

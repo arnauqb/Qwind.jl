@@ -17,18 +17,19 @@ function searchsorted_first(a,x, direction=1)
    if (idx>length(a)); return length(a); end
    if a[idx] == x; return idx; end
    if (idx==1); return 1; end
+   (direction == 0) && (direction = 1)
    return idx - (direction + 1) / 2
 end
 
-function countsignchanges(array::Vector{Float64})
+function countsignchanges(array::Vector{Float64}, reference=0)
    counter = 0 
    if length(array) == 0
       return 0
    end
-   current_sign = sign(array[1])
+   current_sign = sign(array[1] + reference)
    for elem in array
-      if sign(elem) != current_sign
-         current_sign = sign(elem)
+      if sign(elem + reference) != current_sign
+         current_sign = sign(elem + reference)
          counter += 1
       end
    end
