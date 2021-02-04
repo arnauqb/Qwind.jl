@@ -74,6 +74,24 @@ function create_line_kdtree(r, z, density, width, n_timesteps)
     return LineKDTree(r, z, density, width, line_tree, line_tree_z, n_timesteps)
 end
 
+function reduce_line(z, n, width)
+    zs = [z[1]]
+    ns = [[n[1]]]
+    widths = [[width[1]]]
+    for (zp, np, wp) in zip(z,n, width)
+        if zp > zs[end]
+            push!(zs, zp)
+            push!(ns, [np])
+            push!(widths,[wp])
+        else
+            idx = searchsorted_nearest(zs, zp)
+            push!(ns[idx], np)
+            push!(widths[idx], wp)
+        end
+    end
+    return zs, maximum.(ns), maximum.(widths)
+end
+
 function create_line_kdtree(
     integrator::Sundials.IDAIntegrator,
     n_timesteps = 10000,
@@ -82,6 +100,7 @@ function create_line_kdtree(
         get_dense_solution_from_integrator(integrator, n_timesteps)
     return create_line_kdtree(r, z, density, width, n_timesteps)
 end
+
 
 function create_lines_kdtree(
     integrators::Array{Sundials.IDAIntegrator},
