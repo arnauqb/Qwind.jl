@@ -73,7 +73,7 @@ function initialize_integrator(
     rtol = 1e-3,
     tmax = 1e8,
     line_id = -1,
-    save_path = nothing,
+    #save_path = nothing,
 )
     l0 = getl0(initial_conditions, r0)
     z0 = getz0(initial_conditions, r0)
@@ -82,7 +82,7 @@ function initialize_integrator(
     lwnorm = linewidth / r0
     termination_callback = DiscreteCallback(
         termination_condition,
-        integrator -> affect!(integrator, save_path),
+        integrator -> affect!(integrator),
         save_positions = (false, false),
     )
     data = make_save_data(line_id)
@@ -136,15 +136,15 @@ function initialize_integrators(
     initial_conditions::InitialConditions;
     atol = 1e-8,
     rtol = 1e-3,
-    save_path = nothing,
+    #save_path = nothing,
 )
     lines_range, lines_widths = get_initial_radii_and_linewidths(
         initial_conditions,
         radiative_transfer.radiation.Rg,
     )
-    if isfile(save_path)
-        rm(save_path)
-    end
+    #if isfile(save_path)
+    #    rm(save_path)
+    #end
     integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
     for (i, (r0, linewidth)) in enumerate(zip(lines_range, lines_widths))
         integrator = initialize_integrator(
@@ -156,7 +156,7 @@ function initialize_integrators(
             atol = atol,
             rtol = rtol,
             line_id = i,
-            save_path = save_path,
+            #save_path = save_path,
         )
         integrators[i] = integrator
     end
@@ -172,7 +172,6 @@ function create_and_run_integrator(
     line_id,
     atol,
     rtol,
-    save_path,
 )
     integrator = initialize_integrator(
         radiative_transfer,
@@ -183,7 +182,7 @@ function create_and_run_integrator(
         atol = atol,
         rtol = rtol,
         line_id = line_id,
-        save_path = save_path,
+        #save_path = save_path,
     )
     solve!(integrator)
     return integrator
@@ -253,7 +252,7 @@ function stalling_affect!(integrator)
     integrator.u[1] += sign(integrator.u[3]) * 5e-2 * integrator.u[1]
 end
 
-function affect!(integrator, save_path)
+function affect!(integrator)
     if escaped(integrator)
         @info "Line $(integrator.p.line_id) escaped!"
         #println(" \U1F4A8")

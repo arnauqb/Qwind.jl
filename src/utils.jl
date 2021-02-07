@@ -4,7 +4,8 @@ export searchsorted_nearest,
     remove_close_elements,
     iter_paths,
     get_value_in_path,
-    set_value_in_path!
+    set_value_in_path!,
+    parse_cl
 
 function searchsorted_nearest(a, x)
     idx = searchsortedfirst(a, x)
@@ -108,4 +109,18 @@ function set_value_in_path!(d, path, value)
     end
     d[path[end]] = value
 end
+
+using ArgParse
+
+function parse_cl()
+    s= ArgParseSettings()
+    @add_arg_table s begin
+        "--model", "-m"
+            help = "Model number to run"
+            arg_type = Int
+            required = true
+    end
+    return parsed_args = parse_args(ARGS, s)
+end
+
 
