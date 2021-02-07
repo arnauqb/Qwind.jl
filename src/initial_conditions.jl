@@ -20,7 +20,12 @@ end
 
 function UniformIC(radiation, black_hole, config)
     icc = config[:initial_conditions]
-    rin, rfi = icc[:launch_range]
+    if :launch_range in keys(icc)
+        rin, rfi = icc[:launch_range]
+    else
+        rin = icc[:r_in]
+        rfi = icc[:r_fi]
+    end
     return UniformIC(
         rin,
         rfi,
@@ -53,7 +58,12 @@ end
 
 function CAKIC(radiation, black_hole, config)
     icc = config[:initial_conditions]
-    rin, rfi = icc[:launch_range]
+    if :launch_range in keys(icc)
+        rin, rfi = icc[:launch_range]
+    else
+        rin = icc[:r_in]
+        rfi = icc[:r_fi]
+    end
     return CAKIC(
         radiation,
         black_hole,
