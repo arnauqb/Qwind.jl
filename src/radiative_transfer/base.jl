@@ -73,14 +73,15 @@ function integrate_radiation_force_integrand(
     rtol = 1e-4,
     norm = Cubature.INDIVIDUAL,
     maxevals = 50000,
-    zmax_fromstreamline = 1e-4,
+    zmax_fromstreamline = 1e-3,
 )
-    if z < zmax_fromstreamline
-        #return [0.0, 0.0], [0.0, 0.0]
-        integration_type = IntegrationFromStreamline()
-    else
-        integration_type = IntegrationFromCenter()
-    end
+    #if z < zmax_fromstreamline
+    #    #return [0.0, 0.0], [0.0, 0.0]
+    #    integration_type = IntegrationFromStreamline()
+    #else
+    #    integration_type = IntegrationFromCenter()
+    #end
+    integration_type = IntegrationFromCenter()
     f(x, v) = radiation_force_integrand!(
         radiative_transfer,
         integration_type,
@@ -102,6 +103,14 @@ function integrate_radiation_force_integrand(
     )
 end
 
+function compute_disc_radiation_field_vertical(rt::RadiativeTransfer, r, z)
+    constant = 3 / (2 * rt.radiation.efficiency)
+    fuv, mdot = get_fuv_mdot(rt.radiation, r)
+    tauuv = compute_uv_tau(rt, r, r, z)
+    nt = disk_nt_rel_factors(r, rt.radiation.spin, rt.radiation.isco)
+    return [0.0, nt * constant * mdot * exp(-tauuv) * fuv / r^3]
+end
+
 """
 Computes the disc radiation field at the point (r,z) by performing
 an integral over the disc.
@@ -117,24 +126,29 @@ function compute_disc_radiation_field(
     z;
     rmax = 1600,
     atol = 0,
-    rtol = 1e-2,
+    rtol = 1e-3,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
+    max_z_vertical_flux = 5e-1,
 )
-    #println("r : $r,\t z : $z")
-    res, err = integrate_radiation_force_integrand(
-        radiative_transfer,
-        r,
-        z,
-        radiative_transfer.radiation.isco,
-        rmax,
-        atol = atol,
-        rtol = rtol,
-        norm = norm,
-        maxevals = maxevals,
-    )
-    radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
-    force = z * radiation_constant .* res
-    #println("force $force")
+    println("r $r z $z")
+    if z < max_z_vertical_flux
+        force = compute_disc_radiation_field_vertical(radiative_transfer, r, z)
+    else
+        res, err = integrate_radiation_force_integrand(
+            radiative_transfer,
+            r,
+            z,
+            radiative_transfer.radiation.isco,
+            rmax,
+            atol = atol,
+            rtol = rtol,
+            norm = norm,
+            maxevals = maxevals,
+        )
+        radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
+        force = z * radiation_constant .* res
+    end
+    println("force $force")
     return force
 end

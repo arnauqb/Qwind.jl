@@ -4,31 +4,28 @@ using Qwind
 using Profile
 using PProf, CSV, DataFrames
 
-#model = Model("scripts/config.yaml")
-#iterations_dict = Dict()
+model = Model("paper2/plot_nn.yaml")
+iterations_dict = Dict()
 #run!(model, iterations_dict)
 
 lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg);
 
-rt = iterations_dict[4]["radiative_transfer"]
-
-line_id = 15;
-
+line_id = 75;
 integrator = initialize_integrator(
-    rt,
+    model.rt,
     model.wind_grid,
     model.ic,
-    lines_range[15],
-    lines_widths[15],
-    atol = 1e-6,
+    lines_range[line_id],
+    lines_widths[line_id],
+    atol = 1e-8,
     rtol = 1e-3,
-    line_id = 15,
+    line_id = line_id,
     save_path = "tests",
 );
+run_integrator!(integrator);
+loglog(integrator.p.data[:z], integrator.p.data[:n])
 
-run_integrator!(integrator)
-
-plot(integrator.p.data[:r], integrator.p.data[:z])
+#loglog(integrator.p.data[:r], integrator.p.data[:z])
 
 semilogy(integrator.p.data[:vr])
 

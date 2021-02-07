@@ -84,7 +84,11 @@ function plot_streamlines(
     if ax === nothing
         fig, ax = plt.subplots()
     end
-    for (i, integrator) in enumerate(integrators)
+    for i in 1:length(integrators)
+        if !isassigned(integrators, i)
+            continue
+        end
+        integrator = integrators[i]
         if color === nothing
             color_toplot = get(colorscheme_plot, i / length(integrators))
             color_toplot = [color_toplot.r, color_toplot.g, color_toplot.b]

@@ -236,14 +236,15 @@ function termination_condition(u, t, integrator)
 end
 
 function is_stalled(u, t, integrator)
-    min_length = 100
-    if length(integrator.p.data[:vz]) <= min_length
-        return false
-    end
-    vz_std =
-        std(integrator.p.data[:vz][(end - min_length):end]) /
-        mean(integrator.p.data[:vz][(end - min_length):end])
-    abs(vz_std) < 0.05
+    return false
+    #min_length = 100
+    #if length(integrator.p.data[:vz]) <= min_length
+    #    return false
+    #end
+    #vz_std =
+    #    std(integrator.p.data[:vz][(end - min_length):end]) /
+    #    mean(integrator.p.data[:vz][(end - min_length):end])
+    #abs(vz_std) < 0.05
 end
 
 function stalling_affect!(integrator)

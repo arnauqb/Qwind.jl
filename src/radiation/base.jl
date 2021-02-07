@@ -10,6 +10,11 @@ export disk_nt_rel_factors,
 function disk_nt_rel_factors(radiation::Radiation, radius)
     return disk_nt_rel_factors(radius, radiation.spin, radiation.isco)
 end
+
+function compute_eddington_luminosity(radiation::Radiation)
+    return 4 * π * radiation.Rg * C^3 * M_P / SIGMA_T
+end
+
 """
 Ionization parameter ξ
 """

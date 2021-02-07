@@ -11,6 +11,13 @@ struct QsosedRadiation <: Radiation
     Rg::Float64
 end
 
+function compute_mass_accretion_rate(radiation::Radiation, r)
+    r_idx = searchsorted_nearest(radiation.disk_grid, r)
+    mdot = radiation.mdot_grid[r_idx]
+    return mdot * 4 * π * radiation.Rg * M_P * C / (SIGMA_T * radiation.efficiency) 
+end
+
+
 function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64)
     rmin = bh.isco
     rmax = 1400
@@ -43,4 +50,5 @@ function get_fuv_mdot(radiation::QsosedRadiation, r)
     mdot = radiation.mdot_grid[r_index]
     return f_uv, mdot
 end
+
 compute_radiation_constant(radiation::QsosedRadiation) = 3 / (π * radiation.efficiency)

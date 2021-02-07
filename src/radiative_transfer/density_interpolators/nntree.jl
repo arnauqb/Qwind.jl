@@ -29,16 +29,6 @@ struct KDTree <: NNInterpolator
     tree::NearestNeighbors.KDTree
 end
 
-struct LineKDTree <: NNInterpolator
-    r::Vector{Float64}
-    z::Vector{Float64}
-    n::Vector{Float64}
-    width::Vector{Float64}
-    line_tree::NearestNeighbors.KDTree
-    line_tree_z::NearestNeighbors.KDTree
-    n_timesteps::Int
-end
-
 r_min(grid::NNInterpolator) = minimum(grid.r)
 r_max(grid::NNInterpolator) = maximum(grid.r)
 z_min(grid::NNInterpolator) = minimum(grid.z)
@@ -62,52 +52,6 @@ function create_wind_kdtree(
     r, z, zmax, z0, width, density =
         get_dense_solution_from_integrators(integrators, n_timesteps)
     return create_wind_kdtree(r, z, zmax, z0, width, density, vacuum_density, n_timesteps)
-end
-
-function create_line_kdtree(r, z, density, width, n_timesteps)
-    points_line = hcat(r, z)'
-    points_line = convert(Array{Float64,2}, points_line)
-    line_tree = NearestNeighbors.KDTree(points_line)
-    points_line = z'
-    points_line = convert(Array{Float64,2}, points_line)
-    line_tree_z = NearestNeighbors.KDTree(points_line)
-    return LineKDTree(r, z, density, width, line_tree, line_tree_z, n_timesteps)
-end
-
-function reduce_line(z, n, width)
-    zs = [z[1]]
-    ns = [[n[1]]]
-    widths = [[width[1]]]
-    for (zp, np, wp) in zip(z,n, width)
-        if zp > zs[end]
-            push!(zs, zp)
-            push!(ns, [np])
-            push!(widths,[wp])
-        else
-            idx = searchsorted_nearest(zs, zp)
-            push!(ns[idx], np)
-            push!(widths[idx], wp)
-        end
-    end
-    return zs, maximum.(ns), maximum.(widths)
-end
-
-function create_line_kdtree(
-    integrator::Sundials.IDAIntegrator,
-    n_timesteps = 10000,
-)
-    r, z, zmax, z0, width, density =
-        get_dense_solution_from_integrator(integrator, n_timesteps)
-    return create_line_kdtree(r, z, density, width, n_timesteps)
-end
-
-
-function create_lines_kdtree(
-    integrators::Array{Sundials.IDAIntegrator},
-    n_timesteps = 10000,
-    vacuum_density = 1e2,
-)
-    return [create_line_kdtree(integrator, n_timesteps) for integrator in integrators]
 end
 
 function get_closest_point(kdtree::KDTree, r, z)
@@ -168,41 +112,3 @@ function get_closest_density_distance(kdtree::KDTree, z)
     return nc, distance
 end
 
-#function get_density(
-#    kdtree::KDTree,
-#    kdtrees::Vector{KDTree},
-#    kdtrees_z::Vector{KDTree},
-#    r,
-#    z,
-#)
-#    rc, zc, zmax, z0, width, density, distance = get_closest_point(kdtree, r, z)
-#    if is_point_outside_wind(z, zmax, z0, distance, width)
-#        return kdtree.vacuum_density
-#    end
-#    distances = []
-#    densities = []
-#    for (i, kdtree) in enumerate(kdtrees)
-#        rc, zc, zmax, z0, width, density, distance = get_closest_point(kdtree, r, z)
-#        if distance > width
-#            continue
-#        end
-#        kdtree_z = kdtrees_z[i]
-#        z_idx, _ = NearestNeighbors.nn(kdtree_z.tree, [z])
-#        dens = kdtree_z.n[z_idx]
-#        dist =
-#            Distances.evaluate(Euclidean(), [r, z], [kdtree_z.r[z_idx], kdtree_z.z[z_idx]])
-#        push!(densities, dens)
-#        push!(distances, dist)
-#    end
-#    if length(distances) == 0
-#        return 1e2
-#    elseif length(distances) == 1
-#        return densities[1]
-#    else
-#        idcs = sortperm(distances)[1:2]
-#        d1, d2 = distances[idcs]
-#        n1, n2 = densities[idcs]
-#        return (n1 * d2 + n2 * d1) / (d1 + d2)
-#    end
-#end
-#
