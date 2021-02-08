@@ -123,4 +123,5 @@ function parse_cl()
     return parsed_args = parse_args(ARGS, s)
 end
 
-
+function cosma_script()
+end

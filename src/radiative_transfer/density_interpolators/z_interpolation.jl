@@ -11,7 +11,8 @@ end
 #    [a[1] / norm.r_norm, a[2] / norm.z_norm],
 #    [b[1] / norm.r_norm, b[2] / norm.z_norm],
 #)
-(norm::NEuclidean)(a, b) = sqrt(((a[1] - b[1]) / norm.r_norm)^2 + ((a[2] - b[2]) / norm.z_norm)^2)
+(norm::NEuclidean)(a, b) =
+    sqrt(((a[1] - b[1]) / norm.r_norm)^2 + ((a[2] - b[2]) / norm.z_norm)^2)
 
 struct LineKDTree <: NNInterpolator
     r::Vector{Float64}
@@ -124,14 +125,22 @@ struct VIGrid <: GridInterpolator
 end
 
 
-function VIGrid(integrators; nr = 250, nz = 250, vacuum_density = 1e2, n_timesteps = 10000)
+function VIGrid(
+    integrators;
+    nr = 250,
+    nz = 250,
+    n = nothing,
+    vacuum_density = 1e2,
+    n_timesteps = 10000,
+)
+    if n !== nothing
+        nr = n
+        nz = n
+    end
     if integrators === nothing
         lines_kdtrees = nothing
     else
-        lines_kdtrees = create_lines_kdtrees(
-            integrators,
-            n_timesteps = n_timesteps,
-        )
+        lines_kdtrees = create_lines_kdtrees(integrators, n_timesteps = n_timesteps)
     end
     return VIGrid(
         lines_kdtrees,
@@ -190,7 +199,7 @@ function get_closest_point(line_kdtree::LineKDTree, point)
     width = line_kdtree.width[idx]
     r = line_kdtree.r[idx]
     z = line_kdtree.z[idx]
-    distance = Distances.evaluate(Euclidean(), point, [r,z])
+    distance = Distances.evaluate(Euclidean(), point, [r, z])
     return n, width, distance, idx
 end
 
@@ -206,7 +215,6 @@ function get_density(lines_kdtrees::Array{LineKDTree,1}, r, z)
         if distance > width
             continue
         end
-        #println("i $i n $n distance $distance, ro $(line_kdtree.r[idx]) zo $(line_kdtree.z[idx])")
         push!(densities, n)
         push!(distances, distance)
     end

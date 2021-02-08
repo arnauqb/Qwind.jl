@@ -191,8 +191,10 @@ function create_running_script(path)
     using Printf
     args = parse_cl()
     model_num = args[\"model\"]
-    model_path = @sprintf(\"model_%03d\", model_num)
-    model = Model(\"\$model_path/config.yaml\")
+    model_name = @sprintf(\"model_%03d\", model_num)
+    current_path = join(splitpath(String(@__FILE__))[1:end-1], \"/\")
+    model_path = current_path * \"/\$model_name/config.yaml\"
+    model = Model(model_path)
     run!(model)
     """
     open(path * "/run_model.jl", "w") do io
@@ -213,7 +215,7 @@ function create_models_folders(config::Dict)
     configs = parse_configs(config)
     model_dict = Dict()
     for (i, config) in enumerate(configs)
-        model_name =@sprintf("model_%03d", i) 
+        model_name = @sprintf("model_%03d", i)
         model_dict[model_name] = config
         model_folder = save_folder * "/" * model_name
         mkdir(model_folder)
@@ -222,3 +224,6 @@ function create_models_folders(config::Dict)
     create_running_script(save_folder)
     YAML.write_file(save_folder * "/all_configs.yaml", model_dict)
 end
+
+create_models_folders(config::String) =
+    create_models_folders(YAML.load_file(config, dicttype = Dict{Symbol,Any}))

@@ -5,7 +5,7 @@ black_hole:
 
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
-  f_x: "@vary linear 0.05 0.2 3"
+  f_x: 0.15
   n_r: 1000
 
 radiative_transfer:
@@ -14,8 +14,7 @@ radiative_transfer:
     type: VIGrid
     vacuum_density: 1e2
     n_timesteps: 10000
-    nr: 100
-    nz: 101
+    n: "@vary linear 50 500 10"
 
 grid:
   # units of Rg
@@ -26,19 +25,17 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  r_in: "@vary linear 10 200 4"
+  r_in: 50 #"@vary linear 10 200 4"
   r_fi: 1300
-  n_lines: 120
+  n_lines: 200
   log_spaced: true
   z_0: 0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.5
-  n_0: 2e8 # cm^-3
-  v_0: 5e7 # cm / s
 
 integrator:
-  n_iterations: 1
+  n_iterations: 10
   atol: 1e-8
   rtol: 1e-3
-  save_path: "results/models_test"
+  save_path: "runs/test_resolution"

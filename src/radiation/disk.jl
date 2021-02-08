@@ -20,6 +20,10 @@ end
 
 kev_to_hz(energy) = energy / ERG_TO_KEV / H_PLANCK
 
+lambda_peak(T) = 0.2897771955 / T 
+nu_peak(T) = C / lambda_peak(T)
+nu_peak(bb::BlackBody) = nu_peak(bb.T)
+
 """
 Spectral radiance of a black body bb for a frequency. Input frequency is
 in Hz, and output units are erg / (s cm^2 sr Hz)
@@ -45,6 +49,8 @@ end
 Computes the radiance on a frequency band from low to high.
 """
 function spectral_band_radiance_frequency(bb::BlackBody, low, high)
+    low = max(low, nu_peak(bb) / 1e4)
+    high = min(high, nu_peak(bb) * 1e4)
     integral, err = quadgk(x -> spectral_radiance_frequency(bb, x), low, high, rtol = 1e-8)
     return integral
 end
@@ -55,6 +61,8 @@ Computes the radiance on an energetic band from low to high.
 function spectral_band_radiance(bb::BlackBody, low, high)
     low = kev_to_hz(low)
     high = kev_to_hz(high)
+    low = max(low, nu_peak(bb) / 1e3)
+    high = min(high, nu_peak(bb) * 1e3)
     integral, err = quadgk(x -> spectral_radiance_frequency(bb, x), low, high, rtol = 1e-8)
     return integral
 end
@@ -153,4 +161,19 @@ end
 
 function uv_fractions(bh::BlackHole, radius_range)
     return uv_fraction.(Ref(bh), radius_range)
+end
+
+"""
+Disk spectrum
+"""
+function disk_spectral_band_radiance(bh::BlackHole, low, high)
+    f(r) = spectral_band_radiance(BlackBody(disk_temperature(bh, r)), low, high) * r
+    integral, err = quadgk(f, bh.isco, 1600, rtol = 1e-8, atol=0)
+    return integral * 4π^2 * bh.Rg^2
+end
+
+function xray_fraction(bh::BlackHole; low = UV_HIGH_KEV, high = 1e7)
+    total_lumin = compute_bolometric_luminosity(bh)
+    xray_lumin = disk_spectral_band_radiance(bh, low, high)
+    xray_lumin / total_lumin
 end

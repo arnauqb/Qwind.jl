@@ -131,7 +131,7 @@ function compute_disc_radiation_field(
     maxevals = 10000,
     max_z_vertical_flux = 5e-1,
 )
-    println("r $r z $z")
+    #println("r $r z $z")
     if z < max_z_vertical_flux
         force = compute_disc_radiation_field_vertical(radiative_transfer, r, z)
     else
@@ -149,6 +149,6 @@ function compute_disc_radiation_field(
         radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
         force = z * radiation_constant .* res
     end
-    println("force $force")
+    #println("force $force")
     return force
 end

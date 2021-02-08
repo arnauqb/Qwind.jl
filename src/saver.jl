@@ -106,8 +106,8 @@ function save_wind_properties(integrators, save_path, bh::BlackHole)
     ret["eddington_luminosity"] = compute_eddington_luminosity(bh)
     ret["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
     ret["mass_accretion_rate"] = compute_mass_accretion_rate(bh)
-    ret["kinetic_luminosity"] = compute_kinetic_luminosity(integrators, Rg)
-    ret["mass_loss"] = compute_wind_mdot(integrators, Rg)
+    ret["kinetic_luminosity"] = compute_kinetic_luminosity(integrators, bh.Rg)
+    ret["mass_loss"] = compute_wind_mdot(integrators, bh.Rg)
     ret["max_velocity"] = compute_maximum_velocity(integrators)
     ret["mass_loss_fraction"] = ret["mass_loss"] / ret["mass_accretion_rate"]
     YAML.write_file(save_path, ret)
@@ -118,6 +118,6 @@ function save_wind(integrators, model, save_path)
     lines_save_path = save_path * "/streamlines.csv"
     properties_save_path = save_path * "/wind_properties.yaml"
     save_integrators(integrators, lines_save_path)
-    save_wind_properties(integrators, model.bh.Rg, properties_save_path)
+    save_wind_properties(integrators, properties_save_path, model.bh)
 end
 
