@@ -1,3 +1,9 @@
+system:
+  n_cpus: 1
+  queue: cosma5
+  max_time: 72
+  job_name: qwind
+  
 black_hole:
   M: 1e8 # solar masses
   mdot: 0.5 # Eddington units
@@ -14,7 +20,7 @@ radiative_transfer:
     type: VIGrid
     vacuum_density: 1e2
     n_timesteps: 10000
-    n: "@vary linear 50 500 10"
+    n: "@vary grid 50,100,200,500"
 
 grid:
   # units of Rg
@@ -38,4 +44,4 @@ integrator:
   n_iterations: 10
   atol: 1e-8
   rtol: 1e-3
-  save_path: "runs/test_resolution"
+  save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution"

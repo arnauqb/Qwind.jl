@@ -137,6 +137,8 @@ function VIGrid(
         nr = n
         nz = n
     end
+    nr = Int(nr)
+    nz = Int(nz)
     if integrators === nothing
         lines_kdtrees = nothing
     else

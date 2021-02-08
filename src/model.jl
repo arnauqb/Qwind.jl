@@ -156,6 +156,8 @@ function parse_variation(value)
             parse(Float64, value_split[3]),
             length = parse(Int, value_split[4]),
         )
+    elseif value_split[1] == "grid"
+        return parse.(Float64, split(value_split[2], ","))
     else
         error("Type of variation not supported")
     end
@@ -192,8 +194,7 @@ function create_running_script(path)
     args = parse_cl()
     model_num = args[\"model\"]
     model_name = @sprintf(\"model_%03d\", model_num)
-    current_path = join(splitpath(String(@__FILE__))[1:end-1], \"/\")
-    model_path = current_path * \"/\$model_name/config.yaml\"
+    model_path = \"$path\" * \"/\$model_name/config.yaml\"
     model = Model(model_path)
     run!(model)
     """
@@ -223,6 +224,7 @@ function create_models_folders(config::Dict)
     end
     create_running_script(save_folder)
     YAML.write_file(save_folder * "/all_configs.yaml", model_dict)
+    make_cosma_scripts(length(configs), path = save_folder; configs[1][:system]...);
 end
 
 create_models_folders(config::String) =
