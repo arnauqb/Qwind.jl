@@ -132,7 +132,7 @@ function cosma_script(;
     queue = "cosma",
     account="durham",
     stdout_path = nothing,
-    max_time = 72,
+    max_time = "72:00:00",
     save_path = nothing,
     run_script_path = nothing,
 )
@@ -146,7 +146,7 @@ function cosma_script(;
     #SBATCH -e $stdout_path.err
     #SBATCH -t $max_time
 
-    julia $run_script_path -m $script_number
+    stdbuf -o0 -e0 julia $run_script_path -m $script_number
     """
     open(save_path, "w") do io
         write(io, script)

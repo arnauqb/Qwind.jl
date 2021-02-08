@@ -95,7 +95,7 @@ function compute_maximum_velocity(integrators)
         vzf = integrator.p.data[:vz][end]
         vf = sqrt(vrf^2 + vzf^2)
         if vf > maxv
-            maxv = v_f
+            maxv = vf
         end
     end
     return maxv

@@ -134,16 +134,9 @@ function run!(model::Model, iterations_dict = nothing)
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
-    save_path_base = model.config[:integrator][:save_path]
-    save_path = save_path_base
-    i = 0
-    while isdir(save_path)
-        save_path = save_path_base * "_$i"
-        i += 1
-    end
+    save_path = model.config[:integrator][:save_path]
     @info "Saving results to $save_path"
     flush(stdout)
-    mkpath(save_path)
     # iterations
     n_iterations = model.config[:integrator][:n_iterations]
     iterations_dict[1] = Dict()

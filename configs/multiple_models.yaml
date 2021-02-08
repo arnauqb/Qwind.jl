@@ -2,7 +2,7 @@ system:
   n_cpus: 1
   queue: cosma
   account: durham
-  max_time: 72
+  max_time: 72:00:00
   job_name: qwind
   
 black_hole:
