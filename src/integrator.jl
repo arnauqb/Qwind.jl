@@ -192,6 +192,7 @@ run_integrator!(integrator::Sundials.IDAIntegrator) = solve!(integrator)
 function run_integrators!(integrators::Vector)
     for (i, integrator) in enumerate(integrators)
         @info "Running integrator $(@sprintf "%03d" i) of $(length(integrators))"
+        flush(stdout)
         run_integrator!(integrator)
     end
 end
@@ -248,6 +249,7 @@ end
 
 function stalling_affect!(integrator)
     @warn "STALLING!"
+    flush(stdout)
     integrator.u[2] += sign(integrator.u[4]) * 5e-2 * integrator.u[2]
     integrator.u[1] += sign(integrator.u[3]) * 5e-2 * integrator.u[1]
 end
@@ -255,12 +257,15 @@ end
 function affect!(integrator)
     if escaped(integrator)
         @info "Line $(integrator.p.line_id) escaped!"
+        flush(stdout)
         #println(" \U1F4A8")
     elseif failed(integrator)
         @info "Line $(integrator.p.line_id) failed!"
+        flush(stdout)
         #println(" \U1F4A5")
     else
         @info "Line $(integrator.p.line_id) stalled!"
+        flush(stdout)
         #println(" \U2753")
     end
     terminate!(integrator)
@@ -480,6 +485,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
     line_width_dense = Float64[]
     density_dense = Float64[]
     @info "Getting dense solution from integrators..."
+    flush(stdout)
     for integrator in integrators
         rp, zp, zmaxp, z0p, lwp, densityp =
             get_dense_solution_from_integrator(integrator, n_timesteps)
@@ -491,6 +497,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
         density_dense = vcat(density_dense, densityp)
     end
     @info "Done"
+    flush(stdout)
     return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
 end
 

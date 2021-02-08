@@ -49,11 +49,13 @@ function run_parallel!(config::Dict, iterations_dict = nothing)
         i += 1
     end
     @info "Saving results to $save_path"
+    flush(stdout)
     mkpath(save_path)
     # iterations
     n_iterations = config[:integrator][:n_iterations]
     for it = 1:n_iterations
         @info "Starting iteration $it of $n_iterations"
+        flush(stdout)
         iterations_dict[it] = Dict()
         output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
         lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic)
@@ -78,6 +80,7 @@ function run_parallel!(config::Dict, iterations_dict = nothing)
         iterations_dict[it]["integrators"] = integrators
         iterations_dict[it]["radiative_transfer"] = model.rt
         @info "Integration of iteration $it ended!"
+        flush(stdout)
         radiative_transfer = update_radiative_transfer(model.rt, integrators)
         model = update_model!(model, radiative_transfer)
     end
@@ -101,6 +104,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     iteration_save_path = save_path * "/iteration_$(@sprintf "%03d" it_num)"
     lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
     @info "Starting iteration $it_num with $(length(lines_range)) lines."
+    flush(stdout)
     integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
     iterations_dict[it_num]["integrators"] = integrators
     for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
@@ -115,8 +119,10 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     end
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
+    flush(stdout)
     save_wind(integrators, model, iteration_save_path)
     @info "Done"
+    flush(stdout)
     radiative_transfer = update_radiative_transfer(model.rt, integrators)
     update_model!(model, radiative_transfer)
     iterations_dict[it_num + 1] = Dict()
@@ -136,6 +142,7 @@ function run!(model::Model, iterations_dict = nothing)
         i += 1
     end
     @info "Saving results to $save_path"
+    flush(stdout)
     mkpath(save_path)
     # iterations
     n_iterations = model.config[:integrator][:n_iterations]
@@ -212,6 +219,7 @@ function create_models_folders(config::Dict)
         i += 1
     end
     @info "Saving results to $save_folder"
+    flush(stdout)
     mkpath(save_folder)
     configs = parse_configs(config)
     model_dict = Dict()

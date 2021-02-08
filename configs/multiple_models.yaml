@@ -1,6 +1,6 @@
 system:
   n_cpus: 1
-  queue: cosma5
+  queue: cosma
   max_time: 72
   job_name: qwind
   
