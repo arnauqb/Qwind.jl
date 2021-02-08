@@ -220,6 +220,7 @@ function create_models_folders(config::Dict)
         model_dict[model_name] = config
         model_folder = save_folder * "/" * model_name
         mkdir(model_folder)
+        config[:integrator][:save_path] = model_folder
         YAML.write_file(model_folder * "/config.yaml", config)
     end
     create_running_script(save_folder)

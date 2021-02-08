@@ -129,20 +129,22 @@ function cosma_script(;
     n_cpus = 1,
     job_name = "qwind",
     script_number = 1,
-    queue = "cosma5",
+    queue = "cosma",
+    account="durham",
     stdout_path = nothing,
     max_time = 72,
     save_path = nothing,
     run_script_path = nothing,
 )
     script = """
-    #!/bin/bash -l,
-    #SBATCH --ntasks $n_cpus,
-    #SBATCH -J $(job_name[1:4])_$(@sprintf "%03d" script_number),
-    #SBATCH -p $queue,
-    #SBATCH -o $stdout_path.out,
-    #SBATCH -e $stdout_path.err,
-    #SBATCH -t $max_time,
+    #!/bin/bash -l
+    #SBATCH --ntasks $n_cpus
+    #SBATCH -J $(job_name[1:4])_$(@sprintf "%03d" script_number)
+    #SBATCH -p $queue
+    #SBATCH -A $account
+    #SBATCH -o $stdout_path.out
+    #SBATCH -e $stdout_path.err
+    #SBATCH -t $max_time
 
     julia $run_script_path -m $script_number
     """
@@ -156,7 +158,8 @@ function make_cosma_scripts(
     n_cpus = 1,
     path = nothing,
     job_name = "qwind",
-    queue = "cosma5",
+    queue = "cosma",
+    account = "durham",
     max_time = 72,
 )
     run_script_path = path * "/run_model.jl"
@@ -170,6 +173,7 @@ function make_cosma_scripts(
             n_cpus = n_cpus,
             job_name = job_name,
             queue = queue,
+            account=account,
             max_time = max_time,
             run_script_path = run_script_path,
             save_path = submit_script_path,

@@ -1,6 +1,7 @@
 system:
   n_cpus: 1
-  queue: cosma5
+  queue: cosma
+  account: durham
   max_time: 72
   job_name: qwind
   
@@ -44,4 +45,5 @@ integrator:
   n_iterations: 10
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution"
+  #save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution"
+  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/test_resolution"
