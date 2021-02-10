@@ -1,6 +1,6 @@
 # general pieces of a model
 
-export DensityInterpolator, GridInterpolator
+export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp
 
 abstract type Radiation end
 abstract type RadiativeTransfer end

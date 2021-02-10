@@ -81,6 +81,7 @@ function integrate_radiation_force_integrand(
     #else
     #    integration_type = IntegrationFromCenter()
     #end
+    println("asd")
     integration_type = IntegrationFromCenter()
     f(x, v) = radiation_force_integrand!(
         radiative_transfer,
@@ -91,6 +92,7 @@ function integrate_radiation_force_integrand(
         r,
         z,
     )
+    println("asd2")
     return hcubature(
         2,
         f,
