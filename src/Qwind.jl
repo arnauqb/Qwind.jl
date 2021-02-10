@@ -31,7 +31,7 @@ include("initial_conditions.jl")
 
 # integrator
 include("integrator.jl")
-include("plotting.jl")
+#include("plotting.jl")
 
 # saver
 include("saver.jl")
