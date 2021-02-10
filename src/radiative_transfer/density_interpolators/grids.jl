@@ -10,6 +10,7 @@ struct InterpolationGrid
     z_max::Float64
     nr::Int
     nz::Int
+    iterator::GridIterator
     function InterpolationGrid(r_range, z_range, grid)
         r_min = minimum(r_range)
         r_max = maximum(r_range)
@@ -17,7 +18,8 @@ struct InterpolationGrid
         z_max = maximum(z_range)
         nr = length(r_range)
         nz = length(z_range)
-        return new(r_range, z_range, grid, r_min, z_min, r_max, z_max, nr, nz)
+        iterator = GridIterator(r_range, z_range)
+        return new(r_range, z_range, grid, r_min, z_min, r_max, z_max, nr, nz, iterator)
     end
 end
 

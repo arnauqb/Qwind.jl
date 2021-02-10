@@ -95,6 +95,13 @@ run!(config::String, iterations_dict = nothing) = run!(
 run!(config::Dict, iterations_dict = nothing) =
     run!(Model(config), iterations_dict = iterations_dict)
 
+initialize_integrators(model::Model) = initialize_integrators(
+    model.rt,
+    model.wind_grid,
+    model.ic,
+    atol = model.config[:integrator][:atol],
+    rtol = model.config[:integrator][:rtol],
+)
 
 function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     if it_num ∉ keys(iterations_dict)
@@ -102,20 +109,25 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     end
     save_path = model.config[:integrator][:save_path]
     iteration_save_path = save_path * "/iteration_$(@sprintf "%03d" it_num)"
-    lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
-    @info "Starting iteration $it_num with $(length(lines_range)) lines."
+    #lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
+    #@info "Starting iteration $it_num with $(length(lines_range)) lines."
     flush(stdout)
-    integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
+    @info "Initializing integrators..."
+    integrators = initialize_integrators(model) #Array{Sundials.IDAIntegrator}(undef, length(lines_range))
+    @info "Done. Running $(length(integrators)) integrators."
     iterations_dict[it_num]["integrators"] = integrators
-    for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-        @time integrators[i] = create_and_run_integrator(
-            model,
-            linewidth = lw,
-            r0 = r0,
-            atol = model.config[:integrator][:atol],
-            rtol = model.config[:integrator][:rtol],
-            line_id = i,
-        )
+    for integrator in integrators
+        @time run_integrator!(integrator)
+        #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
+        #    @time run_integrator!(int
+        #@time integrators[i] = create_and_run_integrator(
+        #    model,
+        #    linewidth = lw,
+        #    r0 = r0,
+        #    atol = model.config[:integrator][:atol],
+        #    rtol = model.config[:integrator][:rtol],
+        #    line_id = i,
+        #)
     end
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
@@ -226,7 +238,7 @@ function create_models_folders(config::Dict)
     end
     create_running_script(save_folder)
     YAML.write_file(save_folder * "/all_configs.yaml", model_dict)
-    make_cosma_scripts(length(configs), path = save_folder; configs[1][:system]...);
+    make_cosma_scripts(length(configs), path = save_folder; configs[1][:system]...)
 end
 
 create_models_folders(config::String) =
