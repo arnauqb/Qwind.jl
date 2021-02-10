@@ -40,7 +40,7 @@ function searchsorted_first(a, x, direction = 1)
         return 1
     end
     (direction == 0) && (direction = 1)
-    return idx - (direction + 1) / 2
+    return Int(idx - (direction + 1) / 2)
 end
 
 function countsignchanges(array::Vector{Float64}, reference = 0)
