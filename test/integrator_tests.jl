@@ -29,10 +29,10 @@ function residual!(radiation::TestRadiation, out, du, u, p, t)
     out[4] = v_z_dot - a_z
 end
 
-function compute_radiation_acceleration(radiation::TestRadiation1, du, u, p)
+function compute_radiation_acceleration(radiation::TestRadiation1, du, u, p::Parameters)
     return [0.0, 0.0]
 end
-function compute_radiation_acceleration(radiation::TestRadiation2, du, u, p)
+function compute_radiation_acceleration(radiation::TestRadiation2, du, u, p::Parameters)
     return [0.0, 400 / C^2 * earth.Rg]
 end
 
