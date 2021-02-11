@@ -18,11 +18,12 @@ end
 
 function create_test_kdtree(density_function; r_range, z_range, width_range)
     zmax = maximum(z_range) * ones(length(r_range))
+    z0 = minimum(z_range) * ones(length(z_range))
     if width_range === nothing
         width_range = 300 .* ones(length(zmax))
     end
     density = density_function(r_range, z_range)
-    kdtree = create_wind_kdtree(r_range, z_range, zmax, width_range, density)
+    kdtree = create_wind_kdtree(r_range, z_range, zmax, z0, width_range, density, 1e2, 10000)
     kdtree
 end
 

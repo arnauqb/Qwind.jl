@@ -29,10 +29,10 @@ function residual!(radiation::TestRadiation, out, du, u, p, t)
     out[4] = v_z_dot - a_z
 end
 
-function compute_radiation_acceleration(radiation::TestRadiation1, du, u, p)
+function compute_radiation_acceleration(radiation::TestRadiation1, du, u, p::Parameters)
     return [0.0, 0.0]
 end
-function compute_radiation_acceleration(radiation::TestRadiation2, du, u, p)
+function compute_radiation_acceleration(radiation::TestRadiation2, du, u, p::Parameters)
     return [0.0, 400 / C^2 * earth.Rg]
 end
 
@@ -55,7 +55,7 @@ end
 
 @testset "Test Free fall" begin
     ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
-    grid = Grid(-5, Inf, -5, Inf)
+    grid = Rectangular(-5, Inf, -5, Inf)
     radiation = TestRadiation1(earth)
     integrator = initialize_integrator(
         radiation,
@@ -66,6 +66,7 @@ end
         atol = 1e-7,
         rtol = 1e-4,
         tmax = 1e2 * C / earth.Rg,
+        save_results = false
     )
     run_integrator!(integrator)
     analytical_solution(t) = 0.5 * earth_gravity * t^2
@@ -79,7 +80,7 @@ end
 
 @testset "Test Free fall + constant radiation" begin
     ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
-    grid = Grid(-5, Inf, -5, Inf)
+    grid = Rectangular(-5, Inf, -5, Inf)
     radiation = TestRadiation2(earth)
     integrator = initialize_integrator(
         radiation,
@@ -90,6 +91,7 @@ end
         atol = 1e-7,
         rtol = 1e-4,
         tmax = 1e2 * C / earth.Rg,
+        save_results = false
     )
     run_integrator!(integrator)
     analytical_solution(t) = 0.5 * ((400 / C^2 * earth.Rg) + earth_gravity) * t^2

@@ -1,16 +1,6 @@
 using Qwind
 using Test
 
-@testset "NT rel factors" begin
-    @test nt_rel_factors.([6, 100, 1e8], 0, 6.0) ≈
-          [0, 0.6522661452445981, 0.9960299145167933] rtol = 5e-3 atol = 0
-    @test nt_rel_factors.(10, 0.99, 6.0) ≈ 0.22827160704457788 rtol = 5e-3 atol =
-        0
-    @test nt_rel_factors.(10, 0.99, 10) ≈ 0.0 rtol = 5e-3 atol = 0
-    @test nt_rel_factors.(500, 0.5, 10) ≈ 0.8296494067756125 rtol = 5e-3 atol =
-        0
-end
-
 @testset "Ionization Parameter" begin
     @test compute_ionization_parameter(1, 1, 10, 0, 1, 1) ≈ 1 / 20
     @test compute_ionization_parameter(1, 1, 10, 100, 1, 1) ≈ 0 atol = 1e-20
@@ -26,17 +16,17 @@ end
 
 @testset "Force multiplier" begin
     @test Qwind.compute_force_multiplier_k(1e-3) == 0.411
-    @test Qwind.compute_force_multiplier_k(1e-3, NoInterp()) ≈ 0.411 rtol=0.1
+    @test Qwind.compute_force_multiplier_k(1e-3, FMNoInterp()) ≈ 0.411 rtol=0.1
     @test Qwind.compute_force_multiplier_k(10^3.51) == 0.045
     @test Qwind.compute_force_multiplier_k(1e-5) == 0.411
     @test Qwind.compute_force_multiplier_k(1e10) == 0.013
-    @test Qwind.compute_force_multiplier_k(1e10, NoInterp()) == 0.03
+    @test Qwind.compute_force_multiplier_k(1e10, FMNoInterp()) == 0.03
     @test Qwind.compute_force_multiplier_eta(1e-3) == 10^6.95
-    @test Qwind.compute_force_multiplier_eta(1e-3, NoInterp()) ≈ 9.33e6 rtol=0.1
+    @test Qwind.compute_force_multiplier_eta(1e-3, FMNoInterp()) ≈ 9.33e6 rtol=0.1
     @test Qwind.compute_force_multiplier_eta(10^3.50) == 10^1.58
     @test Qwind.compute_force_multiplier_eta(1e-5) == 10^6.95
     @test Qwind.compute_force_multiplier_eta(1e10) == 10^0.78
-    @test Qwind.compute_force_multiplier_eta(1e10, NoInterp()) == 1.0
+    @test Qwind.compute_force_multiplier_eta(1e10, FMNoInterp()) == 1.0
     @test compute_force_multiplier(1e5, 1e5) < 1e-3
     @test compute_force_multiplier(1e5, 1e-5) < 1e-3
     @test compute_force_multiplier(1e-8, 1e-5) > 2000
@@ -46,27 +36,28 @@ end
     @test Qwind.compute_tau_eff(1e8, 0) == 1.0
 end
 
-import Qwind.radiation_force_integrand!
-struct RadiationTest <: RadiativeTransfer end
-
-function radiation_force_integrand!(radiation::RadiationTest, v, r_d, phi_d, r, z)
-    v[1] = 2 * r_d^2 * cos(phi_d) * r
-    v[2] = 2 * r_d^3 * sin(phi_d) * z
-end
-
-@testset "integrand integration" begin
-    result, error = integrate_radiation_force_integrand(
-        RadiationTest(),
-        2.0,
-        3.0,
-        1.0,
-        2.0,
-        phi_min = 0.0,
-        phi_max = π / 4,
-        rtol = 1e-4,
-    )
-    @test result[1] ≈ 14 / 3 * sqrt(2)
-    @test error[1] < 5e-3 * result[1]
-    @test result[2] ≈ 15 / 2 * (1 - sqrt(2) / 2) * 3
-    @test error[2] < 5e-3 * result[2]
-end
+#import Qwind.radiation_force_integrand!
+#struct RadiationTest <: RadiativeTransfer end
+#
+#function radiation_force_integrand!(radiation::RadiationTest, v, r_d, phi_d, r, z)
+#    println("??")
+#    v[1] = 2 * r_d^2 * cos(phi_d) * r
+#    v[2] = 2 * r_d^3 * sin(phi_d) * z
+#end
+#
+#@testset "integrand integration" begin
+#    result, error = integrate_radiation_force_integrand(
+#        RadiationTest(),
+#        2.0,
+#        3.0,
+#        1.0,
+#        2.0,
+#        phi_min = 0.0,
+#        phi_max = π / 4,
+#        rtol = 1e-4,
+#    )
+#    @test result[1] ≈ 14 / 3 * sqrt(2)
+#    @test error[1] < 5e-3 * result[1]
+#    @test result[2] ≈ 15 / 2 * (1 - sqrt(2) / 2) * 3
+#    @test error[2] < 5e-3 * result[2]
+#end
