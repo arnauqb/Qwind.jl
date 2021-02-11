@@ -102,6 +102,7 @@ function integrate_radiation_force_integrand(
     )
 end
 
+
 function compute_disc_radiation_field_vertical(rt::RadiativeTransfer, r, z)
     constant = 3 / (2 * rt.radiation.efficiency)
     fuv, mdot = get_fuv_mdot(rt.radiation, r)
@@ -130,7 +131,6 @@ function compute_disc_radiation_field(
     maxevals = 10000,
     max_z_vertical_flux = 5e-1,
 )
-    #println("r $r z $z")
     if z < max_z_vertical_flux
         force = compute_disc_radiation_field_vertical(radiative_transfer, r, z)
     else

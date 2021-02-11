@@ -420,7 +420,8 @@ function compute_radiation_acceleration(
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
-    force_radiation = (1 + forcemultiplier) * disc_radiation_field
+    fc = flux_correction(radiative_transfer.radiation.flux_correction, vt)
+    force_radiation = (1 + forcemultiplier) * disc_radiation_field * fc
     return force_radiation
 end
 
