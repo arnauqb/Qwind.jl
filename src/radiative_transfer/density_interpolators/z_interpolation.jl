@@ -6,11 +6,6 @@ struct NEuclidean <: Metric
     z_norm::Float64
 end
 
-#(norm::NEuclidean)(a, b) = Distances.evaluate(
-#    Euclidean(),
-#    [a[1] / norm.r_norm, a[2] / norm.z_norm],
-#    [b[1] / norm.r_norm, b[2] / norm.z_norm],
-#)
 (norm::NEuclidean)(a, b) =
     sqrt(((a[1] - b[1]) / norm.r_norm)^2 + ((a[2] - b[2]) / norm.z_norm)^2)
 
@@ -162,9 +157,9 @@ function VIGrid(
     n_timesteps = 10000,
 )
     if lines_kdtrees === nothing
-        r_range = zeros(nr) #[0.0, 1.0]
-        z_range = zeros(nz) #[0.0, 1.0]
-        density_grid = nothing #vacuum_density .* ones((2, 2))
+        r_range = zeros(nr)
+        z_range = zeros(nz)
+        density_grid = nothing
     else
         r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)
         density_grid = zeros(Float64, nr, nz)
