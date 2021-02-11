@@ -99,20 +99,20 @@ end
 
 struct VIGrid <: GridInterpolator
     grid::InterpolationGrid
-    lines_kdtrees::Union{Array{LineKDTree,1},Nothing}
+    #lines_kdtrees::Union{Array{LineKDTree,1},Nothing}
     vacuum_density::Float64
     n_timesteps::Int
     function VIGrid(
         r_range::Vector{Float64},
         z_range::Vector{Float64},
         grid::Union{Array{Float64,2},Nothing};
-        lines_kdtrees,
+        #lines_kdtrees,
         vacuum_density = 1e2,
         n_timesteps = 10000,
     )
         return new(
             InterpolationGrid(r_range, z_range, grid),
-            lines_kdtrees,
+            #lines_kdtrees,
             vacuum_density,
             n_timesteps,
         )
@@ -173,7 +173,7 @@ function VIGrid(
         r_range,
         z_range,
         density_grid,
-        lines_kdtrees = lines_kdtrees,
+        #lines_kdtrees = lines_kdtrees,
         vacuum_density = vacuum_density,
         n_timesteps = n_timesteps,
     )

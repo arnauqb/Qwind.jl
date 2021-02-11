@@ -58,7 +58,7 @@ function run_parallel!(config::Dict, iterations_dict = nothing)
         flush(stdout)
         iterations_dict[it] = Dict()
         output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
-        lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic)
+        lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
         integrators_future = Array{Future}(undef, length(lines_range))
         for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
             @time integrators_future[i] =
@@ -68,7 +68,6 @@ function run_parallel!(config::Dict, iterations_dict = nothing)
                     r0 = r0,
                     atol = config[:integrator][:atol],
                     rtol = config[:integrator][:rtol],
-                    #save_path = output_path,
                     line_id = i,
                 )
         end
@@ -86,8 +85,8 @@ function run_parallel!(config::Dict, iterations_dict = nothing)
     end
 end
 
-run_parallel!(config::String) =
-    run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}))
+run_parallel!(config::String, iterations_dict) =
+    run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}), iterations_dict)
 run!(config::String, iterations_dict = nothing) = run!(
     YAML.load_file(config, dicttype = Dict{Symbol,Any}),
     iterations_dict = iterations_dict,
@@ -103,6 +102,7 @@ initialize_integrators(model::Model) = initialize_integrators(
     rtol = model.config[:integrator][:rtol],
 )
 
+
 function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     if it_num ∉ keys(iterations_dict)
         iterations_dict[1] = Dict()
@@ -111,24 +111,30 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     iteration_save_path = save_path * "/iteration_$(@sprintf "%03d" it_num)"
     #lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
     #@info "Starting iteration $it_num with $(length(lines_range)) lines."
-    flush(stdout)
-    @info "Initializing integrators..."
-    integrators = initialize_integrators(model) #Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-    @info "Done. Running $(length(integrators)) integrators."
-    iterations_dict[it_num]["integrators"] = integrators
-    for integrator in integrators
-        @time run_integrator!(integrator)
-        #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-        #    @time run_integrator!(int
-        #@time integrators[i] = create_and_run_integrator(
-        #    model,
-        #    linewidth = lw,
-        #    r0 = r0,
-        #    atol = model.config[:integrator][:atol],
-        #    rtol = model.config[:integrator][:rtol],
-        #    line_id = i,
-        #)
+    #flush(stdout)
+    #@info "Initializing integrators..."
+    #integrators = initialize_integrators(model) #Array{Sundials.IDAIntegrator}(undef, length(lines_range))
+    #@info "Done. Running $(length(integrators)) integrators."
+    #iterations_dict[it_num]["integrators"] = integrators
+    #for integrator in integrators
+    #    @time run_integrator!(integrator)
+    #end
+    lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
+    integrators_future = Array{Future}(undef, length(lines_range))
+    for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
+        @time integrators_future[i] =
+            @spawnat (i % nprocs() + 1) create_and_run_integrator(
+                model,
+                linewidth = lw,
+                r0 = r0,
+                atol = model.config[:integrator][:atol],
+                rtol = model.config[:integrator][:rtol],
+                line_id = i,
+            )
     end
+    integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
+    integrators[:] .= fetch.(integrators_future)
+    iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush(stdout)
