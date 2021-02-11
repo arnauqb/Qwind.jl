@@ -46,7 +46,6 @@ function radiation_force_integrand!(
     fuv, mdot = get_fuv_mdot(rt.radiation, rd)
     delta2 = p^2 + z^2
     tauuv = compute_uv_tau(rt, rd, r, z)
-    #println("rd $rd r $r z $z tau_uv $tauuv")
     tauuv = tauuv / sqrt((r - rd)^2 + z^2) * sqrt(delta2)
     common_part = nt * mdot * fuv * p / delta2^2 / rd^3 * exp(-tauuv)
     v[1] = common_part * p * cosψ
@@ -81,7 +80,6 @@ function integrate_radiation_force_integrand(
     #else
     #    integration_type = IntegrationFromCenter()
     #end
-    println("asd")
     integration_type = IntegrationFromCenter()
     f(x, v) = radiation_force_integrand!(
         radiative_transfer,
@@ -92,7 +90,6 @@ function integrate_radiation_force_integrand(
         r,
         z,
     )
-    println("asd2")
     return hcubature(
         2,
         f,

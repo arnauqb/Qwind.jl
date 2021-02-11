@@ -66,7 +66,7 @@ end
         atol = 1e-7,
         rtol = 1e-4,
         tmax = 1e2 * C / earth.Rg,
-        save = false
+        save_results = false
     )
     run_integrator!(integrator)
     analytical_solution(t) = 0.5 * earth_gravity * t^2
@@ -91,7 +91,7 @@ end
         atol = 1e-7,
         rtol = 1e-4,
         tmax = 1e2 * C / earth.Rg,
-        save = false
+        save_results = false
     )
     run_integrator!(integrator)
     analytical_solution(t) = 0.5 * ((400 / C^2 * earth.Rg) + earth_gravity) * t^2

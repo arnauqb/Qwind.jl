@@ -73,7 +73,7 @@ function initialize_integrator(
     rtol = 1e-3,
     tmax = 1e8,
     line_id = -1,
-    save=true
+    save_results=true
     #save_path = nothing,
 )
     l0 = getl0(initial_conditions, r0)
@@ -90,7 +90,7 @@ function initialize_integrator(
     stalling_cb =
         DiscreteCallback(is_stalled, stalling_affect!, save_positions = (false, false))
     params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data)
-    if save
+    if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
             (u, t, integrator) -> save(u, t, integrator, radiative_transfer, line_id),
