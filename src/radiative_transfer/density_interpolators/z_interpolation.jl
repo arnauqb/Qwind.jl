@@ -8,30 +8,35 @@ end
 
 (norm::NEuclidean)(a, b) =
     sqrt(((a[1] - b[1]) / norm.r_norm)^2 + ((a[2] - b[2]) / norm.z_norm)^2)
+#(norm::NEuclidean)(a, b) = sqrt((a[1]-b[1])^2 + (a[2]-b[2])^2)
 
 struct LineKDTree <: NNInterpolator
     r::Vector{Float64}
     z::Vector{Float64}
     n::Vector{Float64}
     width::Vector{Float64}
-    r_norm::Float64
-    z_norm::Float64
+    #r_norm::Float64
+    #z_norm::Float64
     zmax::Float64
+    r0::Float64
     z0::Float64
-    line_tree::NearestNeighbors.BallTree
+    line_tree::NearestNeighbors.NNTree
     n_timesteps::Int
-    function LineKDTree(r, z, density, width, r_norm, z_norm, n_timesteps)
-        points_line = hcat(r, z)'
+    function LineKDTree(r, z, density, width, n_timesteps)
+        r_pos, z_pos, width_pos = reduce_line_uniformely_spaced_distance(r, z, width)
+        points_line = hcat(r_pos, z_pos)'
         points_line = convert(Array{Float64,2}, points_line)
-        line_tree = NearestNeighbors.BallTree(points_line, NEuclidean(r_norm, z_norm))
+        line_tree = NearestNeighbors.KDTree(points_line)
+        r_den, z_den, n_den = reduce_line_uniformely_spaced_density(r, z, density)
+        #line_tree = NearestNeighbors.BallTree(points_line, NEuclidean(r_norm, z_norm))
+        #line_tree = NearestNeighbors.BallTree(points_line, NEuclidean(maximum(r), maximum(z)))
         return new(
-            r,
-            z,
-            density,
-            width,
-            r_norm,
-            z_norm,
+            r_den,
+            z_den,
+            n_den,
+            width_pos,
             maximum(z),
+            r[1] - width[1]/2,
             minimum(z),
             line_tree,
             n_timesteps,
@@ -39,20 +44,42 @@ struct LineKDTree <: NNInterpolator
     end
 end
 
-function reduce_line(r, z, n, width)
+function reduce_line_uniformely_spaced_distance(r, z, width)
     rs = [r[1]]
     zs = [z[1]]
-    ns = [n[1]]
+    #ns = [n[1]]
     widths = [width[1]]
-    for (rp, zp, np, wp) in zip(r, z, n, width)
-        if zp > zs[end]
+    #for (rp, zp, np, wp) in zip(r, z, n, width)
+    for (rp, zp, wp) in zip(r, z, width)
+        #ns_eps = abs(np - ns[end]) / ns[end]
+        d0 = d_euclidean(rp, rs[1], zp, zs[1])
+        d = d_euclidean(rp, rs[end], zp, zs[end])
+        d_lim = 0.01 * d0
+        if zp > zs[end] && d > d_lim  # && np > 1e3 #ns_eps > 0.01
             push!(rs, rp)
             push!(zs, zp)
-            push!(ns, np)
+            #push!(ns, np)
             push!(widths, wp)
         end
     end
-    return rs, zs, ns, widths
+    return rs, zs, widths #, ns, widths
+end
+
+function reduce_line_uniformely_spaced_density(r, z, n)
+    rs = [r[1]]
+    zs = [z[1]]
+    ns = [n[1]]
+    #widths = [width[1]]
+    #for (rp, zp, np, wp) in zip(r, z, n, width)
+    for (rp, zp, np) in zip(r, z, n)
+        ns_eps = abs(np - ns[end]) / ns[end]
+        if zp > zs[end] && ns_eps > 0.01# && np > 1e3
+            push!(rs, rp)
+            push!(zs, zp)
+            push!(ns, np)
+        end
+    end
+    return rs, zs, ns
 end
 
 function create_lines_kdtrees(
@@ -63,10 +90,12 @@ function create_lines_kdtrees(
     r_norm = maximum(maximum([integrator.p.data[:r] for integrator in integrators]))
     z_norm = maximum(maximum([integrator.p.data[:z] for integrator in integrators]))
     for integrator in integrators
-        r, z, zmax, z0, width, density =
+        r, z, zmax, z0, width, n =
             get_dense_solution_from_integrator(integrator, n_timesteps)
-        rs, zs, ns, widths = reduce_line(r, z, density, width)
-        line_kdtree = LineKDTree(rs, zs, ns, widths, r_norm, z_norm, n_timesteps)
+        #rs, zs, ns, widths = reduce_line(r, z, density, width)
+        #println(length(rs))
+        #line_kdtree = LineKDTree(rs, zs, ns, widths, r_norm, z_norm, n_timesteps)
+        line_kdtree = LineKDTree(r, z, n, width, n_timesteps)
         push!(ret, line_kdtree)
     end
     return ret
@@ -80,10 +109,10 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     z_max = 0
     max_width = 0
     for lk in lines_kdtrees
-        r_min = min(r_min, minimum(lk.r))
+        r_min = min(r_min, lk.r0)
         r_max = max(r_max, maximum(lk.r))
-        z_min = min(z_min, minimum(lk.z))
-        z_max = max(z_max, maximum(lk.z))
+        z_min = min(z_min, lk.z0)
+        z_max = max(z_max, lk.zmax)
         max_width = max(max_width, maximum(lk.width))
     end
     r_min = max(6, r_min)
@@ -191,13 +220,9 @@ function update_density_interpolator(interpolator::VIGrid, integrators)
 end
 
 function get_closest_point(line_kdtree::LineKDTree, point)
-    idx, _ = NearestNeighbors.nn(line_kdtree.line_tree, point)
-    n = line_kdtree.n[idx]
+    idx, distance = NearestNeighbors.nn(line_kdtree.line_tree, point)
     width = line_kdtree.width[idx]
-    r = line_kdtree.r[idx]
-    z = line_kdtree.z[idx]
-    distance = Distances.evaluate(Euclidean(), point, [r, z])
-    return n, width, distance, idx
+    return distance, width, idx
 end
 
 function get_density(lines_kdtrees::Array{LineKDTree,1}, r, z)
@@ -206,12 +231,19 @@ function get_density(lines_kdtrees::Array{LineKDTree,1}, r, z)
     point = [r, z]
     for (i, line_kdtree) in enumerate(lines_kdtrees)
         if z > line_kdtree.zmax || z < line_kdtree.z0
+            #println("i $i zmax $(line_kdtree.zmax)")
             continue
         end
-        n, width, distance, idx = get_closest_point(line_kdtree, point)
+        distance, width, idx = get_closest_point(line_kdtree, point)
         if distance > width
+            #println("i $i distance $distance width $width idx $idx")
             continue
         end
+        #println("i $i distance $distance n $n")
+        #println("r $(line_kdtree.r[idx]) z $(line_kdtree.z[idx])")
+        z_idx = searchsorted_nearest(line_kdtree.z, z)
+        n = line_kdtree.n[z_idx]
+        distance = d_euclidean(line_kdtree.r[z_idx], r, line_kdtree.z[z_idx], z)
         push!(densities, n)
         push!(distances, distance)
     end

@@ -18,7 +18,7 @@ function make_lines_kdtrees(
         zmax_range = 2000 .* ones(n_timesteps)
         z0_range = zeros(n_timesteps)
         lkt =
-            LineKDTree(r_range, z_range, n_range, width_range, r_norm, z_norm, n_timesteps)
+            LineKDTree(r_range, z_range, n_range, width_range, n_timesteps)
         push!(ret, lkt)
     end
     return ret
@@ -26,22 +26,22 @@ end
 
 @testset "Test z interpolation" begin
 
-    @testset "Test reduce line" begin
-        r = [1, 2, 3, 4, 1]
-        z = [2, 4, 6, 3, 1]
-        n = [1, 2, 3, 4, 5]
-        widths = [5, 5, 5, 5, 5]
-        rr, zr, nr, wr = Qwind.reduce_line(r, z, n, widths)
-        @test rr == [1, 2, 3]
-        @test zr == [2, 4, 6]
-        @test nr == [1, 2, 3]
-        @test wr == [5, 5, 5]
-    end
+    #@testset "Test reduce line" begin
+    #    r = [1, 2, 3, 4, 1]
+    #    z = [2, 4, 6, 3, 1]
+    #    n = [1, 2, 3, 4, 5]
+    #    widths = [5, 5, 5, 5, 5]
+    #    rr, zr, nr, wr = Qwind.reduce_line(r, z, n, widths)
+    #    @test rr == [1, 2, 3]
+    #    @test zr == [2, 4, 6]
+    #    @test nr == [1, 2, 3]
+    #    @test wr == [5, 5, 5]
+    #end
 
-    @testset "Test NEuclidean" begin
-        norm = Qwind.NEuclidean(2, 4)
-        @test Distances.evaluate(norm, [1, 2], [3, 4]) ≈ sqrt(1.25)
-    end
+    #@testset "Test NEuclidean" begin
+    #    norm = Qwind.NEuclidean(2, 4)
+    #    @test Distances.evaluate(norm, [1, 2], [3, 4]) ≈ sqrt(1.25)
+    #end
 
     #density_func = (r, z) -> 1e8 
     density_func = (r, z) -> 1e8 ./ (r^2 + z^2);
