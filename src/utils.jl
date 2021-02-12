@@ -8,7 +8,10 @@ export searchsorted_nearest,
     get_value_in_path,
     set_value_in_path!,
     parse_cl,
-    make_cosma_scripts
+    make_cosma_scripts,
+    d_euclidean
+
+d_euclidean(r0, r1, z0, z1) = sqrt((r0-r1)^2 + (z0-z1)^2)
 
 function searchsorted_nearest(a, x)
     idx = searchsortedfirst(a, x)

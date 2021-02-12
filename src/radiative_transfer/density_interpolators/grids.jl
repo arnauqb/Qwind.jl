@@ -33,7 +33,8 @@ end
 
 function get_spatial_grid(kdtree::KDTree, nr, nz)
     max_width = maximum(kdtree.width)
-    r_min = max(6, minimum(kdtree.r))
+    r_min = kdtree.r[1] - kdtree.width[1] / 2
+    #r_min = max(6, minimum(kdtree.r))
     r_max = maximum(kdtree.r) + max_width
     z_min = max(1e-6, minimum(kdtree.z))
     z_max = maximum(kdtree.z) + max_width

@@ -122,7 +122,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
     integrators_future = Array{Future}(undef, length(lines_range))
     for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-        @time integrators_future[i] =
+        integrators_future[i] =
             @spawnat (i % nprocs() + 1) create_and_run_integrator(
                 model,
                 linewidth = lw,

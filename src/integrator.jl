@@ -261,15 +261,15 @@ end
 
 function affect!(integrator)
     if escaped(integrator)
-        @info "Line $(integrator.p.line_id) escaped!"
+        println("Line $(integrator.p.line_id) escaped!")
         flush(stdout)
         #println(" \U1F4A8")
     elseif failed(integrator)
-        @info "Line $(integrator.p.line_id) failed!"
+        println("Line $(integrator.p.line_id) failed!")
         flush(stdout)
         #println(" \U1F4A5")
     else
-        @info "Line $(integrator.p.line_id) stalled!"
+        println("Line $(integrator.p.line_id) stalled!")
         flush(stdout)
         #println(" \U2753")
     end
@@ -512,7 +512,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg)
     lines_range = []
     lines_widths = []
     while rc < rfi
-        delta_r = 1 / (SIGMA_T * Rg * 100 * getn0(ic, rc))
+        delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)
         rc += delta_r
