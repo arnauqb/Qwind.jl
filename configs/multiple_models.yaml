@@ -1,7 +1,7 @@
 system:
-  n_cpus: 1
-  queue: cosma
-  account: durham
+  n_cpus: 120
+  queue: cosma8
+  account: dp004 
   max_time: 72:00:00
   job_name: qwind
   
@@ -12,6 +12,7 @@ black_hole:
 
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
+  relativistic: true
   f_x: 0.15
   n_r: 1000
 
@@ -21,7 +22,7 @@ radiative_transfer:
     type: VIGrid
     vacuum_density: 1e2
     n_timesteps: 10000
-    n: "@vary grid 50,100,200,500"
+    n: "@vary grid 50,100,200,500,1000"
 
 grid:
   # units of Rg
@@ -34,7 +35,7 @@ initial_conditions:
   mode: CAKIC #UniformIC
   r_in: 50 #"@vary linear 10 200 4"
   r_fi: 1300
-  n_lines: 200
+  n_lines: 10000
   log_spaced: true
   z_0: 0 # Rg
   K: 0.03
@@ -42,8 +43,8 @@ initial_conditions:
   mu: 0.5
 
 integrator:
-  n_iterations: 10
+  n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution"
-  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/test_resolution"
+  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/test_resolution_parallel"

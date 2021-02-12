@@ -61,7 +61,7 @@ function run_parallel!(config::Dict, iterations_dict = nothing)
         lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
         integrators_future = Array{Future}(undef, length(lines_range))
         for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-            @time integrators_future[i] =
+            integrators_future[i] =
                 @spawnat (i % nprocs() + 1) create_and_run_integrator(
                     model,
                     linewidth = lw,
@@ -122,7 +122,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
     integrators_future = Array{Future}(undef, length(lines_range))
     for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-        @time integrators_future[i] =
+        integrators_future[i] =
             @spawnat (i % nprocs() + 1) create_and_run_integrator(
                 model,
                 linewidth = lw,
@@ -205,10 +205,10 @@ function parse_configs(config::Dict)
 end
 
 function create_running_script(path)
-    text = """using DrWatson
-    @quickactivate \"Qwind\"
-    using Qwind
-    using Printf
+    text = """using Distributed
+    @everywhere using DrWatson
+    @everywhere @quickactivate \"Qwind\"
+    @everywhere using Qwind, Printf
     args = parse_cl()
     model_num = args[\"model\"]
     model_name = @sprintf(\"model_%03d\", model_num)
