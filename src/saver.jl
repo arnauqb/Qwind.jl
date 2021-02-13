@@ -1,4 +1,4 @@
-using CSV, DataFrames, YAML
+using CSV, DataFrames, YAML, JLD2
 export save_integrator, save_integrators, save_wind
 
 function save_integrator(data::Dict, save_path)
@@ -113,11 +113,17 @@ function save_wind_properties(integrators, save_path, bh::BlackHole)
     YAML.write_file(save_path, ret)
 end
 
+function save_radiative_transfer(rt::RadiativeTransfer, save_path)
+    @save save_path * "/radiative_transfer.jld2" rt
+end
+
 function save_wind(integrators, model, save_path)
     mkpath(save_path)
     lines_save_path = save_path * "/streamlines.csv"
     properties_save_path = save_path * "/wind_properties.yaml"
     save_integrators(integrators, lines_save_path)
     save_wind_properties(integrators, properties_save_path, model.bh)
+    save_radiative_transfer(model.rt, save_path)
 end
+
 
