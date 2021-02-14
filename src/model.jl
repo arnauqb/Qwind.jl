@@ -18,6 +18,10 @@ function Model(config::Dict)
     wind_grid = Rectangular(config)
     ic = getfield(Qwind, Symbol(config[:initial_conditions][:mode]))(rad, bh, config)
     rt = getfield(Qwind, Symbol(config[:radiative_transfer][:mode]))(rad, config)
+    save_path = config[:integrator][:save_path]
+    if isdir(save_path)
+        mv(save_path, save_path * "_backup", force=true)
+    end
     return Model(config, wind_grid, bh, rad, rt, ic)
 end
 
@@ -108,7 +112,6 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         iterations_dict[1] = Dict()
     end
     save_path = model.config[:integrator][:save_path]
-    iteration_save_path = save_path * "/iteration_$(@sprintf "%03d" it_num)"
     #lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
     #@info "Starting iteration $it_num with $(length(lines_range)) lines."
     #flush(stdout)
@@ -138,7 +141,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush(stdout)
-    save_wind(integrators, model, iteration_save_path)
+    save_wind(integrators, model, save_path, it_num)
     @info "Done"
     flush(stdout)
     radiative_transfer = update_radiative_transfer(model.rt, integrators)

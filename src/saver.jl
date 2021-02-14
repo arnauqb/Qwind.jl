@@ -1,5 +1,6 @@
-using CSV, DataFrames, YAML, JLD2
+using CSV, DataFrames, YAML, HDF5
 export save_integrator, save_integrators, save_wind
+
 
 function save_integrator(data::Dict, save_path)
     if save_path === nothing
@@ -24,10 +25,7 @@ function save_integrator(data::Dict, save_path)
     CSV.write(save_path, ret)
 end
 
-function save_integrators(integrators, save_path)
-    if save_path === nothing
-        return
-    end
+function create_integrators_df(integrators)
     df = DataFrame()
     for integrator in integrators
         df2 = DataFrame()
@@ -39,6 +37,14 @@ function save_integrators(integrators, save_path)
         end
         append!(df, df2)
     end
+    return df
+end
+
+function save_integrators(integrators, save_path)
+    if save_path === nothing
+        return
+    end
+    df = create_integrators_df(integrators)
     CSV.write(save_path, df)
 end
 
@@ -101,7 +107,7 @@ function compute_maximum_velocity(integrators)
     return maxv
 end
 
-function save_wind_properties(integrators, save_path, bh::BlackHole)
+function create_wind_properties(integrators, bh::BlackHole)
     ret = Dict()
     ret["eddington_luminosity"] = compute_eddington_luminosity(bh)
     ret["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
@@ -110,20 +116,50 @@ function save_wind_properties(integrators, save_path, bh::BlackHole)
     ret["mass_loss"] = compute_wind_mdot(integrators, bh.Rg)
     ret["max_velocity"] = compute_maximum_velocity(integrators)
     ret["mass_loss_fraction"] = ret["mass_loss"] / ret["mass_accretion_rate"]
+    return ret
+end
+
+function save_wind_properties(integrators, save_path, bh::BlackHole)
+    ret = create_wind_properties(integrators, bh)
     YAML.write_file(save_path, ret)
 end
 
-function save_radiative_transfer(rt::RadiativeTransfer, save_path)
-    @save save_path * "/radiative_transfer.jld2" rt
-end
-
-function save_wind(integrators, model, save_path)
+function save_wind(integrators, model, save_path, it_num)
     mkpath(save_path)
-    lines_save_path = save_path * "/streamlines.csv"
-    properties_save_path = save_path * "/wind_properties.yaml"
+    iteration_save_path = save_path * "/iteration_$(@sprintf "%03d" it_num)"
+    mkpath(iteration_save_path)
+    hdf5_save_path = save_path * "/results.hdf5"
+    save_hdf5(integrators, model, hdf5_save_path, it_num)
+    lines_save_path = iteration_save_path * "/streamlines.csv"
+    properties_save_path = iteration_save_path * "/wind_properties.yaml"
     save_integrators(integrators, lines_save_path)
     save_wind_properties(integrators, properties_save_path, model.bh)
-    save_radiative_transfer(model.rt, save_path)
 end
 
 
+function save_hdf5(integrators, model, hdf5_save_path, it_num)
+    iteration = @sprintf "iteration_%03d" it_num
+    grid = model.rt.density_interpolator.grid
+    bh = model.bh
+    h5open(hdf5_save_path,isfile(hdf5_save_path) ? "r+" : "w") do file
+        g = create_group(file, iteration)
+        dg = create_group(g, "density_grid")
+        dg["r"] = grid.r_range
+        dg["z"] = grid.z_range
+        if grid.grid === nothing
+            grid_to_save = zeros((length(grid.r_range), length(grid.z_range)))
+        else
+            grid_to_save = grid.grid
+        end
+        dg["grid"] = grid_to_save
+        g["eddington_luminosity"] = compute_eddington_luminosity(bh)
+        g["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
+        macc = compute_mass_accretion_rate(bh)
+        g["mass_accretion_rate"] = macc
+        g["kinetic_luminosity"] = compute_kinetic_luminosity(integrators, bh.Rg)
+        mloss = compute_wind_mdot(integrators, bh.Rg)
+        g["mass_loss"] = mloss
+        g["max_velocity"] = compute_maximum_velocity(integrators)
+        g["mass_loss_fraction"] = mloss / macc
+    end
+end
