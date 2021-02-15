@@ -196,26 +196,65 @@ function next_intersection!(iterator::GridIterator)
     return
 end
 
+function ionization_cell_xi_kernel(
+    xray_luminosity,
+    cell_density,
+    distance_from_source,
+    taux0,
+    dx,
+    target_ionization_parameter = 1e5,
+)
+    if dx < distance_from_source
+        error()
+    else
+        ret =
+            log(xray_luminosity / (target_ionization_parameter * cell_density * dx^2)) -
+            cell_density * SIGMA_T * (dx - distance_from_source) - taux0
+        return ret
+    end
+end
+
 function compute_xray_tau_cell(
     intersection_size,
     distance_from_source,
     cell_density,
     taux0,
     xray_luminosity,
+    Rg;
+    non_ionised = false,
+    atol = 0,
+    rtol = 1e-2,
 )
-    column_density = cell_density * intersection_size
-    xi0 = xray_luminosity / (cell_density * distance_from_source^2)
-    f(t) = t - log(xi0) + taux0 + min(40, column_density * compute_xray_opacity(exp(t)))
-    if f(20) < 0
-        xi = xi0
-    elseif f(-20) > 0
-        xi = 1e-20
+    f(t) = ionization_cell_xi_kernel(
+        xray_luminosity,
+        cell_density,
+        distance_from_source,
+        taux0,
+        t,
+    )
+    x1 = distance_from_source
+    x2 = distance_from_source + intersection_size
+    f1 = f(x1)
+    f2 = f(x2)
+    if f1 > 0 && f2 > 0
+        return taux0 + cell_density * SIGMA_T * intersection_size
+    elseif f1 < 0 && f2 < 0
+        return taux0 + cell_density * SIGMA_T * intersection_size * 100
     else
-        t = find_zero(f, (-20, 20), Bisection(), atol = 0, rtol = 0.1)
-        xi = exp(t)
+        dx0 = find_zero(f, (x1, x2), Bisection())
+        return taux0 +
+               cell_density *
+               SIGMA_T *
+               (
+                   (dx0 - distance_from_source) +
+                   100 * (distance_from_source + intersection_size - dx0)
+               )
     end
-    taux = compute_xray_opacity(xi) * column_density
-    return taux
+    return taux, non_ionised
+end
+
+function get_density(density_interpolator::Union{Nothing,DensityInterpolator}, point)
+    return density_interpolator.interpolator(point[1], point[2])
 end
 
 function get_density(
@@ -246,19 +285,23 @@ function compute_xray_tau(
     initial_point = [ri, zi]
     previous_point = copy(iterator.intersection)
     ret = 0
+    non_ionised = false
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
-        cell_density = get_density(density_interpolator, iterator)
-        next_intersection!(iterator)
+        #cell_density = get_density(density_interpolator, iterator)
+        cell_density = get_density(density_interpolator, iterator.intersection)
         distance_from_source = dist(initial_point, iterator.intersection, Rg)
+        next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
-        ret += compute_xray_tau_cell(
+        ret = compute_xray_tau_cell(
             intersection_size,
             distance_from_source,
             cell_density,
             ret,
             xray_luminosity,
+            Rg,
+            non_ionised = non_ionised,
         )
         if ret > 40
             return ret
@@ -281,11 +324,11 @@ function compute_uv_tau(density_interpolator::DensityInterpolator, ri, zi, rf, z
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
-        cell_density = get_density(density_interpolator, iterator)
+        cell_density = get_density(density_interpolator, iterator.intersection)
+        #cell_density = get_density(density_interpolator, iterator)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
         ret += compute_uv_tau_cell(intersection_size, cell_density)
     end
     return ret
 end
-

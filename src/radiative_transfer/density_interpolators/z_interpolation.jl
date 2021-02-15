@@ -1,5 +1,5 @@
 export VIGrid, get_density
-import Distances
+import Distances, Interpolations
 
 struct NEuclidean <: Metric
     r_norm::Float64
@@ -110,14 +110,14 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     max_width = 0
     for lk in lines_kdtrees
         r_min = min(r_min, lk.r0)
-        r_max = max(r_max, maximum(lk.r))
+        r_max = max(r_max, lk.r[1] + lk.width[1])
         z_min = min(z_min, lk.z0)
         z_max = max(z_max, lk.zmax)
         max_width = max(max_width, maximum(lk.width))
     end
     r_min = max(6, r_min)
     r_max += max_width
-    z_min = max(1e-6, z_min)
+    z_min = max(1e-3, z_min)
     z_max += max_width
     r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
     z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
@@ -128,6 +128,7 @@ end
 
 struct VIGrid <: GridInterpolator
     grid::InterpolationGrid
+    interpolator
     #lines_kdtrees::Union{Array{LineKDTree,1},Nothing}
     vacuum_density::Float64
     n_timesteps::Int
@@ -139,8 +140,15 @@ struct VIGrid <: GridInterpolator
         vacuum_density = 1e2,
         n_timesteps = 10000,
     )
+        if grid === nothing
+            itp = (r,z) -> vacuum_density
+        else
+            itp = Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
+            itp = Interpolations.extrapolate(itp, 1e2)
+        end
         return new(
             InterpolationGrid(r_range, z_range, grid),
+            itp,
             #lines_kdtrees,
             vacuum_density,
             n_timesteps,
