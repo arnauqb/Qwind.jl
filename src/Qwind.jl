@@ -4,6 +4,7 @@ export Radiation, RadiativeTransfer, InitialConditions, Model
 include("black_hole.jl")
 include("types.jl")
 include("utils.jl")
+include("cluster_utils.jl")
 include("grid.jl")
 
 include("constants.jl")

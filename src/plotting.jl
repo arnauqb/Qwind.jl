@@ -1,5 +1,6 @@
 using PyPlot
 LogNorm = matplotlib.colors.LogNorm
+LinearNorm = matplotlib.colors.Normalize
 using ColorSchemes
 using ColorSchemes: colorschemes
 export plot_grid,
