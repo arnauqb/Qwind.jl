@@ -41,7 +41,6 @@ end
     # iterate paths
     dict = Dict("a" => 1, "b" => 2, "c" => Dict("a" => [1, 2, 3], "b" => Dict("b" => 2)))
     iterator = Set(iter_paths(dict))
-    println(iterator)
     @test length(iterator) == 6
     @test (["a"], 1) in iterator
     @test (["b"], 2) in iterator

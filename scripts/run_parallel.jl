@@ -4,6 +4,7 @@ using Distributed
 @everywhere using Qwind
 using YAML
 include("scripts/plotting.jl")
+matplotlib.rcParams["figure.dpi"] = 300
 
 # model 1
 model1 = Model("results/resolution_tests/config1.yaml");
@@ -20,9 +21,83 @@ run!(model2, iterations_dict2)
 # second iteration
 #do_iteration!(model1, iterations_dict1, it_num=2);
 #do_iteration!(model2, iterations_dict2, it_num=2);
+#
+
+angles = []
+momentum = []
+for line in iterations_dict1[2]["integrators"]
+    angle = atan(line.p.data[:z][end] / line.p.data[:r][end])
+    push!(angles, angle / π * 180)
+    vel = sqrt(line.p.data[:vr][end]^2 + line.p.data[:vz][end]^2)
+    mom = Qwind.compute_integrator_mdot(line, model1.bh.Rg) * vel * C
+    push!(momentum, mom)
+end
+angles2 = range(0, 90, step=5)
+moms2 = zeros(length(angles2))
+for (i, (angle, mom)) in enumerate(zip(angles, momentum))
+    idx = searchsorted_nearest(angles2, angle)
+    moms2[idx] += mom
+end
+fig, ax = plt.subplots(figsize=(10,5))
+ax.plot(angles2, moms2, "o-")
+ax.set_xlabel("Angle [deg]")
+ax.set_ylabel("Momentum / time [g cm / s^2]")
+ax.set_yscale("log")
+fig.savefig("Momentum_angle.png", dpi=300, bbox_inches="tight")
+
+
 
 vt(vr, vz) = sqrt.(vr .^ 2 + vz .^ 2)
 d(r, z) = sqrt.(r .^ 2 + z .^ 2)
+function compute_xray_grid(rt, r_range, z_range)
+    ret = zeros((length(r_range), length(z_range)))
+    for (i,r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            ret[i,j] = compute_xray_tau(rt, r, z)
+        end
+    end
+    ret
+end
+function compute_density_grid(rt, r_range, z_range)
+    ret = zeros((length(r_range), length(z_range)))
+    for (i,r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            ret[i,j] = get_density(rt, r, z)
+        end
+    end
+    ret
+end
+function plot_grid(r_range, z_range, ax)
+    for r in r_range
+        ax.axvline(r, color="black", alpha=0.5)
+    end
+    for z in z_range
+        ax.axhline(z, color="black", alpha=0.5)
+    end
+end
+
+it_num = 3
+rt = iterations_dict1[it_num]["radiative_transfer"];
+r_range = 10 .^ range(-2, 3, length=100);
+z_range = 10 .^ range(-3, 3, length=100);
+den_grid = compute_xray_grid(rt, r_range, z_range);
+fig, ax = plt.subplots();
+cm = ax.pcolormesh(r_range, z_range, den_grid', norm=LogNorm(vmin=5e-2, vmax=1e-1));
+#plot_streamlines(iterations_dict1[it_num]["integrators"], fig, ax)
+ax.set_xlim(r_range[1], r_range[end])
+ax.set_ylim(z_range[1], z_range[end])
+ax.set_xlabel("R [Rg]")
+ax.set_ylabel("z [Rg]")
+ax_cbar = plt.colorbar(cm, ax=ax)
+ax_cbar.set_label("Tau X")
+ax.set_title("Bad shielding")
+fig.savefig("xray_grid2.png", dpi=300, bbox_inches="tight")
+
+
+
+
+
+
 
 fig, ax = plt.subplots()
 for line in iterations_dict1[2]["integrators"]
@@ -54,33 +129,7 @@ ax.plot(vs2, "o-", label="high res")
 ax.legend()
 
 
-function compute_xray_grid(rt, r_range, z_range)
-    ret = zeros((length(r_range), length(z_range)))
-    for (i,r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            ret[i,j] = compute_xray_tau(rt, r, z)
-        end
-    end
-    ret
-end
-function compute_density_grid(rt, r_range, z_range)
-    ret = zeros((length(r_range), length(z_range)))
-    for (i,r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            ret[i,j] = get_density(rt, r, z)
-        end
-    end
-    ret
-end
 
-function plot_grid(r_range, z_range, ax)
-    for r in r_range
-        ax.axvline(r, color="black", alpha=0.5)
-    end
-    for z in z_range
-        ax.axhline(z, color="black", alpha=0.5)
-    end
-end
 plot_grid(rt, ax) = plot_grid(rt.density_interpolator.grid.r_range, rt.density_interpolator.grid.z_range, ax)
 
 it_num = 2

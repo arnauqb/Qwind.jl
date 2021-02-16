@@ -66,10 +66,53 @@ function GridIterator(r_range, z_range, ri, zi, rf, zf)
     return gi
 end
 
+function corner_sign(xcorner, ycorner, x1, y1, x2, y2)
+    return ((y2 - y1) * xcorner + (x1 - x2) * ycorner + (x2 * y1 - x1 * y2)) >= 0
+end
+
+function intersects_rectangle(r_min, r_max, z_min, z_max, ri, zi, rf, zf)
+    # if first or last point inside rectangle then true
+    if r_min <= ri <= r_max && z_min <= zi <= z_max
+        return true
+    elseif r_min <= rf <= r_max && z_min <= zf <= z_max
+        return true
+    elseif (ri <= r_min && rf <= r_min) || (ri >= r_max && rf >= r_max)
+        return false
+    elseif (zi <= z_min && zf <= z_min) || (zi >= z_max && rf >= z_max)
+        return false
+    else
+        # here we know that both points are outside the grid, we need to work out
+        # if they intersect the rectangle. One way to do it is to check if the segment
+        # "lies" in the same side for all corners
+        sign1 = corner_sign(r_min, z_min, ri, zi, rf, zf)
+        #Println("sign1 $sign1")
+        sign2 = corner_sign(r_min, z_max, ri, zi, rf, zf)
+        #println("sign2 $sign2")
+        (sign2 != sign1) && return true
+        sign3 = corner_sign(r_max, z_min, ri, zi, rf, zf)
+        #println("sign3 $sign3")
+        (sign3 != sign1) && return true
+        sign4 = corner_sign(r_max, z_max, ri, zi, rf, zf)
+        #println("sign4 $sign4")
+        (sign4 != sign1) && return true
+    end
+    return false
+end
+
 function set_iterator!(iterator::GridIterator, ri, zi, rf, zf)
-    if point_outside_grid(iterator.r_range, iterator.z_range, ri, zi) &&
-       point_outside_grid(iterator.r_range, iterator.z_range, rf, zf) ||
-       ((ri == rf) && (zi == zf))
+    if !intersects_rectangle(
+        iterator.r_range[1],
+        iterator.r_range[end],
+        iterator.z_range[1],
+        iterator.z_range[end],
+        ri,
+        zi,
+        rf,
+        zf,
+    )
+        #if point_outside_grid(iterator.r_range, iterator.z_range, ri, zi) &&
+        #   point_outside_grid(iterator.r_range, iterator.z_range, rf, zf) ||
+        #   ((ri == rf) && (zi == zf))
         iterator.ri = ri
         iterator.rf = rf
         iterator.zi = zi
@@ -105,8 +148,6 @@ function set_iterator!(iterator::GridIterator, ri, zi, rf, zf)
     direction_z = sign(zf - zi)
     current_r_idx = searchsorted_first(iterator.r_range, ri, direction_r)
     current_z_idx = searchsorted_first(iterator.z_range, zi, direction_z)
-    #current_r_idx = searchsorted_nearest(iterator.r_range, ri)
-    #current_z_idx = searchsorted_nearest(iterator.z_range, zi)
     #println("ri $ri zi $zi rf $rf zf $zf")
     #println("----------------------------")
     #println("current_r $(current_r_idx)")
@@ -221,7 +262,6 @@ function compute_xray_tau_cell(
     taux0,
     xray_luminosity,
     Rg;
-    non_ionised = false,
     atol = 0,
     rtol = 1e-2,
 )
@@ -250,7 +290,6 @@ function compute_xray_tau_cell(
                    100 * (distance_from_source + intersection_size - dx0)
                )
     end
-    return taux, non_ionised
 end
 
 function get_density(density_interpolator::Union{Nothing,DensityInterpolator}, point)
@@ -285,7 +324,6 @@ function compute_xray_tau(
     initial_point = [ri, zi]
     previous_point = copy(iterator.intersection)
     ret = 0
-    non_ionised = false
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
@@ -301,7 +339,6 @@ function compute_xray_tau(
             ret,
             xray_luminosity,
             Rg,
-            non_ionised = non_ionised,
         )
         if ret > 40
             return ret
