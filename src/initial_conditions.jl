@@ -26,10 +26,14 @@ function UniformIC(radiation, black_hole, config)
         rin = icc[:r_in]
         rfi = icc[:r_fi]
     end
+    nlines = icc[:n_lines]
+    if nlines != "auto"
+        nlines = Int(nlines)
+    end
     return UniformIC(
         rin,
         rfi,
-        Int(icc[:n_lines]),
+        nlines,
         icc[:z_0],
         icc[:n_0],
         icc[:v_0] / C,
@@ -64,12 +68,16 @@ function CAKIC(radiation, black_hole, config)
         rin = icc[:r_in]
         rfi = icc[:r_fi]
     end
+    nlines = icc[:n_lines]
+    if nlines != "auto"
+        nlines = Int(nlines)
+    end
     return CAKIC(
         radiation,
         black_hole,
         rin,
         rfi,
-        Int(icc[:n_lines]),
+        nlines,
         icc[:z_0],
         icc[:K],
         icc[:alpha],
