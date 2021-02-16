@@ -76,6 +76,10 @@ function intersects_rectangle(r_min, r_max, z_min, z_max, ri, zi, rf, zf)
         return true
     elseif r_min <= rf <= r_max && z_min <= zf <= z_max
         return true
+    elseif (ri <= r_min && rf <= r_min) || (ri >= r_max && rf >= r_max)
+        return false
+    elseif (zi <= z_min && zf <= z_min) || (zi >= z_max && rf >= z_max)
+        return false
     else
         # here we know that both points are outside the grid, we need to work out
         # if they intersect the rectangle. One way to do it is to check if the segment

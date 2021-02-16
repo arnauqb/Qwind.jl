@@ -126,7 +126,8 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     integrators_future = Array{Future}(undef, length(lines_range))
     for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
         integrators_future[i] =
-            @spawnat (i % nprocs() + 1) create_and_run_integrator(
+            #@spawnat (i % nprocs() + 1) create_and_run_integrator(
+            @spawnat :any create_and_run_integrator(
                 model,
                 linewidth = lw,
                 r0 = r0,

@@ -4,6 +4,7 @@ using Distributed
 @everywhere using Qwind
 using YAML
 include("scripts/plotting.jl")
+matplotlib.rcParams["figure.dpi"] = 300
 
 # model 1
 model1 = Model("results/resolution_tests/config1.yaml");
@@ -20,6 +21,31 @@ run!(model2, iterations_dict2)
 # second iteration
 #do_iteration!(model1, iterations_dict1, it_num=2);
 #do_iteration!(model2, iterations_dict2, it_num=2);
+#
+
+angles = []
+momentum = []
+for line in iterations_dict1[2]["integrators"]
+    angle = atan(line.p.data[:z][end] / line.p.data[:r][end])
+    push!(angles, angle / π * 180)
+    vel = sqrt(line.p.data[:vr][end]^2 + line.p.data[:vz][end]^2)
+    mom = Qwind.compute_integrator_mdot(line, model1.bh.Rg) * vel * C
+    push!(momentum, mom)
+end
+angles2 = range(0, 90, step=5)
+moms2 = zeros(length(angles2))
+for (i, (angle, mom)) in enumerate(zip(angles, momentum))
+    idx = searchsorted_nearest(angles2, angle)
+    moms2[idx] += mom
+end
+fig, ax = plt.subplots(figsize=(10,5))
+ax.plot(angles2, moms2, "o-")
+ax.set_xlabel("Angle [deg]")
+ax.set_ylabel("Momentum / time [g cm / s^2]")
+ax.set_yscale("log")
+fig.savefig("Momentum_angle.png", dpi=300, bbox_inches="tight")
+
+
 
 vt(vr, vz) = sqrt.(vr .^ 2 + vz .^ 2)
 d(r, z) = sqrt.(r .^ 2 + z .^ 2)
@@ -50,17 +76,22 @@ function plot_grid(r_range, z_range, ax)
     end
 end
 
-it_num = 2
+it_num = 3
 rt = iterations_dict1[it_num]["radiative_transfer"];
 r_range = 10 .^ range(-2, 3, length=100);
 z_range = 10 .^ range(-3, 3, length=100);
 den_grid = compute_xray_grid(rt, r_range, z_range);
 fig, ax = plt.subplots();
-cm = ax.pcolormesh(r_range, z_range, den_grid', norm=LogNorm());
+cm = ax.pcolormesh(r_range, z_range, den_grid', norm=LogNorm(vmin=5e-2, vmax=1e-1));
 #plot_streamlines(iterations_dict1[it_num]["integrators"], fig, ax)
 ax.set_xlim(r_range[1], r_range[end])
 ax.set_ylim(z_range[1], z_range[end])
-plt.colorbar(cm, ax=ax)
+ax.set_xlabel("R [Rg]")
+ax.set_ylabel("z [Rg]")
+ax_cbar = plt.colorbar(cm, ax=ax)
+ax_cbar.set_label("Tau X")
+ax.set_title("Bad shielding")
+fig.savefig("xray_grid2.png", dpi=300, bbox_inches="tight")
 
 
 

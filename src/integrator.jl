@@ -511,8 +511,20 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg)
     rc = rin
     lines_range = []
     lines_widths = []
+    tau_x = 0
+    tau_uv = 0
     while rc < rfi
-        delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
+        if tau_x < 1
+            delta_r = 0.1 / (SIGMA_T * Rg * 100 * getn0(ic, rc))
+            tau_x += 0.1
+            tau_uv += 0.1 / 100
+        elseif (tau_x > 1) && (tau_uv < 1)
+            delta_r = 0.1 / (SIGMA_T * Rg * getn0(ic, rc))
+            tau_x += 10
+            tau_uv += 0.1 
+        else
+            delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
+        end
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)
         rc += delta_r
