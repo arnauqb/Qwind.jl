@@ -23,6 +23,50 @@ run!(model2, iterations_dict2)
 
 vt(vr, vz) = sqrt.(vr .^ 2 + vz .^ 2)
 d(r, z) = sqrt.(r .^ 2 + z .^ 2)
+function compute_xray_grid(rt, r_range, z_range)
+    ret = zeros((length(r_range), length(z_range)))
+    for (i,r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            ret[i,j] = compute_xray_tau(rt, r, z)
+        end
+    end
+    ret
+end
+function compute_density_grid(rt, r_range, z_range)
+    ret = zeros((length(r_range), length(z_range)))
+    for (i,r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            ret[i,j] = get_density(rt, r, z)
+        end
+    end
+    ret
+end
+function plot_grid(r_range, z_range, ax)
+    for r in r_range
+        ax.axvline(r, color="black", alpha=0.5)
+    end
+    for z in z_range
+        ax.axhline(z, color="black", alpha=0.5)
+    end
+end
+
+it_num = 2
+rt = iterations_dict1[it_num]["radiative_transfer"];
+r_range = 10 .^ range(-2, 3, length=100);
+z_range = 10 .^ range(-3, 3, length=100);
+den_grid = compute_xray_grid(rt, r_range, z_range);
+fig, ax = plt.subplots();
+cm = ax.pcolormesh(r_range, z_range, den_grid', norm=LogNorm());
+#plot_streamlines(iterations_dict1[it_num]["integrators"], fig, ax)
+ax.set_xlim(r_range[1], r_range[end])
+ax.set_ylim(z_range[1], z_range[end])
+plt.colorbar(cm, ax=ax)
+
+
+
+
+
+
 
 fig, ax = plt.subplots()
 for line in iterations_dict1[2]["integrators"]
@@ -54,33 +98,7 @@ ax.plot(vs2, "o-", label="high res")
 ax.legend()
 
 
-function compute_xray_grid(rt, r_range, z_range)
-    ret = zeros((length(r_range), length(z_range)))
-    for (i,r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            ret[i,j] = compute_xray_tau(rt, r, z)
-        end
-    end
-    ret
-end
-function compute_density_grid(rt, r_range, z_range)
-    ret = zeros((length(r_range), length(z_range)))
-    for (i,r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            ret[i,j] = get_density(rt, r, z)
-        end
-    end
-    ret
-end
 
-function plot_grid(r_range, z_range, ax)
-    for r in r_range
-        ax.axvline(r, color="black", alpha=0.5)
-    end
-    for z in z_range
-        ax.axhline(z, color="black", alpha=0.5)
-    end
-end
 plot_grid(rt, ax) = plot_grid(rt.density_interpolator.grid.r_range, rt.density_interpolator.grid.z_range, ax)
 
 it_num = 2
