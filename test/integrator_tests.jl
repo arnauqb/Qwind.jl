@@ -11,6 +11,35 @@ struct TestRadiation2 <: TestRadiation
     bh::BlackHole
 end
 
+
+@testset "Get initial radii linewidths" begin
+    # linear
+    ic = UniformIC(0, 100, 25, 2, 1e8, 1e6 / C, false)
+    bh = BlackHole(1e8 *M_SUN, 0.5, 0.0)
+    Rg = bh.Rg
+    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg)
+    @test length(lines_range) == 25
+    @test length(lines_widths) == 25
+    @test lines_widths == 4 .* ones(25)
+    @test lines_range[1] == 2
+    @test lines_range[2] == 6
+    @test lines_range[end-1] == 94
+    @test lines_range[end] == 98
+    # log 
+    ic = UniformIC(1, 1e4, 4, 2, 1e8, 1e6 / C, true)
+    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg)
+    println(lines_range)
+    @test diff(log10.(lines_widths)) ≈ ones(3)
+    @test lines_range[1] == 5.5
+    @test lines_range[2] == 55.0
+    @test lines_range[3] == 550.0
+    @test lines_range[4] == 5500.0
+    @test lines_widths[1] == 9
+    @test lines_widths[2] == 90
+    @test lines_widths[3] == 900
+    @test lines_widths[4] == 9000
+end
+
 earth_mass = 5.972e27 # g
 earth = BlackHole(earth_mass, 0, 0)
 earth_radius = 6371e5 / earth.Rg #cm

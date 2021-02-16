@@ -24,3 +24,11 @@ using Test
     @test compute_gravitational_acceleration(earth_radius_rg, 0) ≈ [earth_gravity_rgc2, 0.0] atol =
         0.0 rtol = 0.01
 end
+
+@testset "Initialise black holes" begin
+    config = Dict(:black_hole => Dict(:M => 1e9, :mdot => 0.2, :spin => 0.6))
+    bh = BlackHole(config)
+    @test bh.M == 1e9 * M_SUN
+    @test bh.mdot == 0.2
+    @test bh.spin == 0.6
+end

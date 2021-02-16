@@ -119,14 +119,14 @@ function get_initial_radii_and_linewidths(initial_conditions::InitialConditions,
         lines_range, lines_widths = compute_lines_range(initial_conditions, rin, rfi, Rg)
     else
         if initial_conditions.logspaced
-            linedelimiters = 10 .^ range(log10(rin), log10(rfi), length = nlines + 1)
-            lines_range = []
-            for i = 1:nlines
-                r0 = linedelimiters[i] + (linedelimiters[i + 1] - linedelimiters[i]) / 2.0
+            lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines+1))
+            lines_range = [rin + lines_widths[1] / 2.]
+            for i = 2:nlines
+                r0 = lines_range[i-1] + lines_widths[i-1] / 2 + lines_widths[i] / 2
                 push!(lines_range, r0)
             end
-            lines_widths = diff(linedelimiters)
         else
+            lines_widths = range(rin, rfi, length=nlines)
             dr = (rfi - rin) / nlines
             lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
             lines_widths = diff([lines_range; rfi + dr / 2])
