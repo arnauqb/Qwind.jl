@@ -149,6 +149,8 @@ function cosma_script(;
     #SBATCH -e $stdout_path.err
     #SBATCH -t $max_time
 
+    module load hdf5
+
     stdbuf -o0 -e0 julia -p $(n_cpus-1) $run_script_path -m $script_number
     """
     open(save_path, "w") do io

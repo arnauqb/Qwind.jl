@@ -19,9 +19,9 @@ function Model(config::Dict)
     ic = getfield(Qwind, Symbol(config[:initial_conditions][:mode]))(rad, bh, config)
     rt = getfield(Qwind, Symbol(config[:radiative_transfer][:mode]))(rad, config)
     save_path = config[:integrator][:save_path]
-    if isdir(save_path)
-        mv(save_path, save_path * "_backup", force=true)
-    end
+    #if isdir(save_path)
+    #    mv(save_path, save_path * "_backup", force=true)
+    #end
     return Model(config, wind_grid, bh, rad, rt, ic)
 end
 

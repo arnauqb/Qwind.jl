@@ -29,7 +29,7 @@ function UniformIC(radiation, black_hole, config)
     return UniformIC(
         rin,
         rfi,
-        icc[:n_lines],
+        Int(icc[:n_lines]),
         icc[:z_0],
         icc[:n_0],
         icc[:v_0] / C,
@@ -69,7 +69,7 @@ function CAKIC(radiation, black_hole, config)
         black_hole,
         rin,
         rfi,
-        icc[:n_lines],
+        Int(icc[:n_lines]),
         icc[:z_0],
         icc[:K],
         icc[:alpha],
