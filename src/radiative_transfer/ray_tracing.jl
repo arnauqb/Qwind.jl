@@ -31,13 +31,32 @@ function get_intersection_with_grid(r, z, r_range, z_range, ri, rf, zi, zf; from
         lambda_z = get_time_to_intersection(z_range[end], zi, zf)
     end
     if from_outside
-        lambda = max(lambda_r, lambda_z)
+        if lambda_r > lambda_z 
+            direction = "r"
+            lambda = lambda_r
+        else
+            direction = "z"
+            lambda = lambda_z
+        end
+        #lambda = max(lambda_r, lambda_z)
     else
-        lambda = min(lambda_r, lambda_z)
+        #lambda = min(lambda_r, lambda_z)
+        if lambda_r < lambda_z 
+            direction = "r"
+            lambda = lambda_r
+        else
+            direction = "z"
+            lambda = lambda_z
+        end
     end
     if abs(lambda) != Inf && !isnan(lambda)
         r = ri + lambda * (rf - ri)
         z = zi + lambda * (zf - zi)
+        if direction == "r"
+            r = r_range[searchsorted_nearest(r_range, r)]
+        else
+            z = z_range[searchsorted_nearest(z_range, z)]
+        end
     end
     return r, z
 end
@@ -56,6 +75,8 @@ mutable struct GridIterator <: CellIterator
     intersection::Vector{Float64}
     finished::Bool
     function GridIterator(r_range, z_range)
+        r_range = round.(r_range, digits=6)
+        z_range = round.(z_range, digits=6)
         new(r_range, z_range, 0.0, 0.0, 0.0, 0.0, 1, 1, 1, 1, [0.0, 0.0], false)
     end
 end
@@ -163,6 +184,7 @@ function set_iterator!(iterator::GridIterator, ri, zi, rf, zf)
     iterator.intersection[1] = ri #iterator.r_range[current_r_idx]
     iterator.intersection[2] = zi #iterator.z_range[current_z_idx]
     iterator.finished = false
+    return
 end
 
 
@@ -229,6 +251,7 @@ function next_intersection!(iterator::GridIterator)
         iterator.finished = true
         iterator.intersection[1] = iterator.rf
         iterator.intersection[2] = iterator.zf
+        #println("inter $(iterator.intersection)")
         return
     end
     lambda = step_ray!(iterator, lambda_r, lambda_z)
@@ -329,9 +352,13 @@ function compute_xray_tau(
         previous_point[2] = iterator.intersection[2]
         #cell_density = get_density(density_interpolator, iterator)
         cell_density = get_density(density_interpolator, iterator.intersection)
+        #println("##########")
+        #println("cell_density $cell_density")
         distance_from_source = dist(initial_point, iterator.intersection, Rg)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
+        #println("previous $previous_point")
+        #println("intersect $(iterator.intersection)")
         ret = compute_xray_tau_cell(
             intersection_size,
             distance_from_source,

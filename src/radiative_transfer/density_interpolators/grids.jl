@@ -2,40 +2,27 @@ export get_spatial_grid,
     InterpolationGrid, get_density, get_density_points, get_density_grid
 
 struct InterpolationGrid
-    r_range::Vector{Float64}
-    z_range::Vector{Float64}
+    r_range::Union{Vector{Float64}, Nothing}
+    z_range::Union{Vector{Float64}, Nothing}
     grid::Union{Array{Float64,2},Nothing}
-    r_min::Float64
-    z_min::Float64
-    r_max::Float64
-    z_max::Float64
-    nr::Int
+    nr::Union{Int, String}
     nz::Int
     iterator::GridIterator
-    function InterpolationGrid(r_range, z_range, grid)
-        r_min = minimum(r_range)
-        r_max = maximum(r_range)
-        z_min = minimum(z_range)
-        z_max = maximum(z_range)
-        nr = length(r_range)
-        nz = length(z_range)
+    function InterpolationGrid(r_range, z_range, grid, nr=nothing, nz=nothing)
+        if nr === nothing
+            nr = length(r_range)
+        end
+        if nz === nothing
+            nz = length(z_range)
+        end
         iterator = GridIterator(r_range, z_range)
-        return new(r_range, z_range, grid, r_min, z_min, r_max, z_max, nr, nz, iterator)
-    end
-end
-
-function is_point_outside_grid(grid::InterpolationGrid, r, z)
-    if (z > grid.z_max) || (z < grid.z_min) || (r < grid.r_min) || (r > grid.r_max)
-        return true
-    else
-        return false
+        return new(r_range, z_range, grid, nr, nz, iterator)
     end
 end
 
 function get_spatial_grid(kdtree::KDTree, nr, nz)
     max_width = maximum(kdtree.width)
     r_min = kdtree.r[1] - kdtree.width[1] / 2
-    #r_min = max(6, minimum(kdtree.r))
     r_max = maximum(kdtree.r) + max_width
     z_min = max(1e-6, minimum(kdtree.z))
     z_max = maximum(kdtree.z) + max_width
