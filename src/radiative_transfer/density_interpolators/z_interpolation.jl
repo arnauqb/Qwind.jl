@@ -103,7 +103,7 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     end
     r_min = max(6, r_min)
     r_max += max_width
-    z_min = max(1e-3, z_min)
+    z_min = max(1e-6, z_min)
     if nr == "auto"
         r_range = [line.r0 for line in lines_kdtrees]
     else
