@@ -73,7 +73,7 @@ function initialize_integrator(
     rtol = 1e-3,
     tmax = 1e8,
     line_id = -1,
-    save_results=true
+    save_results = true,
     #save_path = nothing,
 )
     l0 = getl0(initial_conditions, r0)
@@ -119,14 +119,14 @@ function get_initial_radii_and_linewidths(initial_conditions::InitialConditions,
         lines_range, lines_widths = compute_lines_range(initial_conditions, rin, rfi, Rg)
     else
         if initial_conditions.logspaced
-            lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines+1))
-            lines_range = [rin + lines_widths[1] / 2.]
+            lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
+            lines_range = [rin + lines_widths[1] / 2.0]
             for i = 2:nlines
-                r0 = lines_range[i-1] + lines_widths[i-1] / 2 + lines_widths[i] / 2
+                r0 = lines_range[i - 1] + lines_widths[i - 1] / 2 + lines_widths[i] / 2
                 push!(lines_range, r0)
             end
         else
-            lines_widths = range(rin, rfi, length=nlines)
+            lines_widths = range(rin, rfi, length = nlines)
             dr = (rfi - rin) / nlines
             lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
             lines_widths = diff([lines_range; rfi + dr / 2])
@@ -219,7 +219,7 @@ function failed(integrator::Sundials.IDAIntegrator)
     integrator.u[1] < 0.0 ||
         integrator.u[2] < integrator.p.grid.z_min ||
         (sign_changes1 >= 2)
-        #(sign_changes2 >= 2)
+    #(sign_changes2 >= 2)
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -469,7 +469,7 @@ function get_dense_solution_from_integrator(integrator, n_timesteps = 10000)
     dense_solution = integrator.sol(t_range)
     r_dense = dense_solution[1, :]
     z_dense = dense_solution[2, :]
-    line_width_dense = dense_solution[1, :] .* integrator.p.lwnorm
+    line_width_dense = r_dense .* integrator.p.lwnorm
     density_dense =
         compute_density.(
             dense_solution[1, :],
@@ -521,7 +521,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg)
         elseif (tau_x > 1) && (tau_uv < 1)
             delta_r = 0.1 / (SIGMA_T * Rg * getn0(ic, rc))
             tau_x += 10
-            tau_uv += 0.1 
+            tau_uv += 0.1
         else
             delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
         end

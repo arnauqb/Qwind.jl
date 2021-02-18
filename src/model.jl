@@ -41,54 +41,6 @@ create_and_run_integrator(model::Model; r0, linewidth, line_id, atol, rtol) =
         #save_path = save_path,
     )
 
-function run_parallel!(config::Dict, iterations_dict = nothing)
-    model = Model(config)
-    if iterations_dict === nothing
-        iterations_dict = Dict()
-    end
-    save_path = config[:integrator][:save_path]
-    i = 0
-    while isfile(save_path)
-        save_path = save_path * "_$i"
-        i += 1
-    end
-    @info "Saving results to $save_path"
-    flush(stdout)
-    mkpath(save_path)
-    # iterations
-    n_iterations = config[:integrator][:n_iterations]
-    for it = 1:n_iterations
-        @info "Starting iteration $it of $n_iterations"
-        flush(stdout)
-        iterations_dict[it] = Dict()
-        output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
-        lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
-        integrators_future = Array{Future}(undef, length(lines_range))
-        for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-            integrators_future[i] =
-                @spawnat (i % nprocs() + 1) create_and_run_integrator(
-                    model,
-                    linewidth = lw,
-                    r0 = r0,
-                    atol = config[:integrator][:atol],
-                    rtol = config[:integrator][:rtol],
-                    line_id = i,
-                )
-        end
-        integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-        integrators[:] .= fetch.(integrators_future)
-        for integrator in integrators
-            save_integrator(integrator.p.data, output_path)
-        end
-        iterations_dict[it]["integrators"] = integrators
-        iterations_dict[it]["radiative_transfer"] = model.rt
-        @info "Integration of iteration $it ended!"
-        flush(stdout)
-        radiative_transfer = update_radiative_transfer(model.rt, integrators)
-        model = update_model!(model, radiative_transfer)
-    end
-end
-
 run_parallel!(config::String, iterations_dict) =
     run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}), iterations_dict)
 run!(config::String, iterations_dict = nothing) = run!(
@@ -112,32 +64,35 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         iterations_dict[1] = Dict()
     end
     save_path = model.config[:integrator][:save_path]
-    #lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
-    #@info "Starting iteration $it_num with $(length(lines_range)) lines."
-    #flush(stdout)
-    #@info "Initializing integrators..."
-    #integrators = initialize_integrators(model) #Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-    #@info "Done. Running $(length(integrators)) integrators."
-    #iterations_dict[it_num]["integrators"] = integrators
-    #for integrator in integrators
-    #    @time run_integrator!(integrator)
-    #end
     lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
-    integrators_future = Array{Future}(undef, length(lines_range))
-    for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-        integrators_future[i] =
-            #@spawnat (i % nprocs() + 1) create_and_run_integrator(
-            @spawnat :any create_and_run_integrator(
-                model,
-                linewidth = lw,
-                r0 = r0,
-                atol = model.config[:integrator][:atol],
-                rtol = model.config[:integrator][:rtol],
-                line_id = i,
-            )
-    end
-    integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-    integrators[:] .= fetch.(integrators_future)
+    f(i) = create_and_run_integrator(
+        model,
+        linewidth = lines_widths[i],
+        r0 = lines_range[i],
+        atol = model.config[:integrator][:atol],
+        rtol = model.config[:integrator][:rtol],
+        line_id = i,
+    )
+    integrators = pmap(f, 1:length(lines_range))
+    #integrators_future = Array{Future}(undef, length(lines_range))
+    #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
+    #    integrators_future[i] =
+    #        #@spawnat (i % nprocs() + 1) create_and_run_integrator(
+    #        @spawn create_and_run_integrator(
+    #            model,
+    #            linewidth = lw,
+    #            r0 = r0,
+    #            atol = model.config[:integrator][:atol],
+    #            rtol = model.config[:integrator][:rtol],
+    #            line_id = i,
+    #        )
+    #end
+    #println("done!")
+    #integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
+    #@sync for i in 1:length(integrators_future)
+    #    @async integrators[i] = fetch(integrators_future[i])
+    #end
+    #integrators[:] .= fetch.(integrators_future)
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
@@ -208,8 +163,9 @@ function parse_configs(config::Dict)
     ret
 end
 
-function create_running_script(path)
-    text = """using Distributed
+function create_running_script(path, n_cpus)
+    text = """using Distributed, ClusterManagers
+    addprocs_slurm($(n_cpus-1))
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
     @everywhere using Qwind, Printf
@@ -246,7 +202,7 @@ function create_models_folders(config::Dict)
         config[:integrator][:save_path] = model_folder
         YAML.write_file(model_folder * "/config.yaml", config)
     end
-    create_running_script(save_folder)
+    create_running_script(save_folder, config[:system][:n_cpus])
     YAML.write_file(save_folder * "/all_configs.yaml", model_dict)
     make_cosma_scripts(length(configs), path = save_folder; configs[1][:system]...)
 end

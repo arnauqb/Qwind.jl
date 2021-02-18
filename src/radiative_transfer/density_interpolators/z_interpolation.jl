@@ -13,7 +13,9 @@ struct LineKDTree <: NNInterpolator
     r::Vector{Float64}
     z::Vector{Float64}
     n::Vector{Float64}
-    width::Vector{Float64}
+    r_pos::Vector{Float64}
+    z_pos::Vector{Float64}
+    width_pos::Vector{Float64}
     zmax::Float64
     r0::Float64
     z0::Float64
@@ -29,9 +31,11 @@ struct LineKDTree <: NNInterpolator
             r_den,
             z_den,
             n_den,
+            r_pos,
+            z_pos,
             width_pos,
             maximum(z),
-            r[1] - width[1]/2,
+            r[1] - width_pos[1] / 2,
             minimum(z),
             line_tree,
             n_timesteps,
@@ -47,13 +51,13 @@ function reduce_line_uniformely_spaced_distance(r, z, width)
         d0 = d_euclidean(rp, rs[1], zp, zs[1])
         d = d_euclidean(rp, rs[end], zp, zs[end])
         d_lim = 0.01 * d0
-        if zp > zs[end] && d > d_lim  
+        if zp > zs[end] && d > d_lim
             push!(rs, rp)
             push!(zs, zp)
             push!(widths, wp)
         end
     end
-    return rs, zs, widths 
+    return rs, zs, widths
 end
 
 function reduce_line_uniformely_spaced_density(r, z, n)
@@ -72,7 +76,7 @@ function reduce_line_uniformely_spaced_density(r, z, n)
 end
 
 function create_lines_kdtrees(
-    integrators::Vector{Sundials.IDAIntegrator};
+    integrators;
     n_timesteps = 10000,
 )
     ret = LineKDTree[]
@@ -96,43 +100,45 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     max_width = 0
     for lk in lines_kdtrees
         r_min = min(r_min, lk.r0)
-        r_max = max(r_max, lk.r[1] + lk.width[1])
+        r_max = max(r_max, lk.r[1] + lk.width_pos[1])
         z_min = min(z_min, lk.z0)
         z_max = max(z_max, lk.zmax)
-        max_width = max(max_width, maximum(lk.width))
+        max_width = max(max_width, maximum(lk.width_pos))
     end
     r_min = max(6, r_min)
     r_max += max_width
     z_min = max(1e-6, z_min)
     if nr == "auto"
         r_range = [line.r0 for line in lines_kdtrees]
+        additional_r = collect(range(r_range[end], r_max, step=100)[2:end])
+        r_range = vcat(r_range, additional_r)
     else
         r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
     end
     z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
     z_range = pushfirst!(z_range, 0.0)
-    r_range = round.(r_range, digits=7)
-    z_range = round.(z_range, digits=7)
+    r_range = round.(r_range, digits = 7)
+    z_range = round.(z_range, digits = 7)
     points = hcat([[r, z] for r in r_range for z in z_range]...)
     return r_range, z_range
 end
 
 struct VIGrid <: GridInterpolator
     grid::InterpolationGrid
-    interpolator
+    interpolator::Any
     vacuum_density::Float64
     n_timesteps::Int
     function VIGrid(
-        r_range::Union{Vector{Float64}, Nothing},
-        z_range::Union{Vector{Float64}, Nothing},
+        r_range::Union{Vector{Float64},Nothing},
+        z_range::Union{Vector{Float64},Nothing},
         grid::Union{Array{Float64,2},Nothing};
-        nr=nothing,
-        nz=nothing,
+        nr = nothing,
+        nz = nothing,
         vacuum_density = 1e2,
         n_timesteps = 10000,
     )
         if grid === nothing
-            itp = (r,z) -> vacuum_density
+            itp = (r, z) -> vacuum_density
         else
             itp = Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
             itp = Interpolations.extrapolate(itp, 1e2)
@@ -145,7 +151,6 @@ struct VIGrid <: GridInterpolator
         )
     end
 end
-
 
 function VIGrid(
     integrators;
@@ -180,7 +185,7 @@ end
 
 function VIGrid(
     lines_kdtrees::Union{Array{LineKDTree,1},Nothing},
-    nr::Union{Number, String},
+    nr::Union{Number,String},
     nz::Number;
     vacuum_density = 1e2,
     n_timesteps = 10000,
@@ -202,8 +207,8 @@ function VIGrid(
         r_range,
         z_range,
         density_grid,
-        nr=nr,
-        nz=nz,
+        nr = nr,
+        nz = nz,
         vacuum_density = vacuum_density,
         n_timesteps = n_timesteps,
     )
@@ -222,7 +227,7 @@ end
 
 function get_closest_point(line_kdtree::LineKDTree, point)
     idx, distance = NearestNeighbors.nn(line_kdtree.line_tree, point)
-    width = line_kdtree.width[idx]
+    width = line_kdtree.width_pos[idx]
     return distance, width, idx
 end
 
@@ -235,7 +240,7 @@ function get_density(lines_kdtrees::Array{LineKDTree,1}, r, z)
             continue
         end
         distance, width, idx = get_closest_point(line_kdtree, point)
-        if distance > width
+        if distance > 1.1 * width / 2
             continue
         end
         z_idx = searchsorted_nearest(line_kdtree.z, z)
