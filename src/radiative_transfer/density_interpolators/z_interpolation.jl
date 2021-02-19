@@ -1,5 +1,6 @@
 export VIGrid, get_density
 import Distances, Interpolations
+using ProgressMeter
 
 struct NEuclidean <: Metric
     r_norm::Float64
@@ -197,7 +198,17 @@ function VIGrid(
     else
         r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)
         density_grid = zeros(Float64, length(r_range), length(z_range))
-        for (i, r) in enumerate(r_range)
+        #func(r,z) = get_density(lines_kdtrees, r, z)
+        #function func(r)
+        #    ret = zeros(Float64, length(z_range))
+        #    for (j, z) in enumerate(z_range)
+        #        ret[j] = get_density(lines_kdtrees, r, z)
+        #    end
+        #    return ret
+        #end
+        #@info "Generating density grid..."
+        #density_grid = @showprogress pmap(func, r_range)
+        @showprogress for (i, r) in enumerate(r_range)
             for (j, z) in enumerate(z_range)
                 density_grid[i, j] = get_density(lines_kdtrees, r, z)
             end
