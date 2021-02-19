@@ -388,8 +388,8 @@ function compute_uv_tau(density_interpolator::DensityInterpolator, ri, zi, rf, z
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
-        cell_density = get_density(density_interpolator, iterator.intersection)
-        #cell_density = get_density(density_interpolator, iterator)
+        #cell_density = get_density(density_interpolator, iterator.intersection)
+        cell_density = get_density(density_interpolator, iterator)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
         ret += compute_uv_tau_cell(intersection_size, cell_density)

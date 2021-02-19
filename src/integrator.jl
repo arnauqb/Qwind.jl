@@ -178,6 +178,9 @@ function create_and_run_integrator(
     atol,
     rtol,
 )
+    println("Running integrator $line_id")
+    flush(stdout)
+    flush(stderr)
     integrator = initialize_integrator(
         radiative_transfer,
         grid,
@@ -190,6 +193,9 @@ function create_and_run_integrator(
         #save_path = save_path,
     )
     solve!(integrator)
+    println("Integrator $line_id done")
+    flush(stdout)
+    flush(stderr)
     return integrator
 end
 
