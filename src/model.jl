@@ -164,8 +164,7 @@ function parse_configs(config::Dict)
 end
 
 function create_running_script(path, n_cpus)
-    text = """using Distributed, ClusterManagers
-    addprocs_slurm($(n_cpus-1))
+    text = """using Distributed
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
     @everywhere using Qwind, Printf
