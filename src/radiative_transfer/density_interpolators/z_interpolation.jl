@@ -76,10 +76,7 @@ function reduce_line_uniformely_spaced_density(r, z, n)
     return rs, zs, ns
 end
 
-function create_lines_kdtrees(
-    integrators;
-    n_timesteps = 10000,
-)
+function create_lines_kdtrees(integrators; n_timesteps = 10000)
     ret = LineKDTree[]
     r_norm = maximum(maximum([integrator.p.data[:r] for integrator in integrators]))
     z_norm = maximum(maximum([integrator.p.data[:z] for integrator in integrators]))
@@ -111,7 +108,7 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     z_min = max(1e-6, z_min)
     if nr == "auto"
         r_range = [line.r0 for line in lines_kdtrees]
-        additional_r = collect(range(r_range[end], r_max, step=100)[2:end])
+        additional_r = collect(range(r_range[end], r_max, step = 100)[2:end])
         r_range = vcat(r_range, additional_r)
     else
         r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
@@ -197,22 +194,18 @@ function VIGrid(
         density_grid = nothing
     else
         r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)
-        density_grid = zeros(Float64, length(r_range), length(z_range))
-        #func(r,z) = get_density(lines_kdtrees, r, z)
-        #function func(r)
-        #    ret = zeros(Float64, length(z_range))
+        density_grid = pmap(
+            z -> get_density.(Ref(lines_kdtrees), r_range, z),
+            z_range,
+            batch_size = 10 #Int(round(nz / nprocs())),
+        )
+        density_grid = hcat(density_grid...)
+        #density_grid = zeros(Float64, length(r_range), length(z_range))
+        #for (i, r) in enumerate(r_range)
         #    for (j, z) in enumerate(z_range)
-        #        ret[j] = get_density(lines_kdtrees, r, z)
+        #        density_grid[i, j] = get_density(lines_kdtrees, r, z)
         #    end
-        #    return ret
         #end
-        #@info "Generating density grid..."
-        #density_grid = @showprogress pmap(func, r_range)
-        @showprogress for (i, r) in enumerate(r_range)
-            for (j, z) in enumerate(z_range)
-                density_grid[i, j] = get_density(lines_kdtrees, r, z)
-            end
-        end
     end
     return VIGrid(
         r_range,

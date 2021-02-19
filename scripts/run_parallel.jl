@@ -14,6 +14,33 @@ catch
 end
 model = Model(config_path);
 iterations_dict = Dict();
+do_iteration!(model, iterations_dict, it_num=1);
+
+
+lkdt = Qwind.create_lines_kdtrees(iterations_dict[1]["integrators"]);
+
+using BenchmarkTools
+
+vig = VIGrid(lkdt, 500, 50);
+
+
+fig, ax = plt.subplots()
+gg = vig.grid
+ax.pcolormesh(gg.r_range, gg.z_range, gg.grid', norm=LogNorm());
+
+
+r_range, z_range = get_spatial_grid(lkdt, 1000, 50);
+
+gg = pmap(z -> get_density.(Ref(lkdt), r_range, z), z_range);
+gg = hcat(gg...)
+
+
+
+
+
+
+
+#########################
 
 using JLD2, Profile, PProf
 @load "big_rt.jld2" rt
