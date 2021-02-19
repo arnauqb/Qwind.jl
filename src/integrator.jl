@@ -261,16 +261,19 @@ end
 
 function affect!(integrator)
     if escaped(integrator)
-        println("Line $(integrator.p.line_id) escaped!")
+        @info "Line $(integrator.p.line_id) escaped!"
         flush(stdout)
+        flush(stderr)
         #println(" \U1F4A8")
     elseif failed(integrator)
-        println("Line $(integrator.p.line_id) failed!")
+        @info "Line $(integrator.p.line_id) failed!"
         flush(stdout)
+        flush(stderr)
         #println(" \U1F4A5")
     else
-        println("Line $(integrator.p.line_id) stalled!")
+        @info "Line $(integrator.p.line_id) stalled!"
         flush(stdout)
+        flush(stderr)
         #println(" \U2753")
     end
     terminate!(integrator)

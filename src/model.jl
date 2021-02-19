@@ -167,11 +167,21 @@ function create_running_script(path, n_cpus)
     text = """using Distributed
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
+
+    @info \"Compiling Qwind...\"
+    flush(stdout)
+    flush(stderr)
+
     @everywhere using Qwind, Printf
+    @info \"Done\"
+    flush(stdout)
+    flush(stderr)
+
     args = parse_cl()
     model_num = args[\"model\"]
     model_name = @sprintf(\"model_%03d\", model_num)
     model_path = \"$path\" * \"/\$model_name/config.yaml\"
+
     model = Model(model_path)
     run!(model)
     """
