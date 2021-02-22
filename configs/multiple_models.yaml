@@ -1,5 +1,5 @@
 system:
-  n_cpus: 6
+  n_cpus: 4
   queue: cosma
   account: durham
   max_time: 72:00:00

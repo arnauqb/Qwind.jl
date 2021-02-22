@@ -164,17 +164,21 @@ function parse_configs(config::Dict)
 end
 
 function create_running_script(path, n_cpus)
-    text = """using Distributed, LinearAlgebra
-    BLAS.set_num_threads(1)
+    text = """using Distributed
     addprocs($(n_cpus-1), topology=:master_worker)
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
-
+    println(\"Running on \$(nprocs()) cores.\")
+    @everywhere using LinearAlgebra
+    @everywhere BLAS.set_num_threads(1)
+    println(\"Qwind single node\")
+    using Qwind
+    println(\"Done\")
     @info \"Compiling Qwind...\"
     flush(stdout)
     flush(stderr)
 
-    @everywhere using Qwind, Printf
+    using Printf
     @info \"Done\"
     flush(stdout)
     flush(stderr)

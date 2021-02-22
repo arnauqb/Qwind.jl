@@ -31,7 +31,8 @@ function cosma_script(;
     #SBATCH -o $stdout_path.out
     #SBATCH -e $stdout_path.err
     #SBATCH -t $max_time
-
+    
+    julia --project -e 'push!(LOAD_PATH, "@pkglock"); using PkgLock; PkgLock.instantiate_precompile()'
     julia $run_script_path -m $script_number
     """
     open(save_path, "w") do io
