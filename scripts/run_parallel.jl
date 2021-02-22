@@ -3,8 +3,8 @@ using Distributed
 @everywhere @quickactivate "Qwind"
 @everywhere using Qwind
 using YAML
-include("scripts/plotting.jl")
-matplotlib.rcParams["figure.dpi"] = 300
+#include("scripts/plotting.jl")
+#matplotlib.rcParams["figure.dpi"] = 300
 
 config_path = "configs/config_test.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
