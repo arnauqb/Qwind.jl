@@ -178,7 +178,7 @@ function create_and_run_integrator(
     atol,
     rtol,
 )
-    println("Running integrator $line_id")
+    println("Running integrator $line_id, time $(get_time())")
     flush(stdout)
     flush(stderr)
     integrator = initialize_integrator(
@@ -193,7 +193,7 @@ function create_and_run_integrator(
         #save_path = save_path,
     )
     solve!(integrator)
-    println("Integrator $line_id done")
+    println("Integrator $line_id done, time $(get_time())")
     flush(stdout)
     flush(stderr)
     return integrator

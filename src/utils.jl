@@ -1,3 +1,4 @@
+using Dates
 export searchsorted_nearest,
     searchsorted_first,
     countsignchanges,
@@ -7,8 +8,10 @@ export searchsorted_nearest,
     set_value_in_path!,
     parse_cl,
     make_cosma_scripts,
-    d_euclidean
+    d_euclidean,
+    get_time
 
+get_time() = Dates.format(now(), "HH:MM:SS")
 d_euclidean(r0, r1, z0, z1) = sqrt((r0-r1)^2 + (z0-z1)^2)
 
 function searchsorted_nearest(a, x)

@@ -197,7 +197,7 @@ function VIGrid(
         density_grid = pmap(
             z -> get_density.(Ref(lines_kdtrees), r_range, z),
             z_range,
-            batch_size = 10 #Int(round(nz / nprocs())),
+            batch_size = Int(round(nz / nprocs())),
         )
         density_grid = hcat(density_grid...)
         #density_grid = zeros(Float64, length(r_range), length(z_range))

@@ -32,7 +32,7 @@ function cosma_script(;
     #SBATCH -e $stdout_path.err
     #SBATCH -t $max_time
 
-    julia -p $(n_cpus-1) $run_script_path -m $script_number
+    julia $run_script_path -m $script_number
     """
     open(save_path, "w") do io
         write(io, script)

@@ -73,7 +73,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size=Int(round(length(lines_range) / nprocs())))
+    integrators = pmap(f, 1:length(lines_range), batch_size=Int(round(length(lines_range) / nprocs())))
     #integrators_future = Array{Future}(undef, length(lines_range))
     #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
     #    integrators_future[i] =
@@ -164,7 +164,9 @@ function parse_configs(config::Dict)
 end
 
 function create_running_script(path, n_cpus)
-    text = """using Distributed
+    text = """using Distributed, LinearAlgebra
+    BLAS.set_num_threads(1)
+    addprocs($(n_cpus-1), topology=:master_worker)
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
 
