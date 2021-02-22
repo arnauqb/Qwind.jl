@@ -73,7 +73,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size=10)
+    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size=Int(round(length(lines_range) / nprocs())))
     #integrators_future = Array{Future}(undef, length(lines_range))
     #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
     #    integrators_future[i] =
