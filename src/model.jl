@@ -73,7 +73,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size=10)
+    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size=Int(round(length(lines_range) / nprocs())))
     #integrators_future = Array{Future}(undef, length(lines_range))
     #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
     #    integrators_future[i] =
@@ -164,15 +164,24 @@ function parse_configs(config::Dict)
 end
 
 function create_running_script(path, n_cpus)
-    text = """using Distributed, ClusterManagers
-    addprocs_slurm($(n_cpus-1))
+    text = """using Distributed
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
+
+    @info \"Compiling Qwind...\"
+    flush(stdout)
+    flush(stderr)
+
     @everywhere using Qwind, Printf
+    @info \"Done\"
+    flush(stdout)
+    flush(stderr)
+
     args = parse_cl()
     model_num = args[\"model\"]
     model_name = @sprintf(\"model_%03d\", model_num)
     model_path = \"$path\" * \"/\$model_name/config.yaml\"
+
     model = Model(model_path)
     run!(model)
     """
