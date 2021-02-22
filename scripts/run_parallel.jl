@@ -14,7 +14,49 @@ catch
 end
 model = Model(config_path);
 iterations_dict = Dict();
-do_iteration!(model, iterations_dict, it_num=1);
+run!(model, iterations_dict)
+
+#do_iteration!(model, iterations_dict, it_num=1);
+#
+#
+#
+pdfp = matplotlib.backends.backend_pdf.PdfPages
+pdfile = pdfp("multipage_pdf.pdf")
+for it in 1:length(iterations_dict)
+    try
+        println(it)
+        fig, ax = plt.subplots()
+        plot_streamlines(iterations_dict[it]["integrators"], fig, ax)
+        pdfile.savefig(fig)
+        plt.close("all")
+    catch
+        continue
+    end
+end
+pdfile.close()
+
+rt = iterations_dict[19]["radiative_transfer"]
+r_range = range(6, 1000, length=100)
+z_range = range(6, 1000, length=100)
+tauxg = zeros((length(r_range), length(z_range)))
+for (i,r ) in enumerate(r_range)
+    for (j,z ) in enumerate(z_range)
+        tauxg[i,j] = compute_xray_tau(rt, r, z)
+    end
+end
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(r_range, z_range, tauxg', norm=LogNorm(vmin=1e-3, vmax=1e1))
+plt.colorbar(cm, ax=ax)
+fig.savefig("asd.pdf")
+
+
+
+
+
+
+fig, ax = plt.subplots()
+plot_streamlines(iterations_dict[21]["integrators"], fig, ax)
+fig.savefig("asd.pdf")
 
 
 lkdt = Qwind.create_lines_kdtrees(iterations_dict[1]["integrators"]);
