@@ -32,7 +32,7 @@ function cosma_script(;
     #SBATCH -e $stdout_path.err
     #SBATCH -t $max_time
     
-    julia --project -e 'push!(LOAD_PATH, "@pkglock"); using PkgLock; PkgLock.instantiate_precompile()'
+    julia --project=/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl -e 'push!(LOAD_PATH, "@pkglock"); using PkgLock; PkgLock.instantiate_precompile()'
     julia $run_script_path -m $script_number
     """
     open(save_path, "w") do io

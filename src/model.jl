@@ -73,7 +73,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
-    integrators = pmap(f, 1:length(lines_range), batch_size=Int(round(length(lines_range) / nprocs())))
+    integrators = pmap(f, 1:length(lines_range), batch_size=10)
     #integrators_future = Array{Future}(undef, length(lines_range))
     #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
     #    integrators_future[i] =
@@ -165,6 +165,7 @@ end
 
 function create_running_script(path, n_cpus)
     text = """using Distributed
+    @everywhere pushfirst!(Base.DEPOT_PATH, \"/tmp/julia.cache\")
     addprocs($(n_cpus-1), topology=:master_worker)
     @everywhere using DrWatson
     @everywhere @quickactivate \"Qwind\"
