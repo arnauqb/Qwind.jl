@@ -1,5 +1,4 @@
-using DiffEqBase, DiffEqCallbacks, Sundials
-using DataStructures, Printf
+using DiffEqBase, DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
 using Distributed
 import Qwind.out_of_grid, Qwind.compute_density

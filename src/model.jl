@@ -1,7 +1,7 @@
 export Model, run!, run_parallel!, do_iteration!, create_models_folders
 import Qwind: create_and_run_integrator
 
-using YAML, SharedArrays, Printf, ProgressMeter
+using YAML, Printf, ProgressMeter
 
 mutable struct Model
     config::Dict
