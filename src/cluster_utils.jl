@@ -12,10 +12,11 @@ function parse_cl()
 end
 
 function cosma_script(;
+    qwind_path,
     n_cpus = 1,
     job_name = "qwind",
     script_number = 1,
-    queue = "cosma",
+    partition = "cosma",
     account="durham",
     stdout_path = nothing,
     max_time = "72:00:00",
@@ -26,13 +27,16 @@ function cosma_script(;
     #!/bin/bash -l
     #SBATCH --ntasks $n_cpus
     #SBATCH -J $(job_name[1:4])_$(@sprintf "%03d" script_number)
-    #SBATCH -p $queue
+    #SBATCH -p $partition
     #SBATCH -A $account
     #SBATCH -o $stdout_path.out
     #SBATCH -e $stdout_path.err
     #SBATCH -t $max_time
     
-    julia --project=/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl -e 'push!(LOAD_PATH, "@pkglock"); using PkgLock; PkgLock.instantiate_precompile()'
+    export JULIA_PROJECT=$qwind_path
+
+
+    julia --project=$qwind_path -e 'push!(LOAD_PATH, "@pkglock"); using PkgLock; PkgLock.instantiate_precompile()'
     julia $run_script_path -m $script_number
     """
     open(save_path, "w") do io
@@ -42,10 +46,11 @@ end
 
 function make_cosma_scripts(
     n_models;
+    qwind_path,
     n_cpus = 1,
     path = nothing,
     job_name = "qwind",
-    queue = "cosma",
+    partition = "cosma",
     account = "durham",
     max_time = 72,
 )
@@ -57,9 +62,10 @@ function make_cosma_scripts(
         stdout_path = path * "/stdout/$model_name"
         submit_script_path = path * "/$model_name/submit.sh"
         cosma_script(
+            qwind_path=qwind_path,
             n_cpus = n_cpus,
             job_name = job_name,
-            queue = queue,
+            partition = partition,
             account=account,
             max_time = max_time,
             run_script_path = run_script_path,
