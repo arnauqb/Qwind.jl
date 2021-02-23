@@ -73,7 +73,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size=Int(round(length(lines_range) / nprocs())))
+    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
     #integrators_future = Array{Future}(undef, length(lines_range))
     #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
     #    integrators_future[i] =
@@ -163,22 +163,25 @@ function parse_configs(config::Dict)
     ret
 end
 
-function create_running_script(path, n_cpus)
-    text = """using Distributed
-    addprocs($(n_cpus-1), topology=:master_worker)
-    @everywhere using DrWatson
-    @everywhere @quickactivate \"Qwind\"
+function create_running_script(save_path; n_cpus, max_time, account, partition)
+    text = """using Distributed, ClusterManagers
+    pids = addprocs_slurm($n_cpus,
+                          topology=:master_worker,
+                          p=\"$partition\",
+                          A=\"$account\",
+                          t=\"$max_time\",
+                          job_file_loc=\"$save_path/cpu_logs\")
+    @everywhere pushfirst!(Base.DEPOT_PATH, \"/tmp/julia.cache\")
     println(\"Running on \$(nprocs()) cores.\")
     @everywhere using LinearAlgebra
     @everywhere BLAS.set_num_threads(1)
     println(\"Qwind single node\")
-    using Qwind
+    using Qwind, Printf
     println(\"Done\")
     @info \"Compiling Qwind...\"
     flush(stdout)
     flush(stderr)
 
-    using Printf
     @info \"Done\"
     flush(stdout)
     flush(stderr)
@@ -186,12 +189,12 @@ function create_running_script(path, n_cpus)
     args = parse_cl()
     model_num = args[\"model\"]
     model_name = @sprintf(\"model_%03d\", model_num)
-    model_path = \"$path\" * \"/\$model_name/config.yaml\"
+    model_path = \"$save_path\" * \"/\$model_name/config.yaml\"
 
     model = Model(model_path)
     run!(model)
     """
-    open(path * "/run_model.jl", "w") do io
+    open(save_path * "/run_model.jl", "w") do io
         write(io, text)
     end
 end
@@ -217,7 +220,14 @@ function create_models_folders(config::Dict)
         config[:integrator][:save_path] = model_folder
         YAML.write_file(model_folder * "/config.yaml", config)
     end
-    create_running_script(save_folder, config[:system][:n_cpus])
+    sys_config = config[:system]
+    create_running_script(
+        save_folder,
+        n_cpus = sys_config[:n_cpus],
+        partition = sys_config[:partition],
+        account = sys_config[:account],
+        max_time = sys_config[:max_time]
+    )
     YAML.write_file(save_folder * "/all_configs.yaml", model_dict)
     make_cosma_scripts(length(configs), path = save_folder; configs[1][:system]...)
 end
