@@ -116,7 +116,7 @@ function get_initial_radii_and_linewidths(initial_conditions::InitialConditions,
     rfi = getrfi(initial_conditions)
     nlines = getnlines(initial_conditions)
     if nlines == "auto"
-        lines_range, lines_widths = compute_lines_range_old(initial_conditions, rin, rfi, Rg, xray_luminosity)
+        lines_range, lines_widths = compute_lines_range(initial_conditions, rin, rfi, Rg, xray_luminosity)
     else
         if initial_conditions.logspaced
             lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
