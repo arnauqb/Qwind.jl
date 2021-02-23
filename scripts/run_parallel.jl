@@ -18,9 +18,9 @@ iterations_dict = Dict();
 run!(model, iterations_dict)
 
 #do_iteration!(model, iterations_dict, it_num=1);
-#
-#
-#
+
+
+
 pdfp = matplotlib.backends.backend_pdf.PdfPages
 pdfile = pdfp("multipage_pdf.pdf")
 for it in 1:length(iterations_dict)
