@@ -15,15 +15,26 @@ catch
 end
 model = Model(config_path);
 iterations_dict = Dict();
+do_iteration!(model, iterations_dict, it_num=1);
+
+do_iteration!(model, iterations_dict, it_num=2);
+
 run!(model, iterations_dict)
 
-#do_iteration!(model, iterations_dict, it_num=1);
+#
+
+fig, ax = plt.subplots()
+integrators = iterations_dict[10]["integrators"];
+for line in integrators
+    ax.plot(line.p.data[:r], line.p.data[:z])
+end
+plt.show()
 
 
 
 pdfp = matplotlib.backends.backend_pdf.PdfPages
 pdfile = pdfp("multipage_pdf.pdf")
-for it in 1:length(iterations_dict)
+for it = 1:length(iterations_dict)
     try
         println(it)
         fig, ax = plt.subplots()
@@ -37,17 +48,17 @@ end
 pdfile.close()
 
 rt = iterations_dict[19]["radiative_transfer"]
-r_range = range(6, 1000, length=100)
-z_range = range(6, 1000, length=100)
+r_range = range(6, 1000, length = 100)
+z_range = range(6, 1000, length = 100)
 tauxg = zeros((length(r_range), length(z_range)))
-for (i,r ) in enumerate(r_range)
-    for (j,z ) in enumerate(z_range)
-        tauxg[i,j] = compute_xray_tau(rt, r, z)
+for (i, r) in enumerate(r_range)
+    for (j, z) in enumerate(z_range)
+        tauxg[i, j] = compute_xray_tau(rt, r, z)
     end
 end
 fig, ax = plt.subplots()
-cm = ax.pcolormesh(r_range, z_range, tauxg', norm=LogNorm(vmin=1e-3, vmax=1e1))
-plt.colorbar(cm, ax=ax)
+cm = ax.pcolormesh(r_range, z_range, tauxg', norm = LogNorm(vmin = 1e-3, vmax = 1e1))
+plt.colorbar(cm, ax = ax)
 fig.savefig("asd.pdf")
 
 
@@ -69,7 +80,7 @@ vig = VIGrid(lkdt, 500, 50);
 
 fig, ax = plt.subplots()
 gg = vig.grid
-ax.pcolormesh(gg.r_range, gg.z_range, gg.grid', norm=LogNorm());
+ax.pcolormesh(gg.r_range, gg.z_range, gg.grid', norm = LogNorm());
 
 
 r_range, z_range = get_spatial_grid(lkdt, 1000, 50);
@@ -93,7 +104,7 @@ model.rt = rt;
 iterations_dict[1]["radiative_transfer"] = rt;
 
 
-do_iteration!(model, iterations_dict, it_num=1);
+do_iteration!(model, iterations_dict, it_num = 1);
 
 lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg);
 i = 100
@@ -119,3 +130,51 @@ rt = iterations_dict[2]["radiative_transfer"];
 
 #using JLD2
 #@save "big_rt.jld2" rt
+#
+#
+
+fig, ax = plt.subplots()
+ax.hist(a, bins = 500)
+ax.set_yscale("log")
+ax.set_xscale("log")
+
+
+
+
+rin = 50
+rfi = 1000
+Rg = model.bh.Rg;
+ic = model.ic;
+xray_luminosity = model.rad.xray_luminosity;
+rc = rin;
+lines_range = []
+lines_widths = []
+r_range = 10 .^ range(log10(rin), log10(rfi), length = 1000);
+z_range = [0.0, 1.0];
+density_grid = zeros((length(r_range), length(z_range)));
+density_grid[:, 1] .= getn0.(Ref(ic), r_range);
+interp_grid = VIGrid(r_range, z_range, density_grid);
+tau_x = 0
+tau_uv = 0
+fx(delta_r, rc, delta_tau, tau_x) =
+    0.1 -
+    (compute_xray_tau(interp_grid, 0, 0, rc + delta_r, 0, xray_luminosity, Rg) - tau_x)
+fuv(delta_r, rc, delta_tau, tau_uv) =
+    0.1 -
+    (compute_uv_tau(interp_grid, 0, 0, rc + delta_r, 0, Rg) - tau_uv)
+while rc < rfi
+    println("rc $rc")
+    if tau_x < 50
+        tau_x = compute_xray_tau(interp_grid, 0, 0, rc, 0, xray_luminosity, Rg)
+        println(fx(0, rc, 0.1, tau_x))
+        println(fx(1e3, rc, 0.1, tau_x))
+        delta_r = find_zero(delta_r ->fx(delta_r, rc, 0.1, tau_x) , (0, 1e3), Bisection())
+    else
+        tau_uv = compute_uv_tau(interp_grid, 0, 0, rc, 0, Rg)
+        delta_r = find_zero(delta_r ->fuv(delta_r, rc, 0.1, tau_uv) , (0, 1e3), Bisection())
+    end
+    push!(lines_range, rc + delta_r / 2)
+    push!(lines_widths, delta_r)
+    rc += delta_r
+end
+

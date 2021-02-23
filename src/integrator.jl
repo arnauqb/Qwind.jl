@@ -1,5 +1,6 @@
 using DiffEqBase, DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
+using Roots: find_zero, Bisection
 using Distributed
 import Qwind.out_of_grid, Qwind.compute_density
 import Base.push!
@@ -110,12 +111,12 @@ function initialize_integrator(
     return integrator
 end
 
-function get_initial_radii_and_linewidths(initial_conditions::InitialConditions, Rg)
+function get_initial_radii_and_linewidths(initial_conditions::InitialConditions, Rg, xray_luminosity)
     rin = getrin(initial_conditions)
     rfi = getrfi(initial_conditions)
     nlines = getnlines(initial_conditions)
     if nlines == "auto"
-        lines_range, lines_widths = compute_lines_range(initial_conditions, rin, rfi, Rg)
+        lines_range, lines_widths = compute_lines_range_old(initial_conditions, rin, rfi, Rg, xray_luminosity)
     else
         if initial_conditions.logspaced
             lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
@@ -177,7 +178,7 @@ function create_and_run_integrator(
     atol,
     rtol,
 )
-    println("Running integrator $line_id, time $(get_time())")
+    #println("Running integrator $line_id, time $(get_time())")
     flush(stdout)
     flush(stderr)
     integrator = initialize_integrator(
@@ -192,7 +193,7 @@ function create_and_run_integrator(
         #save_path = save_path,
     )
     solve!(integrator)
-    println("Integrator $line_id done, time $(get_time())")
+    #println("Integrator $line_id done, time $(get_time())")
     flush(stdout)
     flush(stderr)
     return integrator
@@ -515,7 +516,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
     return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
 end
 
-function compute_lines_range(ic::InitialConditions, rin, rfi, Rg)
+function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     rc = rin
     lines_range = []
     lines_widths = []
@@ -532,6 +533,55 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg)
             tau_uv += 0.1
         else
             delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
+        end
+        push!(lines_range, rc + delta_r / 2)
+        push!(lines_widths, delta_r)
+        rc += delta_r
+    end
+    return lines_range, lines_widths
+end
+
+function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
+    lines_range = []
+    lines_widths = []
+    r_range = 10 .^ range(log10(rin), log10(rfi), length = 1000);
+    z_range = [0.0, 1.0];
+    density_grid = zeros((length(r_range), length(z_range)));
+    density_grid[:, 1] .= getn0.(Ref(ic), r_range);
+    interp_grid = VIGrid(r_range, z_range, density_grid);
+    tau_x = 0
+    tau_uv = 0
+    fx(delta_r, rc, delta_tau, tau_x) =
+        delta_tau -
+        (compute_xray_tau(interp_grid, 0, 0, rc + delta_r, 0, xray_luminosity, Rg) - tau_x)
+    fuv(delta_r, rc, delta_tau, tau_uv) =
+        delta_tau -
+        (compute_uv_tau(interp_grid, 0, 0, rc + delta_r, 0, Rg) - tau_uv)
+    rc = rin
+    while rc < rfi
+        if tau_x < 50
+            if tau_x < 10
+                delta_tau = 0.1
+            else
+                delta_tau = 1
+            end
+            tau_x = compute_xray_tau(interp_grid, 0, 0, rc, 0, xray_luminosity, Rg)
+            delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.01)
+        elseif tau_uv < 50
+            if tau_x < 10
+                delta_tau = 0.1
+            else
+                delta_tau = 1
+            end
+            tau_uv = compute_uv_tau(interp_grid, 0, 0, rc, 0, Rg)
+            delta_r = find_zero(delta_r ->fuv(delta_r, rc, delta_tau, tau_uv) , 1)
+        else
+            tau_uv = compute_uv_tau(interp_grid, 0, 0, rc, 0, Rg)
+            try
+                delta_r = find_zero(delta_r ->fuv(delta_r, rc, 10, tau_uv), 1)# , (0, 1e3))
+            catch
+                break
+            end
         end
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)

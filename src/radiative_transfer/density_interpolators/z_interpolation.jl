@@ -80,7 +80,7 @@ function create_lines_kdtrees(integrators; n_timesteps = 10000)
     ret = LineKDTree[]
     r_norm = maximum(maximum([integrator.p.data[:r] for integrator in integrators]))
     z_norm = maximum(maximum([integrator.p.data[:z] for integrator in integrators]))
-    for integrator in integrators
+    for (i, integrator) in enumerate(integrators)
         r, z, zmax, z0, width, n =
             get_dense_solution_from_integrator(integrator, n_timesteps)
         line_kdtree = LineKDTree(r, z, n, width, n_timesteps)
@@ -213,29 +213,37 @@ function VIGrid(
 end
 
 function update_density_interpolator(interpolator::VIGrid, integrators)
-    n_timesteps = interpolator.n_timesteps
-    nr = interpolator.grid.nr
-    nz = interpolator.grid.nz
-    lines_kdtrees = create_lines_kdtrees(integrators, n_timesteps = n_timesteps)
-    r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)
-    f(r, z) =
-        10 .^ (
-            (
-                log10.(get_density.(Ref(interpolator), r, z)) +
-                log10.(get_density.(Ref(lines_kdtrees), r, z))
-            ) / 2
-        )
-    density_grid = @showprogress pmap(z -> f.(r_range, z), z_range, batch_size = 10)
-    density_grid = hcat(density_grid...)
-    return VIGrid(
-        r_range,
-        z_range,
-        density_grid,
-        nr = nr,
-        nz = nz,
+    new_interpolator = VIGrid(
+        integrators,
+        nr = interpolator.grid.nr,
+        nz = interpolator.grid.nz,
         vacuum_density = interpolator.vacuum_density,
-        n_timesteps = n_timesteps,
+        n_timesteps = interpolator.n_timesteps,
     )
+    return new_interpolator
+    #n_timesteps = interpolator.n_timesteps
+    #nr = interpolator.grid.nr
+    #nz = interpolator.grid.nz
+    #lines_kdtrees = create_lines_kdtrees(integrators, n_timesteps = n_timesteps)
+    #r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)
+    #f(r, z) =
+    #    10 .^ (
+    #        (
+    #            log10.(get_density.(Ref(interpolator), r, z)) +
+    #            log10.(get_density.(Ref(lines_kdtrees), r, z))
+    #        ) / 2
+    #    )
+    #density_grid = @showprogress pmap(z -> f.(r_range, z), z_range, batch_size = 10)
+    #density_grid = hcat(density_grid...)
+    #return VIGrid(
+    #    r_range,
+    #    z_range,
+    #    density_grid,
+    #    nr = nr,
+    #    nz = nz,
+    #    vacuum_density = interpolator.vacuum_density,
+    #    n_timesteps = n_timesteps,
+    #)
 end
 
 function get_closest_point(line_kdtree::LineKDTree, point)

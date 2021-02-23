@@ -64,7 +64,8 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         iterations_dict[1] = Dict()
     end
     save_path = model.config[:integrator][:save_path]
-    lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg)
+    lines_range, lines_widths =
+        get_initial_radii_and_linewidths(model.ic, model.bh.Rg, model.rad.xray_luminosity)
     f(i) = create_and_run_integrator(
         model,
         linewidth = lines_widths[i],
@@ -73,6 +74,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
+    @info "Iterating streamlines..."
     integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
     #integrators_future = Array{Future}(undef, length(lines_range))
     #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
@@ -226,7 +228,7 @@ function create_models_folders(config::Dict)
         n_cpus = sys_config[:n_cpus],
         partition = sys_config[:partition],
         account = sys_config[:account],
-        max_time = sys_config[:max_time]
+        max_time = sys_config[:max_time],
     )
     YAML.write_file(save_folder * "/all_configs.yaml", model_dict)
     make_cosma_scripts(length(configs), path = save_folder; configs[1][:system]...)
