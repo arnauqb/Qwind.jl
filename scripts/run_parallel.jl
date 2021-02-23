@@ -1,7 +1,8 @@
 using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
-@everywhere using Qwind
+#@everywhere using Qwind
+using Qwind
 using YAML
 #include("scripts/plotting.jl")
 #matplotlib.rcParams["figure.dpi"] = 300

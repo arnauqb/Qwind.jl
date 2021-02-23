@@ -47,6 +47,6 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  #save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution"
+  save_path: "/home/arnau/code/Qwind.jl/runs/test_mpi"
   #save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/rin_tests_multinode"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/multinode_tests_nthreads"
+  #save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/multinode_tests_nthreads"
