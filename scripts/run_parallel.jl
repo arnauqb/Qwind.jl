@@ -7,7 +7,7 @@ using YAML
 #include("scripts/plotting.jl")
 #matplotlib.rcParams["figure.dpi"] = 300
 
-config_path = "configs/multiple_models.yaml"
+config_path = "configs/config_test.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
 try
     mv(config[:integrator][:save_path], "backup", force = true)
@@ -19,162 +19,175 @@ do_iteration!(model, iterations_dict, it_num=1);
 
 do_iteration!(model, iterations_dict, it_num=2);
 
-run!(model, iterations_dict)
 
+fig, ax =plt.subplots()
+for integ in iterations_dict[2]["integrators"]
+    ax.plot(integ.p.data[:r], integ.p.data[:z])
+end
+
+
+using Dierckx, PyPlot
+LogNorm = matplotlib.colors.LogNorm
+
+function reduce_line(integ)
+    r, z, zmax, z0, width, n = get_dense_solution_from_integrator(integ, 10000);
+    rs = [r[1]]
+    zs = [z[1]]
+    ns = [n[1]]
+    for (rp, zp, np) in zip(r, z, n)
+        #z_ratio = abs(zp / zs[end])
+        if (zp > zs[end])# && (z_ratio < 0.95 || z_ratio > 1.05)
+            push!(rs, rp)
+            push!(zs, zp)
+            push!(ns, np)
+        end
+    end
+    return rs, zs, ns
+end
+
+integrators = iterations_dict[2]["integrators"];
+rs = []
+zs = []
+ns = []
+for integ in integrators
+    r, z, n = reduce_line(integ)
+    #r, z, zmax, z0, width, n = get_dense_solution_from_integrator(integ, 10000);
+    #
+    #r, z, n = Qwind.reduce_line_unfiromely_spaced_distance(r, z, n);
+    rs = vcat(rs, r)
+    zs = vcat(zs, z)
+    ns = vcat(ns, n)
+end
+ns = log10.(ns);
+#ns_idx = sortperm(ns);
+#ns = ns[ns_idx];
+#rs = rs[ns_idx];
+#zs = zs[ns_idx];
 #
 
+rs_training = rs[1:10:end];
+zs_training = zs[1:10:end];
+ns_training = ns[1:10:end];
+spl = Spline2D(rs_training, zs_training, ns_training, kx=1, ky=1, s=length(rs));
+
+ns_interp = evaluate(spl, rs, zs);
 fig, ax = plt.subplots()
-integrators = iterations_dict[10]["integrators"];
-for line in integrators
-    ax.plot(line.p.data[:r], line.p.data[:z])
-end
-plt.show()
+#ax.plot(ns, label="real")
+#ax.plot(ns_interp, label="interp")
+ax.plot(ns_interp ./ ns, label="ratio interp / real")
+ax.legend()
 
 
-
-pdfp = matplotlib.backends.backend_pdf.PdfPages
-pdfile = pdfp("multipage_pdf.pdf")
-for it = 1:length(iterations_dict)
-    try
-        println(it)
-        fig, ax = plt.subplots()
-        plot_streamlines(iterations_dict[it]["integrators"], fig, ax)
-        pdfile.savefig(fig)
-        plt.close("all")
-    catch
-        continue
+#r_range = 10 .^ range(log10(56), log10(61), length=500);
+#z_range = 10 .^ range(log10(0.045), log10(0.06), length=500);
+r_range = 10 .^ range(log10(100), log10(200), length=500);
+z_range = 10 .^ range(log10(1e-6), log10(1), length=500);
+den_grid = zeros((length(r_range), length(z_range)));
+for (i,r) in enumerate(r_range)
+    for (j,z) in enumerate(z_range)
+        den_grid[i,j] = 10 .^ evaluate(spl, r, z)
     end
 end
-pdfile.close()
-
-rt = iterations_dict[19]["radiative_transfer"]
-r_range = range(6, 1000, length = 100)
-z_range = range(6, 1000, length = 100)
-tauxg = zeros((length(r_range), length(z_range)))
-for (i, r) in enumerate(r_range)
-    for (j, z) in enumerate(z_range)
-        tauxg[i, j] = compute_xray_tau(rt, r, z)
-    end
-end
-fig, ax = plt.subplots()
-cm = ax.pcolormesh(r_range, z_range, tauxg', norm = LogNorm(vmin = 1e-3, vmax = 1e1))
-plt.colorbar(cm, ax = ax)
-fig.savefig("asd.pdf")
-
-
-
-
-
-
-fig, ax = plt.subplots()
-plot_streamlines(iterations_dict[21]["integrators"], fig, ax)
-fig.savefig("asd.pdf")
-
-
-lkdt = Qwind.create_lines_kdtrees(iterations_dict[1]["integrators"]);
-
-using BenchmarkTools
-
-vig = VIGrid(lkdt, 500, 50);
-
-
-fig, ax = plt.subplots()
-gg = vig.grid
-ax.pcolormesh(gg.r_range, gg.z_range, gg.grid', norm = LogNorm());
-
-
-r_range, z_range = get_spatial_grid(lkdt, 1000, 50);
-
-gg = pmap(z -> get_density.(Ref(lkdt), r_range, z), z_range);
-gg = hcat(gg...)
-
-
-
-
-
-
-
-#########################
-
-using JLD2, Profile, PProf
-@load "big_rt.jld2" rt
-
-iterations_dict[1] = Dict();
-model.rt = rt;
-iterations_dict[1]["radiative_transfer"] = rt;
-
-
-do_iteration!(model, iterations_dict, it_num = 1);
-
-lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg);
-i = 100
-integrator = Qwind.create_and_run_integrator(
-    model,
-    linewidth = lines_widths[i],
-    r0 = lines_range[i],
-    atol = model.config[:integrator][:atol],
-    rtol = model.config[:integrator][:rtol],
-    line_id = i,
-)
-
-
-#run!(model, iterations_dict1)
-#do_iteration!(model, iterations_dict, it_num=1);
-#do_iteration!(model, iterations_dict, it_num=2);
-
-Profile.clear()
-@profile rt = update_radiative_transfer(model.rt, iterations_dict[1]["integrators"]);
-pprof()
-
+den_grid_old = zeros((length(r_range), length(z_range)));
 rt = iterations_dict[2]["radiative_transfer"];
-
-#using JLD2
-#@save "big_rt.jld2" rt
-#
-#
-
-fig, ax = plt.subplots()
-ax.hist(a, bins = 500)
-ax.set_yscale("log")
-ax.set_xscale("log")
-
-
-
-
-rin = 50
-rfi = 1000
-Rg = model.bh.Rg;
-ic = model.ic;
-xray_luminosity = model.rad.xray_luminosity;
-rc = rin;
-lines_range = []
-lines_widths = []
-r_range = 10 .^ range(log10(rin), log10(rfi), length = 1000);
-z_range = [0.0, 1.0];
-density_grid = zeros((length(r_range), length(z_range)));
-density_grid[:, 1] .= getn0.(Ref(ic), r_range);
-interp_grid = VIGrid(r_range, z_range, density_grid);
-tau_x = 0
-tau_uv = 0
-fx(delta_r, rc, delta_tau, tau_x) =
-    0.1 -
-    (compute_xray_tau(interp_grid, 0, 0, rc + delta_r, 0, xray_luminosity, Rg) - tau_x)
-fuv(delta_r, rc, delta_tau, tau_uv) =
-    0.1 -
-    (compute_uv_tau(interp_grid, 0, 0, rc + delta_r, 0, Rg) - tau_uv)
-while rc < rfi
-    println("rc $rc")
-    if tau_x < 50
-        tau_x = compute_xray_tau(interp_grid, 0, 0, rc, 0, xray_luminosity, Rg)
-        println(fx(0, rc, 0.1, tau_x))
-        println(fx(1e3, rc, 0.1, tau_x))
-        delta_r = find_zero(delta_r ->fx(delta_r, rc, 0.1, tau_x) , (0, 1e3), Bisection())
-    else
-        tau_uv = compute_uv_tau(interp_grid, 0, 0, rc, 0, Rg)
-        delta_r = find_zero(delta_r ->fuv(delta_r, rc, 0.1, tau_uv) , (0, 1e3), Bisection())
+for (i,r) in enumerate(r_range)
+    for (j,z) in enumerate(z_range)
+        den_grid_old[i,j] = get_density(rt, r, z);
     end
-    push!(lines_range, rc + delta_r / 2)
-    push!(lines_widths, delta_r)
-    rc += delta_r
 end
 
+# scipy
+scipy_interpolate = pyimport("scipy.interpolate")
+r_range_grid = r_range .* ones(length(z_range))';
+z_range_grid = z_range' .* ones(length(r_range));
+den_scipy = scipy.interpolate.griddata((rs_training, zs_training), ns_training, (r_range_grid, z_range_grid), method="linear", fill_value = 2);
+den_scipy = 10 .^ den_scipy;
+
+function get_value(r, z, r_range, z_range, den_grid)
+    r_idx = searchsorted_nearest(r_range, r)
+    z_idx = searchsorted_nearest(z_range, z)
+    return den_grid[r_idx, z_idx]
+end
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(r_range, z_range, den_scipy', norm=LogNorm())
+plt.colorbar(cm, ax=ax)
+ax.set_xlim(r_range[1], r_range[end])
+ax.set_ylim(z_range[1], z_range[end])
+
+
+get_value(51.64, 1.69e-6, r_range, z_range, den_grid)
+
+intt = integrators[3]
+ri, zi, _, _, _, ni = get_dense_solution_from_integrator(intt, 10000);
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(r_range, z_range, (den_scipy ./ den_grid)', norm=LogNorm(1e-2, 1e2), cmap="coolwarm")
+#cm = ax.pcolormesh(r_range, z_range, den_scipy', norm=LogNorm())
+for line in integrators
+    ax.plot(line.p.data[:r], line.p.data[:z], color="white")
+end
+#ax.scatter(ri, zi, color="white", s=0.05)
+plt.colorbar(cm, ax=ax)
+ax.set_xlim(r_range[1], r_range[end])
+ax.set_ylim(z_range[1], z_range[end])
+
+fig, ax = plt.subplots()
+semilogy(intt.p.data[:z], intt.p.data[:n])
+ax.set_xlim(0.04, 0.07)
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(r_range, z_range, den_grid_old', norm=LogNorm())
+ax.scatter(ri, zi, color="white", s=0.05)
+plt.colorbar(cm, ax=ax)
+ax.set_xlim(r_range[1], r_range[end])
+ax.set_ylim(z_range[1], z_range[end])
+
+
+points = Vector{Float64}[]
+integrators = iterations_dict[2]["integrators"];
+rmin = Inf
+rmax = 0
+for integ in integrators
+    #r, z, zmax, z0, width, n = get_dense_solution_from_integrator(integ, 10000);
+    r = integ.p.data[:r]
+    z = integ.p.data[:z]
+    mxval, mxindx = findmax(z)
+    rmin = min(rmin, minimum(r))
+    rmax = max(rmax, maximum(r))
+    push!(points, [r[mxindx], z[mxindx]])
+    push!(points, [r[1], z[1]])
+end
+pushfirst!(points, [rmin, 0.0])
+#push!(points, [rmax, 0.0])
+push!(points, [1625, 4400])
+hull = concave_hull(points)
+
+
+pp = hcat(points...)
+scatter(pp[1,:], pp[2,:])
+pp = hcat(hull.vertices...)
+scatter(pp[1,:], pp[2,:], color="red")
+
+rr = range(0, 3000, length=500)
+zz = range(0, 3000, length=500)
+ggrid = zeros((length(rr), length(zz)))
+#polygon = AG.createpolygon(points3)
+for (i,r) in enumerate(rr)
+    for (j,z) in enumerate(zz)
+        if in_hull([r, z], hull) #AG.contains(polygon, AG.createpoint(r,z))
+            ggrid[i,j] = 1
+        else
+            ggrid[i,j] = 0
+        end
+    end
+end
+fig, ax = plt.subplots()
+ax.pcolormesh(rr, zz, ggrid')
+for integ in integrators
+    ax.plot(integ.p.data[:r], integ.p.data[:z], color="white")
+end
+hullp = hcat(hull.vertices...)
+ax.scatter(hullp[1,:], hullp[2,:], color="red")
+ax.set_xlim(rr[1], rr[end])
+ax.set_ylim(zz[1], zz[end])
