@@ -189,8 +189,8 @@ function VIGrid(
     n_timesteps = 10000,
 )
     if lines_kdtrees === nothing
-        r_range = zeros(1)
-        z_range = zeros(1)
+        r_range = zeros(2)
+        z_range = zeros(2)
         density_grid = nothing
     else
         r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)

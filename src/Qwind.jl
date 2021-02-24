@@ -27,6 +27,7 @@ include("radiative_transfer/density_interpolators/grids.jl")
 #include("radiative_transfer/density_interpolators/smoothed_grid.jl")
 #include("radiative_transfer/density_interpolators/log_grid.jl")
 include("radiative_transfer/density_interpolators/z_interpolation.jl")
+include("radiative_transfer/density_interpolators/interpolation.jl")
 #include("radiative_transfer/adaptive_mesh.jl")
 include("initial_conditions.jl")
 

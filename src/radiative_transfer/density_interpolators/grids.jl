@@ -8,7 +8,8 @@ struct InterpolationGrid
     nr::Union{Int, String}
     nz::Int
     iterator::GridIterator
-    function InterpolationGrid(r_range, z_range, grid, nr=nothing, nz=nothing)
+    interpolator
+    function InterpolationGrid(r_range, z_range, grid, interpolator, nr=nothing, nz=nothing)
         if nr === nothing
             nr = length(r_range)
         end
@@ -16,7 +17,7 @@ struct InterpolationGrid
             nz = length(z_range)
         end
         iterator = GridIterator(r_range, z_range)
-        return new(r_range, z_range, grid, nr, nz, iterator)
+        return new(r_range, z_range, grid, nr, nz, iterator, interpolator)
     end
 end
 
@@ -33,8 +34,8 @@ function get_spatial_grid(kdtree::KDTree, nr, nz)
     return r_range, z_range
 end
 
-function get_density(interpolator::GridInterpolator, r, z)
-    return interpolator.interpolator(r, z)
+function get_density(grid::InterpolationGrid, r, z)
+    return grid.interpolator(r, z)
     #if interpolator.grid.grid === nothing
     #    return interpolator.vacuum_density
     #end

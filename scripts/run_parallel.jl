@@ -26,7 +26,8 @@ for integ in iterations_dict[2]["integrators"]
 end
 
 
-using Dierckx, PyPlot
+using Dierckx, PyPlot, PyCall, ConcaveHull, DataFrames
+
 LogNorm = matplotlib.colors.LogNorm
 
 function reduce_line(integ)
@@ -35,8 +36,12 @@ function reduce_line(integ)
     zs = [z[1]]
     ns = [n[1]]
     for (rp, zp, np) in zip(r, z, n)
+        # discard if they are very similar points
+        #if isapprox([rp, zp], [rs[end], zs[end]], rtol = 0.55)
+        #    continue
+        #end
         #z_ratio = abs(zp / zs[end])
-        if (zp > zs[end])# && (z_ratio < 0.95 || z_ratio > 1.05)
+        if (zp > zs[end]) #&& (z_ratio < 0.95 || z_ratio > 1.05)
             push!(rs, rp)
             push!(zs, zp)
             push!(ns, np)
@@ -49,26 +54,34 @@ integrators = iterations_dict[2]["integrators"];
 rs = []
 zs = []
 ns = []
-for integ in integrators
+for integ in integrators[1:end]
     r, z, n = reduce_line(integ)
-    #r, z, zmax, z0, width, n = get_dense_solution_from_integrator(integ, 10000);
-    #
-    #r, z, n = Qwind.reduce_line_unfiromely_spaced_distance(r, z, n);
     rs = vcat(rs, r)
     zs = vcat(zs, z)
     ns = vcat(ns, n)
 end
 ns = log10.(ns);
-#ns_idx = sortperm(ns);
-#ns = ns[ns_idx];
-#rs = rs[ns_idx];
-#zs = zs[ns_idx];
-#
+rs_training = rs[1:1:end];#200000];
+zs_training = zs[1:1:end];#200000];
+ns_training = ns[1:1:end];#200000];
+#rs_training = rs[200000:1:end];
+#zs_training = zs[200000:1:end];
+#ns_training = ns[200000:1:end];
 
-rs_training = rs[1:10:end];
-zs_training = zs[1:10:end];
-ns_training = ns[1:10:end];
-spl = Spline2D(rs_training, zs_training, ns_training, kx=1, ky=1, s=length(rs));
+df = DataFrame(:r=>rs, :z=>zs, :n=>ns)
+dfr = round.(df, sigdigits=2)
+idcs = nonunique(dfr[!,[:r, :z]])
+dff = df[.!idcs, :]
+
+#points = hcat(rs, zs, ns);
+#points = round.(points, sigdigits=1);
+#
+#points_idx = unique(z -> points[z], 1:length(points), dims=1);
+
+#rs_training = dff.r;
+#zs_training = dff.z;
+#ns_training = dff.n;
+spl = Spline2D(rs_training, zs_training, ns_training, kx=1, ky=1, s) #2*length(rs_training));
 
 ns_interp = evaluate(spl, rs, zs);
 fig, ax = plt.subplots()
@@ -80,8 +93,8 @@ ax.legend()
 
 #r_range = 10 .^ range(log10(56), log10(61), length=500);
 #z_range = 10 .^ range(log10(0.045), log10(0.06), length=500);
-r_range = 10 .^ range(log10(100), log10(200), length=500);
-z_range = 10 .^ range(log10(1e-6), log10(1), length=500);
+r_range = 10 .^ range(log10(61), log10(200), length=250);
+z_range = 10 .^ range(log10(1e-6), log10(20), length=250);
 den_grid = zeros((length(r_range), length(z_range)));
 for (i,r) in enumerate(r_range)
     for (j,z) in enumerate(z_range)
@@ -95,13 +108,15 @@ for (i,r) in enumerate(r_range)
         den_grid_old[i,j] = get_density(rt, r, z);
     end
 end
-
 # scipy
 scipy_interpolate = pyimport("scipy.interpolate")
 r_range_grid = r_range .* ones(length(z_range))';
 z_range_grid = z_range' .* ones(length(r_range));
-den_scipy = scipy.interpolate.griddata((rs_training, zs_training), ns_training, (r_range_grid, z_range_grid), method="linear", fill_value = 2);
-den_scipy = 10 .^ den_scipy;
+den_scipy = 10 .^ scipy_interpolate.griddata((rs, zs), ns, (r_range_grid, z_range_grid), method="linear", fill_value = 2);
+#scipy_interpolator = scipy_interpolate.LinearNDInterpolator(collect(zip(rs, zs)), ns, fill_value = 2);
+#den_scipy = 10 .^ scipy_interpolator(r_range_grid, z_range_grid);
+
+#den_scipy = 10 .^ den_scipy;
 
 function get_value(r, z, r_range, z_range, den_grid)
     r_idx = searchsorted_nearest(r_range, r)
@@ -112,8 +127,13 @@ end
 fig, ax = plt.subplots()
 cm = ax.pcolormesh(r_range, z_range, den_scipy', norm=LogNorm())
 plt.colorbar(cm, ax=ax)
+for integ in integrators
+    ax.plot(integ.p.data[:r], integ.p.data[:z], color="white")
+end
 ax.set_xlim(r_range[1], r_range[end])
 ax.set_ylim(z_range[1], z_range[end])
+ax.set_xscale("log")
+ax.set_yscale("log")
 
 
 get_value(51.64, 1.69e-6, r_range, z_range, den_grid)
@@ -145,32 +165,66 @@ ax.set_ylim(z_range[1], z_range[end])
 
 
 points = Vector{Float64}[]
-integrators = iterations_dict[2]["integrators"];
-rmin = Inf
-rmax = 0
+integrators = iterations_dict[1]["integrators"];
+#rmin = Inf
+#rmax = 0
 for integ in integrators
     #r, z, zmax, z0, width, n = get_dense_solution_from_integrator(integ, 10000);
     r = integ.p.data[:r]
     z = integ.p.data[:z]
     mxval, mxindx = findmax(z)
-    rmin = min(rmin, minimum(r))
-    rmax = max(rmax, maximum(r))
+    #rmin = min(rmin, minimum(r))
+    #rmax = max(rmax, maximum(r))
     push!(points, [r[mxindx], z[mxindx]])
     push!(points, [r[1], z[1]])
 end
-pushfirst!(points, [rmin, 0.0])
+#pushfirst!(points, [rmin, 0.0])
 #push!(points, [rmax, 0.0])
-push!(points, [1625, 4400])
 hull = concave_hull(points)
 
 
-pp = hcat(points...)
+points2 = Vector{Float64}[]
+for integ in integrators
+    r = integ.p.data[:r]
+    z = integ.p.data[:z]
+    z_max = 0
+    for (rp, zp) in zip(r, z)
+        if zp > z_max 
+            push!(points2, [rp, zp])
+            z_max = zp
+        end
+    end
+end
+hull = concave_hull(points2)
+
+r_min = minimum([minimum(integ.p.data[:r]) for integ in integrators]);
+r_max = maximum([maximum(integ.p.data[:r]) for integ in integrators]);
+r_range_p = range(r_min, r_max, step=1);
+z_range_p = zeros(length(r_range_p));
+for integ in integrators
+    r, z, zmax, z0, width, n = get_dense_solution_from_integrator(integ, 10000);
+    #r = integ.p.data[:r]
+    #z = integ.p.data[:z]
+    for (rp, zp) in zip(r, z)
+        r_idx = searchsorted_nearest(r_range_p, rp)
+        z_range_p[r_idx] = max(z_range_p[r_idx], zp)
+    end
+end
+points3 = [[integ.p.r0, 0] for integ in integrators];
+for (rp, zp) in zip(r_range_p, z_range_p)
+    zp == 0 && continue
+    push!(points3, [rp, zp])
+end
+hull = concave_hull(points3)
+
+
+pp = hcat(points2...)
 scatter(pp[1,:], pp[2,:])
 pp = hcat(hull.vertices...)
 scatter(pp[1,:], pp[2,:], color="red")
 
-rr = range(0, 3000, length=500)
-zz = range(0, 3000, length=500)
+rr = range(0, 1500, length=500)
+zz = range(0, 100, length=500)
 ggrid = zeros((length(rr), length(zz)))
 #polygon = AG.createpolygon(points3)
 for (i,r) in enumerate(rr)
@@ -188,6 +242,28 @@ for integ in integrators
     ax.plot(integ.p.data[:r], integ.p.data[:z], color="white")
 end
 hullp = hcat(hull.vertices...)
-ax.scatter(hullp[1,:], hullp[2,:], color="red")
+#ax.scatter(hullp[1,:], hullp[2,:], color="red")
+pp = hcat(points3...)
+#ax.scatter(pp[1,:], pp[2,:], color = "blue", s=5)
 ax.set_xlim(rr[1], rr[end])
 ax.set_ylim(zz[1], zz[end])
+
+
+using PyPlot
+LogNorm = matplotlib.colors.LogNorm
+rr = range(0, 1000, length=500)
+zz = range(0, 25, length=500)
+ggrid = zeros((length(rr), length(zz)))
+for (i, r) in enumerate(rr)
+    for (j, z) in enumerate(zz)
+        ggrid[i,j] = get_density(model.rt, r, z)
+    end
+end
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(rr, zz, ggrid', norm=LogNorm(1e7, 5e9))
+plt.colorbar(cm, ax=ax)
+
+fig, ax = plt.subplots()
+rtg = model.rt.density_interpolator.grid
+cm = ax.pcolormesh(rtg.r_range, rtg.z_range, rtg.grid', norm=LogNorm(1e7, 5e9))
+plt.colorbar(cm, ax=ax)
