@@ -1,6 +1,6 @@
 __precompile__()
 using PyCall
-import ConcaveHull, Dierckx, Interpolations
+import ConcaveHull, Interpolations
 export WindInterpolator, get_density
 
 scipy_interpolate = PyNULL() 
