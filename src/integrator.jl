@@ -566,7 +566,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
                 delta_tau = 1
             end
             tau_x = compute_xray_tau(interp_grid, 0, 0, rc, 0, xray_luminosity, Rg)
-            delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.01)
+            delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.1)
         elseif tau_uv < 50
             if tau_x < 10
                 delta_tau = 0.1

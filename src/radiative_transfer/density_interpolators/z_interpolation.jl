@@ -252,7 +252,7 @@ function get_closest_point(line_kdtree::LineKDTree, point)
     return distance, width, idx
 end
 
-function get_density(lines_kdtrees::Array{LineKDTree,1}, r, z)
+function get_density(lines_kdtrees::Vector{LineKDTree}, r, z)
     distances = []
     densities = []
     point = [r, z]
@@ -261,6 +261,8 @@ function get_density(lines_kdtrees::Array{LineKDTree,1}, r, z)
             continue
         end
         distance, width, idx = get_closest_point(line_kdtree, point)
+        println("distance $distance width $width")
+        println("closest point $(line_kdtree.r_pos[idx]) $(line_kdtree.z_pos[idx])")
         if distance > width / 2
             continue
         end
