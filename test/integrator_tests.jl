@@ -17,7 +17,8 @@ end
     ic = UniformIC(0, 100, 25, 2, 1e8, 1e6 / C, false)
     bh = BlackHole(1e8 *M_SUN, 0.5, 0.0)
     Rg = bh.Rg
-    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg)
+    xray_lumin = 1e40
+    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg, xray_lumin)
     @test length(lines_range) == 25
     @test length(lines_widths) == 25
     @test lines_widths == 4 .* ones(25)
@@ -27,8 +28,7 @@ end
     @test lines_range[end] == 98
     # log 
     ic = UniformIC(1, 1e4, 4, 2, 1e8, 1e6 / C, true)
-    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg)
-    println(lines_range)
+    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg, xray_lumin)
     @test diff(log10.(lines_widths)) ≈ ones(3)
     @test lines_range[1] == 5.5
     @test lines_range[2] == 55.0

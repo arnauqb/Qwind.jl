@@ -1,4 +1,4 @@
-using Qwind, Test, SafeTestsets
+using Qwind, Test
 @time begin
 #    @time @safetestset "Quadtree tests" begin include("radiation/quadtree_tests.jl") end
 include("utils.jl")
