@@ -7,7 +7,7 @@ using YAML
 #include("scripts/plotting.jl")
 #matplotlib.rcParams["figure.dpi"] = 300
 
-config_path = "configs/config_test.yaml"
+config_path = "configs/multiple_models.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
 try
     mv(config[:integrator][:save_path], "backup", force = true)
