@@ -14,7 +14,11 @@ try
 catch
 end
 model = Model(config_path);
+
 iterations_dict = Dict();
+run!(model, iterations_dict)
+
+
 do_iteration!(model, iterations_dict, it_num=1);
 
 do_iteration!(model, iterations_dict, it_num=2);
