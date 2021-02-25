@@ -139,7 +139,7 @@ function get_spatial_grid(integrators, nr, nz)
     z_max = 0
     for integrator in integrators
         r_min = min(r_min, integrator.p.r0)
-        r_max = max(r_max, min(maximum(integrator.p.data[:r]), 5e3))
+        r_max = max(r_max, min(maximum(integrator.p.data[:r] * (1 + integrator.p.lwnorm)), 5e3))
         z_min = min(z_min, integrator.p.z0)
         z_max = max(z_max, maximum(integrator.p.data[:z]))
     end

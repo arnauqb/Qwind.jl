@@ -76,25 +76,6 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     )
     @info "Iterating streamlines..."
     integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
-    #integrators_future = Array{Future}(undef, length(lines_range))
-    #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-    #    integrators_future[i] =
-    #        #@spawnat (i % nprocs() + 1) create_and_run_integrator(
-    #        @spawn create_and_run_integrator(
-    #            model,
-    #            linewidth = lw,
-    #            r0 = r0,
-    #            atol = model.config[:integrator][:atol],
-    #            rtol = model.config[:integrator][:rtol],
-    #            line_id = i,
-    #        )
-    #end
-    #println("done!")
-    #integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-    #@sync for i in 1:length(integrators_future)
-    #    @async integrators[i] = fetch(integrators_future[i])
-    #end
-    #integrators[:] .= fetch.(integrators_future)
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
@@ -109,7 +90,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     return
 end
 
-function run!(model::Model, iterations_dict = nothing)
+function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing)
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
@@ -117,10 +98,12 @@ function run!(model::Model, iterations_dict = nothing)
     @info "Saving results to $save_path"
     flush(stdout)
     # iterations
-    n_iterations = model.config[:integrator][:n_iterations]
+    if n_iterations === nothing
+        n_iterations = model.config[:integrator][:n_iterations]
+    end
     iterations_dict[1] = Dict()
     iterations_dict[1]["radiative_transfer"] = model.rt
-    for it = 1:n_iterations
+    for it = start_it:(start_it+n_iterations)
         do_iteration!(model, iterations_dict, it_num = it)
     end
     return
