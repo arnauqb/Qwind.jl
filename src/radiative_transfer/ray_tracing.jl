@@ -367,9 +367,9 @@ function compute_xray_tau(
             xray_luminosity,
             Rg,
         )
-        #if ret > 40
-        #    return ret
-        #end
+        if ret > 40
+            return ret
+        end
     end
     return ret
 end

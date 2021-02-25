@@ -261,7 +261,7 @@ function get_density(lines_kdtrees::Vector{LineKDTree}, r, z)
             continue
         end
         distance, width, idx = get_closest_point(line_kdtree, point)
-        if distance > width / 2
+        if distance > width #/ 2
             continue
         end
         z_idx = searchsorted_nearest(line_kdtree.z, z)
