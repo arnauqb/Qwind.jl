@@ -113,7 +113,6 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     else
         r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
     end
-    println("nz $nz")
     z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
     z_range = pushfirst!(z_range, 0.0)
     r_range = round.(r_range, digits = 7)
