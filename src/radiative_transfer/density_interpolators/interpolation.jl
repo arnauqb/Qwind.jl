@@ -144,17 +144,25 @@ function construct_interpolation_grid(
 )
     log_n = log10.(n)
     r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz)
-    r_range_grid = r_range .* ones(length(z_range))'
-    z_range_grid = z_range' .* ones(length(r_range))
+    #r_range_grid = r_range .* ones(length(z_range))'
+    #z_range_grid = z_range' .* ones(length(r_range))
     scipy_interpolate = pyimport("scipy.interpolate")
-    density_grid =
-        10 .^ scipy_interpolate.griddata(
-            (r, z),
-            log_n,
-            (r_range_grid, z_range_grid),
-            method = "linear",
-            fill_value = 2,
-        )
+    points = hcat(r, z)
+    linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
+    density_grid = @showprogress pmap(
+        z -> 10 .^ linear_int(r_range, z),
+        z_range,
+        batch_size = Int(round(length(z_range) / nprocs())),
+    )
+    density_grid = hcat(density_grid...)
+    #density_grid =
+    #    10 .^ scipy_interpolate.griddata(
+    #        (r, z),
+    #        log_n,
+    #        (r_range_grid, z_range_grid),
+    #        method = "linear",
+    #        fill_value = 2,
+    #    )
     # remove points outside the wind
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
