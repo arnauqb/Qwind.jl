@@ -2,10 +2,10 @@ system:
   #qwind_path: /cosma5/data/durham/covid19/arnau/qwind/Qwind.jl
   #qwind_path: /home/arnau/code/Qwind.jl
   qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
-  n_cpus: 112
-  partition: cosma7-shm
+  n_cpus: 48
+  partition: cosma7-shm2
   account: dp004
-  max_time: 72:00:00
+  max_time: 24:00:00
   job_name: qwind
   
 black_hole:
@@ -22,7 +22,7 @@ radiation:
 radiative_transfer:
   mode: RegularGrid
   density_interpolator: 
-    type: VIGrid
+    type: WindInterpolator #"@vary grid VIGrid,WindInterpolator"
     vacuum_density: 1e2
     n_timesteps: 10000
     nz: 50 #"@vary grid 50,100,500,1000"
@@ -50,7 +50,7 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution50"
-  #save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/rin_tests_interpol"
+  #save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution50"
+  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/test_models_15"
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/multinode_tests_nthreads"
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/big_job_changelines"
