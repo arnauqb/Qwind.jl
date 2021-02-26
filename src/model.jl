@@ -119,7 +119,12 @@ function parse_variation(value)
             length = parse(Int, value_split[4]),
         )
     elseif value_split[1] == "grid"
-        return parse.(Float64, split(value_split[2], ","))
+        values = nothing
+        try
+            return parse.(Float64, split(value_split[2], ","))
+        catch
+            return split(value_split[2], ",")
+        end
     else
         error("Type of variation not supported")
     end
@@ -150,7 +155,7 @@ end
 
 function create_running_script(save_path; n_cpus, max_time, account, partition)
     text = """using Distributed, ClusterManagers
-    pids = addprocs_slurm($n_cpus,
+    pids = addprocs_slurm($(n_cpus-1),
                           topology=:master_worker,
                           p=\"$partition\",
                           A=\"$account\",
