@@ -123,7 +123,6 @@ end
 
 struct VIGrid <: GridInterpolator
     grid::InterpolationGrid
-    interpolator::Any
     vacuum_density::Float64
     n_timesteps::Int
     function VIGrid(
@@ -135,15 +134,8 @@ struct VIGrid <: GridInterpolator
         vacuum_density = 1e2,
         n_timesteps = 10000,
     )
-        if grid === nothing
-            itp = (r, z) -> vacuum_density
-        else
-            itp = Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
-            itp = Interpolations.extrapolate(itp, 1e2)
-        end
         return new(
-            InterpolationGrid(r_range, z_range, grid, itp, nr, nz),
-            itp,
+            InterpolationGrid(r_range, z_range, grid, nr, nz),
             vacuum_density,
             n_timesteps,
         )

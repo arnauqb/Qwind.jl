@@ -315,15 +315,11 @@ function compute_xray_tau_cell(
     end
 end
 
-function get_density(density_interpolator::Union{Nothing,DensityInterpolator}, point)
-    return density_interpolator.interpolator(point[1], point[2])
-end
-
 function get_density(
-    density_interpolator::Union{Nothing,DensityInterpolator},
+    grid::InterpolationGrid,
     iterator::GridIterator,
 )
-    return density_interpolator.grid.grid[iterator.current_r_idx, iterator.current_z_idx]
+    return grid.grid[iterator.current_r_idx, iterator.current_z_idx]
 end
 
 function dist(p1, p2, Rg)
@@ -331,7 +327,7 @@ function dist(p1, p2, Rg)
 end
 
 function compute_xray_tau(
-    density_interpolator::DensityInterpolator,
+    grid::InterpolationGrid,
     ri,
     zi,
     rf,
@@ -339,10 +335,10 @@ function compute_xray_tau(
     xray_luminosity,
     Rg,
 )
-    if density_interpolator.grid.grid === nothing
+    if grid.grid === nothing
         return 0.0
     end
-    iterator = density_interpolator.grid.iterator
+    iterator = grid.iterator
     set_iterator!(iterator, ri, zi, rf, zf)
     initial_point = [ri, zi]
     previous_point = copy(iterator.intersection)
@@ -351,7 +347,7 @@ function compute_xray_tau(
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
         #cell_density = get_density(density_interpolator, iterator)
-        cell_density = get_density(density_interpolator, iterator.intersection)
+        cell_density = get_density(grid, iterator.intersection)
         #println("##########")
         #println("cell_density $cell_density")
         distance_from_source = dist(initial_point, iterator.intersection, Rg)
@@ -377,19 +373,19 @@ end
 compute_uv_tau_cell(intersection_size, cell_density) =
     intersection_size * cell_density * SIGMA_T
 
-function compute_uv_tau(density_interpolator::DensityInterpolator, ri, zi, rf, zf, Rg)
-    if density_interpolator.grid.grid === nothing
+function compute_uv_tau(grid::InterpolationGrid, ri, zi, rf, zf, Rg)
+    if grid.grid === nothing
         return 0.0
     end
-    iterator = density_interpolator.grid.iterator
+    iterator = grid.iterator
     set_iterator!(iterator, ri, zi, rf, zf)
     previous_point = copy(iterator.intersection)
     ret = 0
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
-        #cell_density = get_density(density_interpolator, iterator.intersection)
-        cell_density = get_density(density_interpolator, iterator)
+        #cell_density = get_density(grid, iterator.intersection)
+        cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
         ret += compute_uv_tau_cell(intersection_size, cell_density)

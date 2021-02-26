@@ -40,7 +40,7 @@ function update_radiative_transfer(rt::RegularGrid, integrators)
 end
 
 compute_xray_tau(regular_grid::RegularGrid, ri, zi, rf, zf, xray_luminosity, Rg) =
-    compute_xray_tau(regular_grid.density_interpolator, ri, zi, rf, zf, xray_luminosity, Rg)
+    compute_xray_tau(regular_grid.density_interpolator.grid, ri, zi, rf, zf, xray_luminosity, Rg)
 
 compute_xray_tau(regular_grid::RegularGrid, r, z) = compute_xray_tau(
     regular_grid::RegularGrid,
@@ -53,7 +53,7 @@ compute_xray_tau(regular_grid::RegularGrid, r, z) = compute_xray_tau(
 )
 
 compute_uv_tau(regular_grid::RegularGrid, ri, zi, rf, zf, Rg) =
-    compute_uv_tau(regular_grid.density_interpolator, ri, zi, rf, zf, Rg)
+    compute_uv_tau(regular_grid.density_interpolator.grid, ri, zi, rf, zf, Rg)
 
 compute_uv_tau(regular_grid::RegularGrid, rd, r, z) = compute_uv_tau(
     regular_grid::RegularGrid,
