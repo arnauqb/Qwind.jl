@@ -14,6 +14,11 @@ end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
 run!(model1, iterations_dict1)
+
+#do_iteration!(model1, iterations_dict1, it_num=2)
+
+
+#run!(model1, iterations_dict1)
 #run!(model, iterations_dict, start_it=6, n_iterations=2)
 
 config_path2 = "configs/config_test2.yaml"

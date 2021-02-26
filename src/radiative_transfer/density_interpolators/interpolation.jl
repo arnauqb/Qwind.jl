@@ -1,14 +1,14 @@
-__precompile__()
+#__precompile__()
 using PyCall
 import ConcaveHull, Interpolations
 export WindInterpolator, get_density
 
-scipy_interpolate = PyNULL() 
+#scipy_interpolate = PyNULL() 
 
-function __init__()
-    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
-end
-
+#function __init__()
+#    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
+#end
+#
 struct WindInterpolator <: GridInterpolator
     grid::InterpolationGrid
     hull::Union{ConcaveHull.Hull,Nothing}
@@ -108,6 +108,7 @@ function construct_interpolation_grid(integrators, hull; n_timesteps, nr, nz)
         r_range, z_range = get_spatial_grid(integrators, nr, nz)
         r_range_grid = r_range .* ones(length(z_range))'
         z_range_grid = z_range' .* ones(length(r_range))
+        scipy_interpolate = pyimport("scipy.interpolate")
         density_grid =
             10 .^ scipy_interpolate.griddata(
                 (rs, zs),
