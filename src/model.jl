@@ -75,7 +75,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         line_id = i,
     )
     @info "Iterating streamlines..."
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = Int(ceil(length(lines_range) / nprocs())))
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
@@ -103,7 +103,7 @@ function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=
     end
     iterations_dict[1] = Dict()
     iterations_dict[1]["radiative_transfer"] = model.rt
-    for it = start_it:(start_it+n_iterations)
+    for it = start_it:(start_it+n_iterations-1)
         do_iteration!(model, iterations_dict, it_num = it)
     end
     return

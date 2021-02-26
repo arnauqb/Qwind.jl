@@ -2,6 +2,7 @@ using DiffEqBase, DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
 using Roots: find_zero, Bisection
 using Distributed
+using QuadGK
 import Qwind.out_of_grid, Qwind.compute_density
 import Base.push!
 export initialize_integrator,
@@ -544,11 +545,11 @@ end
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     lines_range = []
     lines_widths = []
-    r_range = 10 .^ range(log10(rin), log10(rfi), length = 1000);
+    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000);
     z_range = [0.0, 1.0];
     density_grid = zeros((length(r_range), length(z_range)));
     density_grid[:, 1] .= getn0.(Ref(ic), r_range);
-    interp_grid = VIGrid(r_range, z_range, density_grid);
+    interp_grid = InterpolationGrid(r_range, z_range, density_grid)
     tau_x = 0
     tau_uv = 0
     fx(delta_r, rc, delta_tau, tau_x) =
@@ -590,3 +591,5 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     lines_widths = vcat(lines_widths, additional_widths)
     return lines_range, lines_widths
 end
+
+compute_lines_range(model) = compute_lines_range(model.ic, model.ic.rin, model.ic.rfi, model.bh.Rg, model.rad.xray_luminosity)
