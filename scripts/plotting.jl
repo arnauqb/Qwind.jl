@@ -1,9 +1,11 @@
-export plot_streamlines, plot_density_grid, plot_xray_grid
+module QwindPlotting
+export plot_streamlines, plot_density_grid, plot_xray_grid, plot_wind_hull
 #using PyPlot
 #LogNorm = matplotlib.colors.LogNorm
 #Normalize = matplotlib.colors.Normalize
 #PdfPages = matplotlib.backends.backend_pdf.PdfPages
-using PyCall, PyPlot
+using PyCall, PyPlot, Qwind
+import ConcaveHull
 #mpl = pyimport("matplotlib")
 #plt = pyimport("matplotlib.pyplot")
 pdfpages = pyimport("matplotlib.backends.backend_pdf")
@@ -132,4 +134,39 @@ function plot_xray_grid(
         ax.set_ylim(ylim[1], ylim[2])
     end
     return fig, ax
+end
+
+function plot_wind_hull(
+    hull::ConcaveHull.Hull;
+    rmin = 1,
+    rmax = 1000,
+    zmin = 0,
+    zmax = 1000,
+    nr = 100,
+    nz = 101,
+    cmap = "viridis",
+    xlim = nothing,
+    ylim = nothing,
+)
+    fig, ax = plt.subplots()
+    r_range = range(rmin, rmax, length=nr)
+    z_range = range(zmin, zmax, length=nz)
+    r_range_grid = r_range .* ones(nz)'
+    z_range_grid = z_range' .* ones(nr)
+
+    ret = Qwind.is_point_in_wind.(Ref(hull), r_range_grid, z_range_grid)
+    cm = ax.pcolormesh(
+        r_range,
+        z_range,
+        ret',
+        cmap = cmap,
+    )
+    if xlim !== nothing
+        ax.set_xlim(xlim[1], xlim[2])
+    end
+    if ylim !== nothing
+        ax.set_ylim(ylim[1], ylim[2])
+    end
+    return fig, ax
+end
 end

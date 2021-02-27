@@ -5,7 +5,7 @@ using Qwind
 using YAML
 include("scripts/plotting.jl")
 
-config_path = "configs/multiple_models.yaml"
+config_path = "configs/config_test.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
 try
     mv(config[:integrator][:save_path], "backup", force = true)
@@ -13,7 +13,11 @@ catch
 end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
-run!(model1, iterations_dict1)
+do_iteration!(model1, iterations_dict1, it_num=1);
+
+do_iteration!(model1, iterations_dict1, it_num=2);
+
+#run!(model1, iterations_dict1)
 
 #do_iteration!(model1, iterations_dict1, it_num=2)
 

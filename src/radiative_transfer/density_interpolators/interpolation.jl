@@ -29,21 +29,18 @@ function WindInterpolator(
     nz = Int(nz)
     if integrators === nothing
         hull = nothing
+        grid = construct_interpolation_grid(nr, nz)
     else
-        hull = construct_wind_hull(integrators, n_timesteps = n_timesteps)
+        r, z, n = reduce_integrators(integrators, n_timesteps=n_timesteps)
+        r0 = [integ.p.r0 for integ in integrators]
+        hull = construct_wind_hull(r, z, r0)
+        grid = construct_interpolation_grid(r, z, n, r0, hull, nr = nr, nz = nz)
     end
-    grid = construct_interpolation_grid(
-        integrators,
-        hull,
-        n_timesteps = n_timesteps,
-        nr = nr,
-        nz = nz,
-    )
     return WindInterpolator(grid, hull, vacuum_density, n_timesteps)
 end
 
-function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64})
-    r_hull = range(minimum(r), maximum(r), step = 1)
+function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64})
+    r_hull = r0
     zmax_hull = zeros(length(r_hull))
     zmin_hull = zeros(length(r_hull))
     for (rp, zp) in zip(r, z)
@@ -54,14 +51,13 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64})
     z_hull = vcat(zmax_hull, zmin_hull)
     points = []
     for (rp, zp) in zip(r_hull, z_hull)
-        #zp == 0 && continue
         push!(points, [rp, zp])
     end
     hull = ConcaveHull.concave_hull(points)
     return hull
 end
 
-function construct_wind_hull(integrators; n_timesteps = 10000)
+function get_dense_line_positions(integrators; n_timesteps=1000)
     r = Float64[]
     z = Float64[]
     for integ in integrators
@@ -69,13 +65,20 @@ function construct_wind_hull(integrators; n_timesteps = 10000)
         r = vcat(r, rp)
         z = vcat(z, zp)
     end
-    return construct_wind_hull(r, z)
+    return r, z
+end
+
+function construct_wind_hull(integrators; n_timesteps = 1000)
+    r, z = get_dense_line_positions(integrators, n_timesteps=n_timesteps)
+    r0 = [integ.p.r0 for integ in integrators]
+    return construct_wind_hull(r, z, r0)
 end
 
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
     return ConcaveHull.in_hull(point, hull)
 end
 is_point_in_wind(wi::WindInterpolator, point) = is_point_in_wind(wi.hull, point)
+is_point_in_wind(hull::ConcaveHull.Hull, r, z) = is_point_in_wind(hull, [r,z])
 
 function reduce_line(r::Vector{<:Number}, z::Vector{<:Number}, n::Vector{<:Number})
     rs = [r[1]]
@@ -108,22 +111,6 @@ function reduce_integrators(integrators; n_timesteps)
         ns = vcat(ns, n)
     end
     return rs, zs, ns
-end
-
-function construct_interpolation_grid(
-    integrators::Union{Vector{<:Sundials.IDAIntegrator}, Nothing},
-    hull::Union{ConcaveHull.Hull, Nothing};
-    n_timesteps,
-    nr,
-    nz,
-)
-    if integrators === nothing
-        return construct_interpolation_grid(nr, nz)
-    else
-        rs, zs, ns = reduce_integrators(integrators, n_timesteps = n_timesteps)
-        r0s = [integrator.p.r0 for integrator in integrators]
-        return construct_interpolation_grid(rs, zs, ns, r0s, hull, nr = nr, nz = nz)
-    end
 end
 
 function construct_interpolation_grid(nr, nz)
