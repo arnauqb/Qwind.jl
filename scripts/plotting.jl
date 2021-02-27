@@ -1,4 +1,4 @@
-export plot_streamlines, plot_density_grid
+export plot_streamlines, plot_density_grid, plot_xray_grid
 #using PyPlot
 #LogNorm = matplotlib.colors.LogNorm
 #Normalize = matplotlib.colors.Normalize
@@ -81,6 +81,46 @@ function plot_density_grid(
         grid.r_range,
         grid.z_range,
         grid.grid',
+        norm = LogNorm(vmin = vmin, vmax = vmax),
+        cmap = cmap,
+    )
+    plt.colorbar(cm, ax = ax)
+    if xlim !== nothing
+        ax.set_xlim(xlim[1], xlim[2])
+    end
+    if ylim !== nothing
+        ax.set_ylim(ylim[1], ylim[2])
+    end
+    return fig, ax
+end
+
+
+function plot_xray_grid(
+    grid::InterpolationGrid,
+    xray_luminosity,
+    Rg;
+    cmap = "viridis",
+    vmin = nothing,
+    vmax = nothing,
+    xlim = nothing,
+    ylim = nothing,
+    rmin = 1,
+    rmax = 1000,
+    zmin = 0,
+    zmax = 1000,
+    nr = 100,
+    nz = 101
+)
+    r_range = range(rmin, rmax, length=nr)
+    z_range = range(zmin, zmax, length=nz)
+    r_range_grid = r_range .* ones(nz)'
+    z_range_grid = z_range' .* ones(nr)
+    ret = compute_xray_tau.(Ref(grid), 0, 0, r_range_grid, z_range_grid, xray_luminosity, Rg)
+    fig, ax = plt.subplots()
+    cm = ax.pcolormesh(
+        r_range,
+        z_range,
+        ret',
         norm = LogNorm(vmin = vmin, vmax = vmax),
         cmap = cmap,
     )

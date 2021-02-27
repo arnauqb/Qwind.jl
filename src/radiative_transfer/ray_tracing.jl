@@ -348,13 +348,9 @@ function compute_xray_tau(
         previous_point[2] = iterator.intersection[2]
         #cell_density = get_density(density_interpolator, iterator)
         cell_density = get_density(grid, iterator.intersection)
-        #println("##########")
-        #println("cell_density $cell_density")
         distance_from_source = dist(initial_point, iterator.intersection, Rg)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
-        #println("previous $previous_point")
-        #println("intersect $(iterator.intersection)")
         ret = compute_xray_tau_cell(
             intersection_size,
             distance_from_source,
