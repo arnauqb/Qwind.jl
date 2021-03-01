@@ -2,13 +2,13 @@
 
 export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp
 
-abstract type Radiation end
-abstract type RadiativeTransfer end
-abstract type DensityInterpolator end
-abstract type GridInterpolator <: DensityInterpolator end
-abstract type NNInterpolator <: DensityInterpolator end
-abstract type InitialConditions end
-abstract type Grid end
+abstract type Radiation{T<:AbstractFloat} end
+abstract type RadiativeTransfer{T<:AbstractFloat} end
+abstract type DensityInterpolator{T<:AbstractFloat} end
+abstract type GridInterpolator{T} <: DensityInterpolator{T} end
+abstract type NNInterpolator{T} <: DensityInterpolator{T} end
+abstract type InitialConditions{T<:AbstractFloat} end
+abstract type Grid{T<:AbstractFloat} end
 
 # Disk integration modes
 abstract type IntegrationType end
@@ -27,5 +27,5 @@ struct Relativistic <: FluxCorrection end
 struct NoRelativistic <: FluxCorrection end
 
 # Radiative transfer
-abstract type CellIterator end
+abstract type CellIterator{T<:AbstractFloat} end
 #abstract type LogGridIterator <: CellIterator end

@@ -10,16 +10,16 @@ end
 (norm::NEuclidean)(a, b) =
     sqrt(((a[1] - b[1]) / norm.r_norm)^2 + ((a[2] - b[2]) / norm.z_norm)^2)
 
-struct LineKDTree <: NNInterpolator
-    r::Vector{Float64}
-    z::Vector{Float64}
-    n::Vector{Float64}
-    r_pos::Vector{Float64}
-    z_pos::Vector{Float64}
-    width_pos::Vector{Float64}
-    zmax::Float64
-    r0::Float64
-    z0::Float64
+struct LineKDTree{T} <: NNInterpolator{T}
+    r::Vector{T}
+    z::Vector{T}
+    n::Vector{T}
+    r_pos::Vector{T}
+    z_pos::Vector{T}
+    width_pos::Vector{T}
+    zmax::T
+    r0::T
+    z0::T
     line_tree::NearestNeighbors.NNTree
     n_timesteps::Int
     function LineKDTree(r, z, density, width, n_timesteps)
@@ -28,7 +28,7 @@ struct LineKDTree <: NNInterpolator
         points_line = convert(Array{Float64,2}, points_line)
         line_tree = NearestNeighbors.KDTree(points_line)
         r_den, z_den, n_den = reduce_line_uniformely_spaced_density(r, z, density)
-        return new(
+        return new{typeof(r[1])}(
             r_den,
             z_den,
             n_den,
@@ -121,9 +121,9 @@ function get_spatial_grid(lines_kdtrees::Vector{LineKDTree}, nr, nz)
     return r_range, z_range
 end
 
-struct VIGrid <: GridInterpolator
+struct VIGrid{T} <: GridInterpolator{T}
     grid::InterpolationGrid
-    vacuum_density::Float64
+    vacuum_density::T
     n_timesteps::Int
     function VIGrid(
         r_range::Union{Vector{Float64},Nothing},
@@ -134,7 +134,7 @@ struct VIGrid <: GridInterpolator
         vacuum_density = 1e2,
         n_timesteps = 10000,
     )
-        return new(
+        return new{Float64}(
             InterpolationGrid(r_range, z_range, grid, nr, nz),
             vacuum_density,
             n_timesteps,

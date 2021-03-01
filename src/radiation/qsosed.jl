@@ -1,14 +1,14 @@
 export QsosedRadiation, from_quadtree, get_fuv_mdot, relativistic_correction
 
-struct QsosedRadiation <: Radiation
-    disk_grid::Vector{Float64}
-    fuv_grid::Vector{Float64}
-    mdot_grid::Vector{Float64}
-    xray_luminosity::Float64
-    efficiency::Float64
-    spin::Float64
-    isco::Float64
-    Rg::Float64
+struct QsosedRadiation{T} <: Radiation{T}
+    disk_grid::Vector{T}
+    fuv_grid::Vector{T}
+    mdot_grid::Vector{T}
+    xray_luminosity::T
+    efficiency::T
+    spin::T
+    isco::T
+    Rg::T
     flux_correction::FluxCorrection
 end
 
@@ -24,7 +24,7 @@ end
 
 function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, relativistic::FluxCorrection)
     rmin = bh.isco
-    rmax = 1400
+    rmax = 1400.0
     disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     uvf = uv_fractions(bh, disk_grid)
     if any(isnan.(uvf))

@@ -8,13 +8,13 @@ getrin(ic::InitialConditions) = ic.rin
 getrfi(ic::InitialConditions) = ic.rfi
 getnlines(ic::InitialConditions) = ic.nlines
 
-struct UniformIC <: InitialConditions
-    rin::Float64
-    rfi::Float64
-    nlines::Int64
-    z0::Float64
-    n0::Float64
-    v0::Float64
+struct UniformIC{T} <: InitialConditions{T}
+    rin::T
+    rfi::T
+    nlines::Int
+    z0::T
+    n0::T
+    v0::T
     logspaced::Bool
 end
 
@@ -47,16 +47,16 @@ getn0(ic::UniformIC, r) = ic.n0
 getv0(ic::UniformIC, r) = ic.v0
 ## CAK
 
-struct CAKIC <: InitialConditions
+struct CAKIC{T} <: InitialConditions{T}
     radiation::Radiation
     bh::BlackHole
-    rin::Float64
-    rfi::Float64
-    nlines::Union{Int64, String}
-    z0::Float64
-    K::Float64
-    alpha::Float64
-    mu::Float64
+    rin::T
+    rfi::T
+    nlines::Union{Int, String}
+    z0::T
+    K::T
+    alpha::T
+    mu::T
     logspaced::Bool
 end
 

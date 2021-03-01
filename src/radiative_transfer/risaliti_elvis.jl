@@ -6,16 +6,20 @@ export RERadiativeTransfer,
     radiation_force_integrand!,
     update_radiative_transfer
 
-struct RERadiativeTransfer <: RadiativeTransfer
+struct RERadiativeTransfer{T} <: RadiativeTransfer{T}
     radiation::Radiation
-    rx::Float64
-    rin::Float64
-    shielding_density::Float64
-    Rg::Float64
-    function RERadiativeTransfer(radiation, shielding_density, rin)
+    rx::T
+    rin::T
+    shielding_density::T
+    Rg::T
+    function RERadiativeTransfer(
+        radiation::Radiation,
+        shielding_density::T,
+        rin::T,
+    ) where {T<:AbstractFloat}
         Rg = radiation.Rg
         rx = compute_ionization_radius(radiation, shielding_density, rin, Rg)
-        new(radiation, rx, rin, shielding_density, Rg)
+        new{typeof(rx)}(radiation, rx, rin, shielding_density, Rg)
     end
 end
 
@@ -116,7 +120,16 @@ Risaliti & Elvis (2010) implementation of the X-Ray optical depth.
 - rx : ionization radius (cm)
 - r0 : initial radius of the current streamline (cm)
 """
-function compute_xray_tau(r, z, shielding_density, local_density, rin, rx, r0, Rg)
+function compute_xray_tau(
+    r::T,
+    z::T,
+    shielding_density::T,
+    local_density::T,
+    rin::T,
+    rx::T,
+    r0::T,
+    Rg::T,
+) where {T<:AbstractFloat}
     if r <= rin
         return 0.0
     end

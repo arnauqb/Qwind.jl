@@ -9,10 +9,10 @@ export WindInterpolator, get_density
 #    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
 #end
 #
-struct WindInterpolator <: GridInterpolator
-    grid::InterpolationGrid
+struct WindInterpolator{T} <: GridInterpolator{T}
+    grid::InterpolationGrid{T}
     hull::Union{ConcaveHull.Hull,Nothing}
-    vacuum_density::Float64
+    vacuum_density::T
     n_timesteps::Int
 end
 
@@ -134,7 +134,7 @@ end
 function construct_interpolation_grid(nr, nz)
     r_range = zeros(2)
     z_range = zeros(2)
-    density_grid = nothing
+    density_grid = [[1e2, 1e2] [1e2, 1e2]]
     return InterpolationGrid(r_range, z_range, density_grid, nr, nz)
 end
 

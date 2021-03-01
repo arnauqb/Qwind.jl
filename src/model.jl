@@ -3,13 +3,13 @@ import Qwind: create_and_run_integrator
 
 using YAML, Printf, ProgressMeter
 
-mutable struct Model
+mutable struct Model{T<:AbstractFloat}
     config::Dict
-    wind_grid::Grid
-    bh::BlackHole
-    rad::Radiation
-    rt::RadiativeTransfer
-    ic::InitialConditions
+    wind_grid::Grid{T}
+    bh::BlackHole{T}
+    rad::Radiation{T}
+    rt::RadiativeTransfer{T}
+    ic::InitialConditions{T}
 end
 
 function Model(config::Dict)
@@ -77,6 +77,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     @info "Iterating streamlines..."
     #integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = Int(ceil(length(lines_range) / nprocs())))
     integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+    #integrators = f.(1:length(lines_range))
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."

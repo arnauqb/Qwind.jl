@@ -2,8 +2,8 @@ using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
 using Qwind
-using YAML
-include("scripts/plotting.jl")
+using YAML, Profile, PProf
+#include("scripts/plotting.jl")
 
 config_path = "configs/config_test.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
@@ -13,11 +13,25 @@ catch
 end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
-do_iteration!(model1, iterations_dict1, it_num=1);
-
-do_iteration!(model1, iterations_dict1, it_num=2);
 
 #run!(model1, iterations_dict1)
+do_iteration!(model1, iterations_dict1, it_num=1);
+
+#Profile.clear()
+#@profile do_iteration!(model1, iterations_dict1, it_num=2);
+
+
+QwindPlotting.plot_streamlines(iterations_dict1[2]["integrators"])
+
+
+do_iteration!(model1, iterations_dict1, it_num=1);
+
+grid = model1.rt.density_interpolator.grid
+
+#f(di::DensityInterpolator) = density_interpolator.grid 
+f(m::RadiativeTransfer) = m.density_interpolator.grid
+@code_warntype f(model1.rt)
+
 
 #do_iteration!(model1, iterations_dict1, it_num=2)
 

@@ -1,9 +1,9 @@
 using Qwind
 export RegularGrid, compute_uv_tau, compute_xray_tau
 
-struct RegularGrid <: RadiativeTransfer
-    radiation::Radiation
-    density_interpolator::Union{DensityInterpolator,Nothing}
+struct RegularGrid{T} <: RadiativeTransfer{T}
+    radiation::Radiation{T}
+    density_interpolator::DensityInterpolator{T}
 end
 
 function RegularGrid(
@@ -58,7 +58,7 @@ compute_uv_tau(regular_grid::RegularGrid, ri, zi, rf, zf, Rg) =
 compute_uv_tau(regular_grid::RegularGrid, rd, r, z) = compute_uv_tau(
     regular_grid::RegularGrid,
     rd, 
-    0,
+    0.0,
     r,
     z,
     regular_grid.radiation.Rg,

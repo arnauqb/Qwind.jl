@@ -17,14 +17,14 @@ export create_wind_kdtree,
     is_point_outside_wind
 
 
-struct KDTree <: NNInterpolator
-    r::Vector{Float64}
-    z::Vector{Float64}
-    zmax::Vector{Float64}
-    z0::Vector{Float64}
-    width::Vector{Float64}
-    n::Vector{Float64}
-    vacuum_density::Float64
+struct KDTree{T} <: NNInterpolator{T}
+    r::Vector{T}
+    z::Vector{T}
+    zmax::Vector{T}
+    z0::Vector{T}
+    width::Vector{T}
+    n::Vector{T}
+    vacuum_density::T
     n_timesteps::Int
     tree::NearestNeighbors.KDTree
 end
