@@ -40,15 +40,33 @@ function WindInterpolator(
 end
 
 function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64})
-    r_hull = r0
-    zmax_hull = zeros(length(r_hull))
-    zmin_hull = zeros(length(r_hull))
-    for (rp, zp) in zip(r, z)
-        r_idx = searchsorted_nearest(r_hull, rp)
-        zmax_hull[r_idx] = max(zmax_hull[r_idx], zp)
-        zmin_hull[r_idx] = min(zmin_hull[r_idx], zp)
+    ri = minimum(r)
+    rf = maximum(r)
+    current_r = ri
+    r_range = [ri]
+    while current_r < rf
+        r0_idx = searchsorted_first(r0, current_r) + 1
+        if r0_idx > length(r0)
+            deltar = 10
+        else
+            deltar0 = r0[r0_idx] - current_r
+            deltar = min(1, deltar0)
+        end
+        current_r += deltar
+        @assert deltar > 0
+        push!(r_range, current_r)
     end
+    zmax_hull = -1 .* ones(length(r_range))
+    for (rp, zp) in zip(r, z)
+        r_idx = searchsorted_nearest(r_range, rp)
+        zmax_hull[r_idx] = max(zmax_hull[r_idx], zp)
+    end
+    mask = zmax_hull .>= 0
+    zmax_hull = zmax_hull[mask]
+    r_range = r_range[mask]
+    zmin_hull = zeros(length(r0))
     z_hull = vcat(zmax_hull, zmin_hull)
+    r_hull = vcat(r_range, r0)
     points = []
     for (rp, zp) in zip(r_hull, z_hull)
         push!(points, [rp, zp])
