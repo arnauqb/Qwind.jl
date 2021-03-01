@@ -42,31 +42,36 @@ end
 function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64})
     ri = minimum(r)
     rf = maximum(r)
-    current_r = ri
-    r_range = [ri]
-    while current_r < rf
-        r0_idx = searchsorted_first(r0, current_r) + 1
-        if r0_idx > length(r0)
-            deltar = 10
-        else
-            deltar0 = r0[r0_idx] - current_r
-            deltar = min(1, deltar0)
-        end
-        current_r += deltar
-        @assert deltar > 0
-        push!(r_range, current_r)
-    end
+    r_range = 10 .^ range(log10(ri), log10(rf), length=10000)
+    z_range = 10 .^ range(log10(max(1e-6, minimum(z))), log10(maximum(z)), length=10000)
+    pushfirst!(z_range, 0.0)
+    r_hull = Float64[]
     zmax_hull = -1 .* ones(length(r_range))
+    rmax_hull = -1 .* ones(length(z_range))
+    z_hull = Float64[]
     for (rp, zp) in zip(r, z)
-        r_idx = searchsorted_nearest(r_range, rp)
-        zmax_hull[r_idx] = max(zmax_hull[r_idx], zp)
+        # get highest position of the wind
+        ridx = searchsorted_nearest(r_range, rp)
+        zmax_hull[ridx] = max(zmax_hull[ridx], zp)
+        # get outer positions of the wind
+        zidx = searchsorted_nearest(z_range, zp)
+        rmax_hull[zidx] = max(rmax_hull[zidx], rp)
     end
+    # filter uninspected
     mask = zmax_hull .>= 0
-    zmax_hull = zmax_hull[mask]
     r_range = r_range[mask]
-    zmin_hull = zeros(length(r0))
-    z_hull = vcat(zmax_hull, zmin_hull)
-    r_hull = vcat(r_range, r0)
+    zmax_hull = zmax_hull[mask]
+    mask = rmax_hull .>= 0
+    z_range = z_range[mask]
+    rmax_hull = rmax_hull[mask]
+
+    # add base 0s
+    r0s = r_range[r0[1] .<= r_range .<= r0[end]]
+    z0s = zeros(length(r0s))
+
+    r_hull = vcat(r_range, rmax_hull, r0s)
+    z_hull = vcat(zmax_hull, z_range, z0s)
+
     points = []
     for (rp, zp) in zip(r_hull, z_hull)
         push!(points, [rp, zp])
@@ -118,7 +123,7 @@ function reduce_line(integrator::Sundials.IDAIntegrator; n_timesteps = 10000)
 end
 
 
-function reduce_integrators(integrators; n_timesteps)
+function reduce_integrators(integrators; n_timesteps=10000)
     rs = Float64[]
     zs = Float64[]
     ns = Float64[]
