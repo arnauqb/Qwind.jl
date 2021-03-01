@@ -140,7 +140,7 @@ function plot_wind_hull(
     hull::ConcaveHull.Hull;
     rmin = 1,
     rmax = 1000,
-    zmin = 0,
+    zmin = 1e-6,
     zmax = 1000,
     nr = 100,
     nz = 101,
@@ -149,8 +149,8 @@ function plot_wind_hull(
     ylim = nothing,
 )
     fig, ax = plt.subplots()
-    r_range = range(rmin, rmax, length=nr)
-    z_range = range(zmin, zmax, length=nz)
+    r_range = 10 .^ range(log10(rmin), log10(rmax), length=nr)
+    z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
     r_range_grid = r_range .* ones(nz)'
     z_range_grid = z_range' .* ones(nr)
 
