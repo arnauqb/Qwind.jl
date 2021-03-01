@@ -33,7 +33,9 @@ function WindInterpolator(
     else
         r, z, n = reduce_integrators(integrators, n_timesteps=n_timesteps)
         r0 = [integ.p.r0 for integ in integrators]
-        hull = construct_wind_hull(r, z, r0)
+        @info "Constructing wind hull..."
+        hull = construct_wind_hull(integrators, n_timesteps=100)
+        @info "Constructing interpolation grid..."
         grid = construct_interpolation_grid(r, z, n, r0, hull, nr = nr, nz = nz)
     end
     return WindInterpolator(grid, hull, vacuum_density, n_timesteps)

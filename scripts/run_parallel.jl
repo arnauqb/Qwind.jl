@@ -24,7 +24,9 @@ do_iteration!(model1, iterations_dict1, it_num=1);
 QwindPlotting.plot_streamlines(iterations_dict1[2]["integrators"])
 
 
-do_iteration!(model1, iterations_dict1, it_num=1);
+do_iteration!(model1, iterations_dict1, it_num=2);
+
+do_iteration!(model1, iterations_dict1, it_num=3);
 
 grid = model1.rt.density_interpolator.grid
 

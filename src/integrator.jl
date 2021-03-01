@@ -550,14 +550,14 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     density_grid = zeros((length(r_range), length(z_range)));
     density_grid[:, 1] .= getn0.(Ref(ic), r_range);
     interp_grid = InterpolationGrid(r_range, z_range, density_grid)
-    tau_x = 0
-    tau_uv = 0
+    tau_x = 0.0
+    tau_uv = 0.0
     fx(delta_r, rc, delta_tau, tau_x) =
         delta_tau -
-        (compute_xray_tau(interp_grid, 0, 0, rc + delta_r, 0, xray_luminosity, Rg) - tau_x)
+        (compute_xray_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, xray_luminosity, Rg) - tau_x)
     fuv(delta_r, rc, delta_tau, tau_uv) =
         delta_tau -
-        (compute_uv_tau(interp_grid, 0, 0, rc + delta_r, 0, Rg) - tau_uv)
+        (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
     rc = rin
     while rc < rfi
         if tau_x < 50
@@ -566,7 +566,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
             else
                 delta_tau = 0.5
             end
-            tau_x = compute_xray_tau(interp_grid, 0, 0, rc, 0, xray_luminosity, Rg)
+            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.1)
         elseif tau_uv < 50
             if tau_uv < 10
@@ -574,7 +574,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
             else
                 delta_tau = 1
             end
-            tau_uv = compute_uv_tau(interp_grid, 0, 0, rc, 0, Rg)
+            tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
             delta_r = find_zero(delta_r ->fuv(delta_r, rc, delta_tau, tau_uv) , 1)
         else
             break
