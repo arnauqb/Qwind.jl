@@ -3,7 +3,7 @@ using Distributed
 @everywhere @quickactivate "Qwind"
 using Qwind
 using YAML, Profile, PProf
-#include("scripts/plotting.jl")
+include("scripts/plotting.jl")
 
 config_path = "configs/config_test.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
@@ -13,6 +13,7 @@ catch
 end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
+run!(model1, iterations_dict1)
 
 #run!(model1, iterations_dict1)
 do_iteration!(model1, iterations_dict1, it_num=1);
