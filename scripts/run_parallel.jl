@@ -16,25 +16,40 @@ iterations_dict1 = Dict();
 #do_iteration!(model1, iterations_dict1, it_num=1);
 run!(model1, iterations_dict1)
 
-integs = iterations_dict1[1]["integrators"];
+integs = iterations_dict1[2]["integrators"];
 r0 = [integ.p.r0 for integ in integs];
-r,z,n = Qwind.reduce_integrators(integs, n_timesteps=100);
-hull = Qwind.construct_wind_hull(r,z,r0);
+r, z, n = Qwind.reduce_integrators(integs, n_timesteps=100);
+
+hull, points = Qwind.construct_wind_hull(r,z,r0);
+
+vs = 10 .^ reduce(hcat, hull.vertices)
+ps = 10 .^ reduce(hcat, points)
+
+#fig, ax = plt.subplots()
+
+fig, ax = QwindPlotting.plot_wind_hull(hull, nr=500, nz=500,rmin=49.999, rmax=50.01, zmax=10)
+QwindPlotting.plot_streamlines(integs, fig, ax)
+ax.set_xlim(49.999, 50.01)
+ax.set_ylim(0, 10)
+ax.scatter(vs[1,:], vs[2,:], color="blue", alpha=0.5)
+#ax.scatter(ps[1,:], ps[2,:], color="red", alpha=0.5)
+#ax.set_xlim(49.999, 50.003)
+#ax.set_ylim(0, 1)
+#ax.set_xlim(50.0, 50.03)
+#ax.set_ylim(1e-6, 1)
 
 r, z, n = Qwind.reduce_integrators(integs, n_timesteps=10000);
 
-r2 = r[1:1:end]
-z2 = z[1:1:end]
-n2 = n[1:1:end]
-
-log_n = log10.(n2)
-
+r2 = r[1:1:end];
+z2 = z[1:1:end];
+n2 = n[1:1:end];
+log_n = log10.(n2);
 r_range, z_range = get_spatial_grid(r2, z2, r0, "auto", 50);
 r_range_grid = r_range .* ones(length(z_range))';
 z_range_grid = z_range' .* ones(length(r_range));
 
 scipy_interpolate = pyimport("scipy.interpolate");
-points = hcat(r, z);
+#points = hcat(r, z);
 #linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
 
 #rbfi = scipy_interpolate.Rbf(r2, z2, log_n; function="linear");
@@ -42,16 +57,33 @@ using BasisFunctionExpansions
 
 v = [log10.(r2) log10.(z2)];
 rbf = MultiUniformRBFE(v, [10, 10], normalize=true)
-
 bfa = BasisFunctionApproximation(log_n,v,rbf,0)
 
-vv = log10.([reduce(vcat, r_range_grid) reduce(vcat, z_range_grid)])
+#vv = log10.([reduce(vcat, r_range_grid) reduce(vcat, z_range_grid)])
+#yy = reshape(bfa(vv), length(z_range), length(r_range))
 
-y = log_n
+ret = zeros((length(r_range), length(z_range)));
+for (i, r) in enumerate(r_range)
+    for (j, z) in enumerate(z_range)
+        if !Qwind.is_point_in_wind(hull, [r,z])
+            ret[i,j] = 1e2
+        else
+            ret[i, j] = 10 .^ bfa(log10.([r z]))[1]
+        end
+    end
+end
 
-yy = bfa(vv)
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(r_range, z_range, ret', norm=LogNorm(vmin=1e5, vmax=1e10))
+#QwindPlotting.plot_streamlines(integs, fig, ax, color="white", alpha=0.1)
+ax.scatter(r[1:100:end], z[1:100:end], c=n[1:100:end], s=10, cmap="viridis", norm=LogNorm(vmin=1e5, vmax=1e10), edgecolor="black", linewidth=0.1)
+plt.colorbar(cm, ax=ax)
+ax.set_xlim(50, 50.05)
+ax.set_ylim(0, 2)
+#ax.set_xscale("log")
 
-yym = reshape(yy, (length(z_range), length(r_range)))
+
+#yym = reshape(yy, (length(z_range), length(r_range)))
 
 plot(r2, y)
 plot!(r2, yy)

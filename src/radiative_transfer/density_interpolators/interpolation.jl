@@ -43,44 +43,98 @@ function WindInterpolator(
 end
 
 function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64})
-    ri = minimum(r)
-    rf = maximum(r)
-    r_range = 10 .^ range(log10(ri), log10(rf), length=10000)
-    z_range = 10 .^ range(log10(max(1e-6, minimum(z))), log10(maximum(z)), length=10000)
-    pushfirst!(z_range, 0.0)
-    r_hull = Float64[]
-    zmax_hull = -1 .* ones(length(r_range))
-    rmax_hull = -1 .* ones(length(z_range))
-    z_hull = Float64[]
-    for (rp, zp) in zip(r, z)
+    r_log = log10.(r)
+    z_log = log10.(z)
+    r0_log = log10.(r0)
+    r_range_log = range(minimum(r_log), maximum(r_log), length=1000)
+    r_range_log = sort(vcat(r_range_log, r0_log))
+    z_range_log = range(max(minimum(z_log), -15), maximum(z_log), length=1000)
+
+    zmax_hull = -Inf .* ones(length(r_range_log))
+    rmax_hull = -Inf .* ones(length(z_range_log))
+    rmin_hull = Inf .* ones(length(z_range_log))
+
+    # top part of the wind
+    for (rp_log, zp_log) in zip(r_log, z_log)
+        ridx = searchsorted_nearest(r_range_log, rp_log)
+        zidx = searchsorted_nearest(z_range_log, zp_log)
+
         # get highest position of the wind
-        ridx = searchsorted_nearest(r_range, rp)
-        zmax_hull[ridx] = max(zmax_hull[ridx], zp)
-        # get outer positions of the wind
-        zidx = searchsorted_nearest(z_range, zp)
-        rmax_hull[zidx] = max(rmax_hull[zidx], rp)
+        zmax_hull[ridx] = max(zmax_hull[ridx], zp_log)
+
+        # get furthest out part of the wind
+        rmax_hull[zidx] = max(rmax_hull[zidx], rp_log)
+
+        # get innermost out part of the wind
+        rmin_hull[zidx] = min(rmin_hull[zidx], rp_log)
     end
-    # filter uninspected
-    mask = zmax_hull .>= 0
-    r_range = r_range[mask]
-    zmax_hull = zmax_hull[mask]
-    mask = rmax_hull .>= 0
-    z_range = z_range[mask]
-    rmax_hull = rmax_hull[mask]
 
-    # add base 0s
-    r0s = r_range[r0[1] .<= r_range .<= r0[end]]
-    z0s = zeros(length(r0s))
+    r_hull = r0_log
+    z_hull = -15 .* ones(length(r_hull))
 
-    r_hull = vcat(r_range, rmax_hull, r0s)
-    z_hull = vcat(zmax_hull, z_range, z0s)
+    # filter unassigned
+    mask = zmax_hull .!= -Inf
+    r_hull = vcat(r_hull, r_range_log[mask])
+    z_hull = vcat(z_hull, zmax_hull[mask])
+
+    mask = rmax_hull .!= -Inf
+    r_hull = vcat(r_hull, rmax_hull[mask])
+    z_hull = vcat(z_hull, z_range_log[mask])
+
+    mask = rmin_hull .!= Inf
+    r_hull = vcat(r_hull, rmin_hull[mask])
+    z_hull = vcat(z_hull, z_range_log[mask])
+
+
+    #r = log10.(r)
+    #z = log10.(z)
+    #r0 = log10.(r0)
+    #ri = minimum(r)
+    #rf = maximum(r)
+    #r_range = range(ri, rf, length=10000)
+    ##r_range = sort(vcat(r_range, r0))
+    #z_range = range(-6, minimum(z))), log10(maximum(z)), length=10000)
+    #pushfirst!(z_range, 0.0)
+    #r_hull = Float64[]
+    #zmax_hull = -1 .* ones(length(r_range))
+    #rmax_hull = -1 .* ones(length(z_range))
+    #rmin_hull = Inf .* ones(length(z_range))
+    #z_hull = Float64[]
+    #for (rp, zp) in zip(r, z)
+    #    # get highest position of the wind
+    #    ridx = searchsorted_nearest(r_range, rp)
+    #    zmax_hull[ridx] = max(zmax_hull[ridx], zp)
+    #    # get outer positions of the wind
+    #    zidx = searchsorted_nearest(z_range, zp)
+    #    rmax_hull[zidx] = max(rmax_hull[zidx], rp)
+    #    zidx = searchsorted_nearest(z_range, zp)
+    #    rmin_hull[zidx] = min(rmin_hull[zidx], rp)
+    #end
+    ## filter uninspected
+    #mask = zmax_hull .>= 0
+    #r_range = r_range[mask]
+    #zmax_hull = zmax_hull[mask]
+    #mask = rmax_hull .>= 0
+    #z_range_rmax = z_range[mask]
+    #rmax_hull = rmax_hull[mask]
+
+    #mask = rmin_hull .!= Inf
+    #z_range_rmin = z_range[mask]
+    #rmin_hull = rmin_hull[mask]
+
+    ## add base 0s
+    #r0s = r_range[r0[1] .<= r_range .<= r0[end]]
+    #z0s = zeros(length(r0s))
+
+    #r_hull = vcat(r_range, rmax_hull, rmin_hull, r0s)
+    #z_hull = vcat(zmax_hull, z_range_rmax, z_range_rmin, z0s)
 
     points = []
     for (rp, zp) in zip(r_hull, z_hull)
         push!(points, [rp, zp])
     end
     hull = ConcaveHull.concave_hull(points)
-    return hull
+    return hull, points
 end
 
 function get_dense_line_positions(integrators; n_timesteps=1000)
@@ -101,7 +155,8 @@ function construct_wind_hull(integrators; n_timesteps = 1000)
 end
 
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
-    return ConcaveHull.in_hull(point, hull)
+    #return ConcaveHull.in_hull(point, hull)
+    return ConcaveHull.in_hull(log10.(point), hull)
 end
 is_point_in_wind(wi::WindInterpolator, point) = is_point_in_wind(wi.hull, point)
 is_point_in_wind(hull::ConcaveHull.Hull, r, z) = is_point_in_wind(hull, [r,z])
@@ -213,7 +268,7 @@ function get_spatial_grid(
         r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
     end
     z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
-    z_range = pushfirst!(z_range, 0.0)
+    #z_range = pushfirst!(z_range, 0.0)
     r_range = round.(r_range, digits = 7)
     z_range = round.(z_range, digits = 7)
     points = hcat([[r, z] for r in r_range for z in z_range]...)
