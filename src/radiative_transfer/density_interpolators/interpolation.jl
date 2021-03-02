@@ -134,7 +134,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
         push!(points, [rp, zp])
     end
     hull = ConcaveHull.concave_hull(points)
-    return hull, points
+    return hull
 end
 
 function get_dense_line_positions(integrators; n_timesteps=1000)
