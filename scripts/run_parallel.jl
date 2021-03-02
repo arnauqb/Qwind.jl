@@ -2,7 +2,7 @@ using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
 using Qwind
-using YAML, Profile, PProf
+using YAML, Profile, PProf, PyCall
 include("scripts/plotting.jl")
 
 config_path = "configs/config_test.yaml"
@@ -13,88 +13,123 @@ catch
 end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
+#do_iteration!(model1, iterations_dict1, it_num=1);
 run!(model1, iterations_dict1)
 
+integs = iterations_dict1[1]["integrators"];
+r0 = [integ.p.r0 for integ in integs];
+r,z,n = Qwind.reduce_integrators(integs, n_timesteps=100);
+hull = Qwind.construct_wind_hull(r,z,r0);
+
+r, z, n = Qwind.reduce_integrators(integs, n_timesteps=10000);
+
+r2 = r[1:1:end]
+z2 = z[1:1:end]
+n2 = n[1:1:end]
+
+log_n = log10.(n2)
+
+r_range, z_range = get_spatial_grid(r2, z2, r0, "auto", 50);
+r_range_grid = r_range .* ones(length(z_range))';
+z_range_grid = z_range' .* ones(length(r_range));
+
+scipy_interpolate = pyimport("scipy.interpolate");
+points = hcat(r, z);
+#linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
+
+#rbfi = scipy_interpolate.Rbf(r2, z2, log_n; function="linear");
+using BasisFunctionExpansions
+
+v = [log10.(r2) log10.(z2)];
+rbf = MultiUniformRBFE(v, [10, 10], normalize=true)
+
+bfa = BasisFunctionApproximation(log_n,v,rbf,0)
+
+vv = log10.([reduce(vcat, r_range_grid) reduce(vcat, z_range_grid)])
+
+y = log_n
+
+yy = bfa(vv)
+
+yym = reshape(yy, (length(z_range), length(r_range)))
+
+plot(r2, y)
+plot!(r2, yy)
+
+asd = yym'
+asd = asd[abs.(asd) .!= Inf]
+asd = reshape(asd, (length(z_range), length(r_range)))
+
+heatmap(r_range, z_range, asd')
+
+
+density_grid = 10 .^ rbfi(r_range_grid, z_range_grid)
+
+
+#grid = Qwind.construct_interpolation_grid(r, z, n, r0, hull, nr="auto", nz=50);
+
+#wi = WindInterpolator(integs);
+
 #run!(model1, iterations_dict1)
-do_iteration!(model1, iterations_dict1, it_num=1);
 
 #Profile.clear()
 #@profile do_iteration!(model1, iterations_dict1, it_num=2);
 
+xray_luminosity = model1.rad.xray_luminosity
+Rg = model1.bh.Rg
 
-QwindPlotting.plot_streamlines(iterations_dict1[2]["integrators"])
-
-
-do_iteration!(model1, iterations_dict1, it_num=2);
-
-do_iteration!(model1, iterations_dict1, it_num=3);
-
-grid = model1.rt.density_interpolator.grid
-
-#f(di::DensityInterpolator) = density_interpolator.grid 
-f(m::RadiativeTransfer) = m.density_interpolator.grid
-@code_warntype f(model1.rt)
-
-
-#do_iteration!(model1, iterations_dict1, it_num=2)
-
-
-#run!(model1, iterations_dict1)
-#run!(model, iterations_dict, start_it=6, n_iterations=2)
-
-config_path2 = "configs/config_test2.yaml"
-config2 = YAML.load_file(config_path2, dicttype = Dict{Symbol,Any})
-try
-    mv(config2[:integrator][:save_path], "backup", force = true)
-catch
-end
-model2 = Model(config_path2);
-iterations_dict2 = Dict();
-run!(model2, iterations_dict2)
-
-do_iteration!(model, iterations_dict, it_num=1)
-
-#do_iteration!(model, iterations_dict, it_num=2)
-
-fig, ax = plot_density_grid(iterations_dict2[4]["radiative_transfer"].density_interpolator.grid)
-
-function make_pdf(iterations_dict, fname)
-    pdfile = pdfpages.PdfPages("$(fname)_lines.pdf")
-    for iteration in sort(collect(keys(iterations_dict)))
-        println("itereation $iteration")
-        if "integrators" ∉ keys(iterations_dict[iteration])
-            continue
-        end
-        integrators = iterations_dict[iteration]["integrators"]
-        fig, ax = plot_streamlines(integrators)
-        ax.set_title("Iteration $iteration")
-        pdfile.savefig(fig)
-        plt.close(fig)
-    end
-    pdfile.close()
-    pdfile = pdfpages.PdfPages("$(fname)_grids.pdf")
-    for iteration in sort(collect(keys(iterations_dict)))
-        (iteration == 1) && continue
-        rt = iterations_dict[iteration]["radiative_transfer"]
-        grid = rt.density_interpolator.grid
-        fig, ax = plot_density_grid(grid)
-        ax.set_title("Iteration $iteration")
-        pdfile.savefig(fig)
-        plt.close(fig)
-    end
-    pdfile.close()
-end
+# XRAY
+it_num = 3
+di = iterations_dict1[it_num]["radiative_transfer"].density_interpolator;
+di2 = iterations_dict2[it_num]["radiative_transfer"].density_interpolator;
+fig, ax = QwindPlotting.plot_xray_grid(di.grid, xray_luminosity, Rg, rmin=0, rmax=200, nr=250, nz=250, vmin=1e-1, vmax=1e4)
+ax.set_yscale("log")
+#ax.set_xscale("log")
+ax.set_title("New")
+fig, ax = QwindPlotting.plot_xray_grid(di2.grid, xray_luminosity, Rg, rmin=0, rmax=200, nr=250, nz=250, vmin=1e-1, vmax=1e4)
+ax.set_title("Old")
+ax.set_yscale("log")
+#ax.set_xscale("log")
 
 
-make_pdf(iterations_dict1, "new")
-make_pdf(iterations_dict2, "old")
 
 
-# rt ratios
-it_num = 4
-grid1 = iterations_dict1[it_num]["radiative_transfer"].density_interpolator.grid;
-grid2 = iterations_dict2[it_num]["radiative_transfer"].density_interpolator.grid;
-fig, ax = plt.subplots();
-cm = ax.pcolormesh(grid1.r_range, grid1.z_range, (grid1.grid ./ grid2.grid)', norm=LogNorm())
+# DENSITY
+it_num = 3
+di = iterations_dict1[it_num]["radiative_transfer"].density_interpolator;
+di2 = iterations_dict2[it_num]["radiative_transfer"].density_interpolator;
+fig, ax = QwindPlotting.plot_density_grid(di.grid, xlim=(0,1e3), ylim=(1e-6,1e3))
+ax.set_yscale("log")
+#ax.set_xscale("log")
+ax.set_title("New")
+fig, ax = QwindPlotting.plot_density_grid(di2.grid, xlim=(0,1e3), ylim=(1e-6,1e3))
+ax.set_title("Old")
+ax.set_yscale("log")
+#ax.set_xscale("log")
+
+QwindPlotting.plot_streamlines(iterations_dict1[4]["integrators"])
+QwindPlotting.plot_streamlines(iterations_dict2[4]["integrators"])
 
 
+integ2 = iterations_dict2[3]["integrators"];
+old_rt = iterations_dict2[4]["radiative_transfer"];
+old_di = old_rt.density_interpolator;
+new_rt = update_radiative_transfer(model1.rt, integ2);
+new_di = new_rt.density_interpolator;
+
+fig, ax = QwindPlotting.plot_xray_grid(new_di.grid, xray_luminosity, Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+ax.set_yscale("log")
+ax.set_xscale("log")
+ax.set_title("New")
+fig, ax = QwindPlotting.plot_xray_grid(old_di.grid, xray_luminosity, Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+ax.set_title("Old")
+ax.set_yscale("log")
+ax.set_xscale("log")
+
+it_num = 2
+integ1 = iterations_dict1[it_num]["integrators"];
+integ2 = iterations_dict2[it_num]["integrators"];
+fig, ax = QwindPlotting.plot_streamlines(integ1)
+ax.set_title("new")
+fig, ax = QwindPlotting.plot_streamlines(integ2)
+ax.set_title("old")

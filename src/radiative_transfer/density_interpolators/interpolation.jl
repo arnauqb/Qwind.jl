@@ -160,11 +160,16 @@ function construct_interpolation_grid(
     #r_range_grid = r_range .* ones(length(z_range))'
     #z_range_grid = z_range' .* ones(length(r_range))
     scipy_interpolate = pyimport("scipy.interpolate")
-    points = hcat(r, z)
+    r_log = log10.(r)
+    z_log = log10.(z)
+    points = hcat(r_log, z_log)
+    points = points
     linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
+    r_range_log = log10.(r_range)
+    z_range_log = log10.(z_range)
     density_grid = @showprogress pmap(
-        z -> 10 .^ linear_int(r_range, z),
-        z_range,
+        z_log -> 10 .^ linear_int(r_range_log, z_log),
+        z_range_log,
         batch_size = Int(round(length(z_range) / nprocs())),
     )
     density_grid = hcat(density_grid...)

@@ -183,7 +183,7 @@ function VIGrid(
     if lines_kdtrees === nothing
         r_range = zeros(2)
         z_range = zeros(2)
-        density_grid = nothing
+        density_grid = vacuum_density .* [[1,1] [1,1]]
     else
         r_range, z_range = get_spatial_grid(lines_kdtrees, nr, nz)
         density_grid = @showprogress pmap(

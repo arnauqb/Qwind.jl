@@ -106,18 +106,18 @@ function plot_xray_grid(
     vmax = nothing,
     xlim = nothing,
     ylim = nothing,
-    rmin = 1,
+    rmin = 0,
     rmax = 1000,
-    zmin = 0,
+    zmin = 1e-6,
     zmax = 1000,
     nr = 100,
     nz = 101
 )
     r_range = range(rmin, rmax, length=nr)
-    z_range = range(zmin, zmax, length=nz)
+    z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
     r_range_grid = r_range .* ones(nz)'
     z_range_grid = z_range' .* ones(nr)
-    ret = compute_xray_tau.(Ref(grid), 0, 0, r_range_grid, z_range_grid, xray_luminosity, Rg)
+    ret = compute_xray_tau.(Ref(grid), 0.0, 0.0, r_range_grid, z_range_grid, xray_luminosity, Rg)
     fig, ax = plt.subplots()
     cm = ax.pcolormesh(
         r_range,
