@@ -561,20 +561,20 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     rc = rin
     while rc < rfi
         if tau_x < 50
+            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             if tau_x < 10
                 delta_tau = 0.05
             else
                 delta_tau = 0.5
             end
-            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.1)
         elseif tau_uv < 50
-            if tau_uv < 10
-                delta_tau = 0.1
-            else
-                delta_tau = 1
-            end
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
+            if tau_uv < 10
+                delta_tau = 0.05
+            else
+                delta_tau = 0.5
+            end
             delta_r = find_zero(delta_r ->fuv(delta_r, rc, delta_tau, tau_uv) , 1)
         else
             break

@@ -45,7 +45,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     r_log = log10.(r)
     z_log = log10.(z)
     r0_log = log10.(r0)
-    r_range_log = log10.(range(minimum(r), maximum(r), step=1))
+    r_range_log = log10.(range(minimum(r), maximum(r), step=5))
     r_range_log = sort(vcat(r_range_log, r0_log))
     z_range_log = range(max(minimum(z_log), -8), maximum(z_log), length=1000)
 
@@ -69,7 +69,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     end
 
     r_hull = r0_log
-    z_hull = -15 .* ones(length(r_hull))
+    z_hull = -10 .* ones(length(r_hull))
 
     # filter unassigned
     mask = zmax_hull .!= -Inf
@@ -88,6 +88,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     for (rp, zp) in zip(r_hull, z_hull)
         push!(points, [rp, zp])
     end
+    #return points
     hull = ConcaveHull.concave_hull(points)
     return hull#, points
 end
@@ -166,8 +167,6 @@ function construct_interpolation_grid(
 )
     log_n = log10.(n)
     r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz)
-    #r_range_grid = r_range .* ones(length(z_range))'
-    #z_range_grid = z_range' .* ones(length(r_range))
     scipy_interpolate = pyimport("scipy.interpolate")
     r_log = log10.(r)
     z_log = log10.(z)
@@ -185,24 +184,27 @@ function construct_interpolation_grid(
     #    end
     #end
     #density_grid = max.(density_grid, 1e2)
-    points = hcat(r_log, z_log)
-    linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
+    #points = hcat(r_log, z_log)
+    #linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
-    density_grid = @showprogress pmap(
-        z_log -> 10 .^ linear_int(r_range_log, z_log),
-        z_range_log,
-        batch_size = Int(round(length(z_range) / nprocs())),
-    )
-    density_grid = reduce(hcat, density_grid)
-    #density_grid =
-    #    10 .^ scipy_interpolate.griddata(
-    #        (r, z),
-    #        log_n,
-    #        (r_range_grid, z_range_grid),
-    #        method = "linear",
-    #        fill_value = 2,
-    #    )
+    r_range_grid_log = r_range_log .* ones(length(z_range_log))'
+    z_range_grid_log = z_range_log' .* ones(length(r_range_log))
+    #density_grid = 10 .^ linear_int(log10.(r_range_grid), log10.(z_range_grid));
+    #density_grid = @showprogress pmap(
+    #    z_log -> 10 .^ linear_int(r_range_log, z_log),
+    #    z_range_log,
+    #    batch_size = Int(round(length(z_range) / nprocs())),
+    #)
+    #density_grid = reduce(hcat, density_grid)
+    density_grid =
+        10 .^ scipy_interpolate.griddata(
+            (r_log, z_log),
+            log_n,
+            (r_range_grid_log, z_range_grid_log),
+            method = "linear",
+            fill_value = 2,
+        )
     # remove points outside the wind
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
