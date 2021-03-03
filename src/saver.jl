@@ -122,6 +122,7 @@ end
 function save_wind_properties(integrators, save_path, bh::BlackHole)
     ret = create_wind_properties(integrators, bh)
     YAML.write_file(save_path, ret)
+    return ret
 end
 
 function save_wind(integrators, model, save_path, it_num)
@@ -133,7 +134,8 @@ function save_wind(integrators, model, save_path, it_num)
     lines_save_path = iteration_save_path * "/streamlines.csv"
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
     save_integrators(integrators, lines_save_path)
-    save_wind_properties(integrators, properties_save_path, model.bh)
+    properties = save_wind_properties(integrators, properties_save_path, model.bh)
+    return properties
 end
 
 

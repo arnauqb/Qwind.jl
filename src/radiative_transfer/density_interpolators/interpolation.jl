@@ -1,5 +1,5 @@
 #__precompile__()
-using PyCall
+using PyCall, BasisFunctionExpansions
 import ConcaveHull, Interpolations
 export WindInterpolator, get_density
 
@@ -21,7 +21,7 @@ function WindInterpolator(
     nr = "auto",
     nz = 50,
     vacuum_density = 1e2,
-    n_timesteps = 10000,
+    n_timesteps = 1000,
 )
     if nr != "auto"
         nr = Int(nr)
@@ -33,10 +33,9 @@ function WindInterpolator(
     else
         r0 = [integ.p.r0 for integ in integrators]
         @info "Constructing wind hull..."
-        r, z, n = reduce_integrators(integrators, n_timesteps=100)
-        hull = construct_wind_hull(r, z, r0)
+        hull = construct_wind_hull(integrators, n_timesteps=100)
         @info "Constructing interpolation grid..."
-        r, z, n = reduce_integrators(integrators, n_timesteps=n_timesteps)
+        r, z, n = reduce_integrators(integrators, n_timesteps=1000)
         grid = construct_interpolation_grid(r, z, n, r0, hull, nr = nr, nz = nz)
     end
     return WindInterpolator(grid, hull, vacuum_density, n_timesteps)
@@ -46,9 +45,9 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     r_log = log10.(r)
     z_log = log10.(z)
     r0_log = log10.(r0)
-    r_range_log = range(minimum(r_log), maximum(r_log), length=1000)
+    r_range_log = log10.(range(minimum(r), maximum(r), step=1))
     r_range_log = sort(vcat(r_range_log, r0_log))
-    z_range_log = range(max(minimum(z_log), -15), maximum(z_log), length=1000)
+    z_range_log = range(max(minimum(z_log), -8), maximum(z_log), length=1000)
 
     zmax_hull = -Inf .* ones(length(r_range_log))
     rmax_hull = -Inf .* ones(length(z_range_log))
@@ -85,56 +84,12 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     r_hull = vcat(r_hull, rmin_hull[mask])
     z_hull = vcat(z_hull, z_range_log[mask])
 
-
-    #r = log10.(r)
-    #z = log10.(z)
-    #r0 = log10.(r0)
-    #ri = minimum(r)
-    #rf = maximum(r)
-    #r_range = range(ri, rf, length=10000)
-    ##r_range = sort(vcat(r_range, r0))
-    #z_range = range(-6, minimum(z))), log10(maximum(z)), length=10000)
-    #pushfirst!(z_range, 0.0)
-    #r_hull = Float64[]
-    #zmax_hull = -1 .* ones(length(r_range))
-    #rmax_hull = -1 .* ones(length(z_range))
-    #rmin_hull = Inf .* ones(length(z_range))
-    #z_hull = Float64[]
-    #for (rp, zp) in zip(r, z)
-    #    # get highest position of the wind
-    #    ridx = searchsorted_nearest(r_range, rp)
-    #    zmax_hull[ridx] = max(zmax_hull[ridx], zp)
-    #    # get outer positions of the wind
-    #    zidx = searchsorted_nearest(z_range, zp)
-    #    rmax_hull[zidx] = max(rmax_hull[zidx], rp)
-    #    zidx = searchsorted_nearest(z_range, zp)
-    #    rmin_hull[zidx] = min(rmin_hull[zidx], rp)
-    #end
-    ## filter uninspected
-    #mask = zmax_hull .>= 0
-    #r_range = r_range[mask]
-    #zmax_hull = zmax_hull[mask]
-    #mask = rmax_hull .>= 0
-    #z_range_rmax = z_range[mask]
-    #rmax_hull = rmax_hull[mask]
-
-    #mask = rmin_hull .!= Inf
-    #z_range_rmin = z_range[mask]
-    #rmin_hull = rmin_hull[mask]
-
-    ## add base 0s
-    #r0s = r_range[r0[1] .<= r_range .<= r0[end]]
-    #z0s = zeros(length(r0s))
-
-    #r_hull = vcat(r_range, rmax_hull, rmin_hull, r0s)
-    #z_hull = vcat(zmax_hull, z_range_rmax, z_range_rmin, z0s)
-
     points = []
     for (rp, zp) in zip(r_hull, z_hull)
         push!(points, [rp, zp])
     end
     hull = ConcaveHull.concave_hull(points)
-    return hull
+    return hull#, points
 end
 
 function get_dense_line_positions(integrators; n_timesteps=1000)
@@ -155,7 +110,6 @@ function construct_wind_hull(integrators; n_timesteps = 1000)
 end
 
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
-    #return ConcaveHull.in_hull(point, hull)
     return ConcaveHull.in_hull(log10.(point), hull)
 end
 is_point_in_wind(wi::WindInterpolator, point) = is_point_in_wind(wi.hull, point)
@@ -217,8 +171,21 @@ function construct_interpolation_grid(
     scipy_interpolate = pyimport("scipy.interpolate")
     r_log = log10.(r)
     z_log = log10.(z)
+    #v = [r_log z_log]
+    #rbf = MultiUniformRBFE(v, [10, 10], normalize=true)
+    #bfa = BasisFunctionApproximation(log_n, v, rbf, 0)
+    #density_grid = 1e2 .* ones((length(r_range), length(z_range)));
+    #for (i, r) in enumerate(r_range)
+    #    for (j, z) in enumerate(z_range)
+    #        if !Qwind.is_point_in_wind(hull, [r,z])
+    #            density_grid[i,j] = 1e2
+    #        else
+    #            density_grid[i, j] = 10 .^ bfa(log10.([r z]))[1]
+    #        end
+    #    end
+    #end
+    #density_grid = max.(density_grid, 1e2)
     points = hcat(r_log, z_log)
-    points = points
     linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
@@ -227,7 +194,7 @@ function construct_interpolation_grid(
         z_range_log,
         batch_size = Int(round(length(z_range) / nprocs())),
     )
-    density_grid = hcat(density_grid...)
+    density_grid = reduce(hcat, density_grid)
     #density_grid =
     #    10 .^ scipy_interpolate.griddata(
     #        (r, z),

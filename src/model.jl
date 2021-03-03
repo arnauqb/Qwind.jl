@@ -82,8 +82,10 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush(stdout)
-    save_wind(integrators, model, save_path, it_num)
+    wind_properties = save_wind(integrators, model, save_path, it_num)
     @info "Done"
+    @info "Wind properties"
+    @info "Mass loss fraction $(wind_properties["mass_loss_fraction"])"
     flush(stdout)
     radiative_transfer = update_radiative_transfer(model.rt, integrators)
     update_model!(model, radiative_transfer)
