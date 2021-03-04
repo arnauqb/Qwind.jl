@@ -91,7 +91,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
         push!(points, [rp, zp])
     end
     points = reduce(hcat, points)
-    points = round.(points, sigdigits = 2)
+    points = round.(points, sigdigits = 3)
     points = unique(points, dims = 2)
     points = [[points[1, i], points[2, i]] for i = 1:size(points)[2]]
     #return points
