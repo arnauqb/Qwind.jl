@@ -50,8 +50,24 @@ end
 #    return r_range, z_range
 #end
 
+function point_outside_grid(grid::InterpolationGrid, r, z)
+    if r < grid.r_range[1] || r > grid.r_range[end]
+        return true
+    end
+    if z > grid.z_range[end]
+        return true
+    end
+    return false
+end
+
 function get_density(grid::InterpolationGrid, r, z)
-    return grid.interpolator(r, z)
+    if point_outside_grid(grid, r, z)
+        return 1e2
+    end
+    ridx = searchsorted_nearest(grid.r_range, r)
+    zidx = searchsorted_nearest(grid.z_range, z)
+    return grid.grid[ridx, zidx]
+    #return grid.interpolator(r, z)
 end
 
 get_density(grid::InterpolationGrid, point::Vector{Float64}) =

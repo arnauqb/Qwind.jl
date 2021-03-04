@@ -64,8 +64,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         iterations_dict[1] = Dict()
     end
     save_path = model.config[:integrator][:save_path]
-    lines_range, lines_widths =
-        get_initial_radii_and_linewidths(model.ic, model.bh.Rg, model.rad.xray_luminosity)
+    lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
         model,
         linewidth = lines_widths[i],

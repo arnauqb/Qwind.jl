@@ -112,12 +112,15 @@ function initialize_integrator(
     return integrator
 end
 
-function get_initial_radii_and_linewidths(initial_conditions::InitialConditions, Rg, xray_luminosity)
+function get_initial_radii_and_linewidths(model)
+    Rg = model.bh.Rg
+    xray_luminosity = model.rad.xray_luminosity
+    initial_conditions = model.ic
     rin = getrin(initial_conditions)
     rfi = getrfi(initial_conditions)
     nlines = getnlines(initial_conditions)
     if nlines == "auto"
-        lines_range, lines_widths = compute_lines_range(initial_conditions, rin, rfi, Rg, xray_luminosity)
+        lines_range, lines_widths = compute_lines_range(model)
     else
         if initial_conditions.logspaced
             lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
@@ -294,7 +297,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
-    taux = compute_xray_tau(radiative_transfer, r, z)
+    taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
@@ -425,7 +428,7 @@ function compute_radiation_acceleration(
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, p)
-    taux = compute_xray_tau(radiative_transfer, r, z)
+    taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
@@ -542,7 +545,7 @@ function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_lumin
     return lines_range, lines_widths
 end
 
-function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
+function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity, zx)
     lines_range = []
     lines_widths = []
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000);
@@ -562,20 +565,28 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     while rc < rfi
         if tau_x < 50
             tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-            if tau_x < 10
-                delta_tau = 0.05
+            if tau_x < 1
+                delta_tau = 0.01
+            elseif tau_x < 10
+                delta_tau = 0.1
             else
-                delta_tau = 0.5
+                delta_tau = 1
             end
-            delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.1)
+            delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.1, atol=1e-7, rtol=1e-3)
         elseif tau_uv < 50
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-            if tau_uv < 10
-                delta_tau = 0.05
+            if tau_uv < 1
+                delta_tau = 0.01
+            elseif tau_uv < 10
+                delta_tau = 0.1
             else
-                delta_tau = 0.5
+                delta_tau = 1
             end
-            delta_r = find_zero(delta_r ->fuv(delta_r, rc, delta_tau, tau_uv) , 1)
+            try
+                delta_r = find_zero(delta_r ->fuv(delta_r, rc, delta_tau, tau_uv), 10, atol=1e-6, rtol=1e-3)
+            catch
+                break
+            end
         else
             break
         end
@@ -592,4 +603,4 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     return lines_range, lines_widths
 end
 
-compute_lines_range(model) = compute_lines_range(model.ic, model.ic.rin, model.ic.rfi, model.bh.Rg, model.rad.xray_luminosity)
+compute_lines_range(model) = compute_lines_range(model.ic, model.ic.rin, model.ic.rfi, model.bh.Rg, model.rad.xray_luminosity, 0.0)

@@ -8,9 +8,16 @@ struct QsosedRadiation{T} <: Radiation{T}
     efficiency::T
     spin::T
     isco::T
+    z_xray::T
     Rg::T
     flux_correction::FluxCorrection
 end
+
+function compute_ionization_parameter(radiation::QsosedRadiation, r, z, number_density, tau_x)
+    d2 = (r^2 + (z - radiation.z_xray)^2) * radiation.Rg^2
+    return max(radiation.xray_luminosity * exp(-tau_x) / (number_density * d2), 1e-20)
+end
+
 
 flux_correction(::Relativistic, beta) = ((1 - beta) / (1 + beta))^2
 flux_correction(::NoRelativistic, beta) = 1.0
@@ -22,7 +29,7 @@ function compute_mass_accretion_rate(radiation::Radiation, r)
 end
 
 
-function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, relativistic::FluxCorrection)
+function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, z_xray::Float64, relativistic::FluxCorrection)
     rmin = bh.isco
     rmax = 1400.0
     disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
@@ -40,6 +47,7 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, relativistic::Flux
         bh.efficiency,
         bh.spin,
         bh.isco,
+        z_xray,
         bh.Rg,
         relativistic,
     )
@@ -51,7 +59,7 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
     else
         mode = NoRelativistic()
     end
-    return QsosedRadiation(bh, radiation_config[:n_r], radiation_config[:f_x], mode)
+    return QsosedRadiation(bh, radiation_config[:n_r], radiation_config[:f_x], radiation_config[:z_xray], mode)
 end
 
 function get_fuv_mdot(radiation::QsosedRadiation, r)

@@ -42,10 +42,10 @@ end
 compute_xray_tau(regular_grid::RegularGrid, ri, zi, rf, zf, xray_luminosity, Rg) =
     compute_xray_tau(regular_grid.density_interpolator.grid, ri, zi, rf, zf, xray_luminosity, Rg)
 
-compute_xray_tau(regular_grid::RegularGrid, r, z) = compute_xray_tau(
+compute_xray_tau(regular_grid::RegularGrid, z_xray, r, z) = compute_xray_tau(
     regular_grid::RegularGrid,
     0.0,
-    6.0,
+    z_xray,
     r,
     z,
     regular_grid.radiation.xray_luminosity,
