@@ -35,6 +35,7 @@ get_density(regular_grid::RegularGrid, r, z) =
 
 function update_radiative_transfer(rt::RegularGrid, integrators)
     @info "Updating radiative transfer... "
+    flush()
     new_interp = update_density_interpolator(rt.density_interpolator, integrators)
     return RegularGrid(rt.radiation, new_interp)
 end

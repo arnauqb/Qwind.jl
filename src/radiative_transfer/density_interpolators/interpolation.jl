@@ -33,9 +33,11 @@ function WindInterpolator(
     else
         r0 = [integ.p.r0 for integ in integrators]
         @info "Constructing wind hull..."
-        hull = construct_wind_hull(integrators, n_timesteps=100)
+        hull = construct_wind_hull(integrators)
+        flush()
         @info "Constructing interpolation grid..."
-        r, z, n = reduce_integrators(integrators, n_timesteps=1000)
+        flush()
+        r, z, n = reduce_integrators(integrators, n_timesteps = 1000)
         grid = construct_interpolation_grid(r, z, n, r0, hull, nr = nr, nz = nz)
     end
     return WindInterpolator(grid, hull, vacuum_density, n_timesteps)
@@ -45,9 +47,9 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     r_log = log10.(r)
     z_log = log10.(z)
     r0_log = log10.(r0)
-    r_range_log = log10.(range(minimum(r), maximum(r), step=5))
+    r_range_log = log10.(range(minimum(r), maximum(r), step = 5))
     r_range_log = sort(vcat(r_range_log, r0_log))
-    z_range_log = range(max(minimum(z_log), -8), maximum(z_log), length=1000)
+    z_range_log = range(max(minimum(z_log), -8), maximum(z_log), length = 1000)
 
     zmax_hull = -Inf .* ones(length(r_range_log))
     rmax_hull = -Inf .* ones(length(z_range_log))
@@ -88,12 +90,16 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     for (rp, zp) in zip(r_hull, z_hull)
         push!(points, [rp, zp])
     end
+    points = reduce(hcat, points)
+    points = round.(points, sigdigits = 2)
+    points = unique(points, dims = 2)
+    points = [[points[1, i], points[2, i]] for i = 1:size(points)[2]]
     #return points
     hull = ConcaveHull.concave_hull(points)
     return hull#, points
 end
 
-function get_dense_line_positions(integrators; n_timesteps=1000)
+function get_dense_line_positions(integrators; n_timesteps = 1000)
     r = Float64[]
     z = Float64[]
     for integ in integrators
@@ -104,17 +110,27 @@ function get_dense_line_positions(integrators; n_timesteps=1000)
     return r, z
 end
 
-function construct_wind_hull(integrators; n_timesteps = 1000)
-    r, z = get_dense_line_positions(integrators, n_timesteps=n_timesteps)
+function construct_wind_hull(integrators)
     r0 = [integ.p.r0 for integ in integrators]
-    return construct_wind_hull(r, z, r0)
+    hull = nothing
+    for nt in [100, 1000, 5000]
+        @info "Trying wind hull with $nt time steps..."
+        flush()
+        r, z = get_dense_line_positions(integrators, n_timesteps = nt)
+        hull = construct_wind_hull(r, z, r0)
+        hull.converged && break
+    end
+    if hull === nothing 
+        error("Cannot construct wind hull!")
+    end
+    return hull
 end
 
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
     return ConcaveHull.in_hull(log10.(point), hull)
 end
 is_point_in_wind(wi::WindInterpolator, point) = is_point_in_wind(wi.hull, point)
-is_point_in_wind(hull::ConcaveHull.Hull, r, z) = is_point_in_wind(hull, [r,z])
+is_point_in_wind(hull::ConcaveHull.Hull, r, z) = is_point_in_wind(hull, [r, z])
 
 function reduce_line(r::Vector{<:Number}, z::Vector{<:Number}, n::Vector{<:Number})
     rs = [r[1]]
@@ -136,7 +152,7 @@ function reduce_line(integrator::Sundials.IDAIntegrator; n_timesteps = 10000)
 end
 
 
-function reduce_integrators(integrators; n_timesteps=10000)
+function reduce_integrators(integrators; n_timesteps = 10000)
     rs = Float64[]
     zs = Float64[]
     ns = Float64[]
@@ -156,13 +172,17 @@ function construct_interpolation_grid(nr, nz)
     return InterpolationGrid(r_range, z_range, density_grid, nr, nz)
 end
 
-function get_density_interpolator(r::Vector{Float64}, z::Vector{Float64}, n::Vector{Float64})
+function get_density_interpolator(
+    r::Vector{Float64},
+    z::Vector{Float64},
+    n::Vector{Float64},
+)
     r_log = log10.(r)
     z_log = log10.(z)
     log_n = log10.(n)
     points = hcat(r_log, z_log)
     scipy_interpolate = pyimport("scipy.interpolate")
-    linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value=2)
+    linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
     return linear_int
 end
 
@@ -172,8 +192,8 @@ function construct_interpolation_grid(
     n::Vector{Float64},
     r0s::Vector{Float64},
     hull;
-    nr="auto",
-    nz=50,
+    nr = "auto",
+    nz = 50,
 )
     interpolator = get_density_interpolator(r, z, n)
     r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz)
@@ -204,12 +224,12 @@ function construct_interpolation_grid(
             if !is_point_in_wind(hull, point)
                 density_grid[i, j] = 1e2
             else
-                density_grid[i,j] = 10 .^ interpolator(log10(r), log10(z))[1]
+                density_grid[i, j] = 10 .^ interpolator(log10(r), log10(z))[1]
             end
         end
     end
     # add z = 0 line
-    density_grid = [density_grid[:,1] density_grid]
+    density_grid = [density_grid[:, 1] density_grid]
     pushfirst!(z_range, 0.0)
     grid = InterpolationGrid(r_range, z_range, density_grid, nr, nz)
     return grid
@@ -226,7 +246,7 @@ function get_spatial_grid(
     z_min = max(minimum(z), 1e-6)
     r_max = min(1e4, maximum(r))
     z_max = min(1e4, maximum(z))
-    if nr == "auto" 
+    if nr == "auto"
         r_range = r0s
         additional_r = collect(range(r_range[end], r_max, step = 100)[2:end])
         r_range = vcat(r_range, additional_r)
@@ -253,16 +273,20 @@ get_density(wi::WindInterpolator, point) = get_density(wi, point[1], point[2])
 function update_density_interpolator(wi::WindInterpolator, integrators)
     if maximum(wi.grid.grid) == wi.vacuum_density
         # first iteration, do not average
-        return WindInterpolator(integrators, nr=wi.grid.nr, nz=wi.grid.nz, vacuum_density=wi.vacuum_density, n_timesteps=wi.n_timesteps)
+        return WindInterpolator(
+            integrators,
+            nr = wi.grid.nr,
+            nz = wi.grid.nz,
+            vacuum_density = wi.vacuum_density,
+            n_timesteps = wi.n_timesteps,
+        )
     end
     old_grid = wi.grid
     @info "Constructing wind hull..."
-    new_hull = construct_wind_hull(integrators, n_timesteps=100)
-    #old_hull = wi.hull
-    #hull = ConcaveHull.hull(vcat(old_hull.vertices, new_hull.vertices))
+    new_hull = construct_wind_hull(integrators)
     @info "Constructing interpolation grid..."
     r0s = [integ.p.r0 for integ in integrators]
-    r, z, n = reduce_integrators(integrators, n_timesteps=1000)
+    r, z, n = reduce_integrators(integrators, n_timesteps = 1000)
     r_range, z_range = get_spatial_grid(r, z, r0s, wi.grid.nr, wi.grid.nz)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
@@ -274,12 +298,18 @@ function update_density_interpolator(wi::WindInterpolator, integrators)
             if !is_point_in_wind(new_hull, point)
                 density_grid[i, j] = 1e2
             else
-                density_grid[i,j] = 10 .^ ((interpolator(log10(r), log10(z))[1] + log10(get_density(old_grid, r, z))) / 2.0)
+                density_grid[i, j] =
+                    10 .^ (
+                        (
+                            interpolator(log10(r), log10(z))[1] +
+                            log10(get_density(old_grid, r, z))
+                        ) / 2.0
+                    )
             end
         end
     end
     # add z = 0 line
-    density_grid = [density_grid[:,1] density_grid]
+    density_grid = [density_grid[:, 1] density_grid]
     pushfirst!(z_range, 0.0)
     grid = InterpolationGrid(r_range, z_range, density_grid, wi.grid.nr, wi.grid.nz)
     return WindInterpolator(grid, new_hull, wi.vacuum_density, wi.n_timesteps)
