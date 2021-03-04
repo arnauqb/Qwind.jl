@@ -80,14 +80,17 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
-    flush(stdout)
+    flush()
     wind_properties = save_wind(integrators, model, save_path, it_num)
     @info "Done"
+    flush()
     @info "Wind properties"
     @info "Mass loss fraction $(wind_properties["mass_loss_fraction"])"
-    flush(stdout)
+    flush()
     radiative_transfer = update_radiative_transfer(model.rt, integrators)
     update_model!(model, radiative_transfer)
+    @info "Done"
+    flush()
     iterations_dict[it_num + 1] = Dict()
     iterations_dict[it_num + 1]["radiative_transfer"] = model.rt
     return
@@ -99,7 +102,7 @@ function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=
     end
     save_path = model.config[:integrator][:save_path]
     @info "Saving results to $save_path"
-    flush(stdout)
+    flush()
     # iterations
     if n_iterations === nothing
         n_iterations = model.config[:integrator][:n_iterations]
@@ -201,7 +204,7 @@ function create_models_folders(config::Dict)
         i += 1
     end
     @info "Saving results to $save_folder"
-    flush(stdout)
+    flush()
     mkpath(save_folder)
     configs = parse_configs(config)
     model_dict = Dict()

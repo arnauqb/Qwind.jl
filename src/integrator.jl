@@ -182,9 +182,6 @@ function create_and_run_integrator(
     atol,
     rtol,
 )
-    #println("Running integrator $line_id, time $(get_time())")
-    flush(stdout)
-    flush(stderr)
     integrator = initialize_integrator(
         radiative_transfer,
         grid,
@@ -197,9 +194,6 @@ function create_and_run_integrator(
         #save_path = save_path,
     )
     solve!(integrator)
-    #println("Integrator $line_id done, time $(get_time())")
-    flush(stdout)
-    flush(stderr)
     return integrator
 end
 
@@ -504,7 +498,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
     line_width_dense = Float64[]
     density_dense = Float64[]
     @info "Getting dense solution from integrators..."
-    flush(stdout)
+    flush()
     for integrator in integrators
         rp, zp, zmaxp, z0p, lwp, densityp =
             get_dense_solution_from_integrator(integrator, n_timesteps)
@@ -516,7 +510,7 @@ function get_dense_solution_from_integrators(integrators, n_timesteps = 10000)
         density_dense = vcat(density_dense, densityp)
     end
     @info "Done"
-    flush(stdout)
+    flush()
     return r_dense, z_dense, zmax_dense, z0_dense, line_width_dense, density_dense
 end
 
