@@ -546,7 +546,7 @@ function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_lumin
 end
 
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity, zx)
-    lines_range = []
+    lines_range = [rin]
     lines_widths = []
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000);
     z_range = [0.0, 1.0];
@@ -594,6 +594,8 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         push!(lines_widths, delta_r)
         rc += delta_r
     end
+    # discard last width
+    lines_widths = lines_widths[1:end-1]
     # distribute remaining ones logarithmically
     additional_range = 10 .^ range(log10(rc), log10(rfi), length=50)
     additional_widths = diff(additional_range)
