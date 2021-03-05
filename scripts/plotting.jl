@@ -1,5 +1,5 @@
 module QwindPlotting
-export plot_streamlines, plot_density_grid, plot_xray_grid, plot_wind_hull
+export plot_streamlines, plot_density_grid, plot_xray_grid, plot_wind_hull, plot_density_contour, plot_xray_contour
 #using PyPlot
 #LogNorm = matplotlib.colors.LogNorm
 #Normalize = matplotlib.colors.Normalize
@@ -96,6 +96,38 @@ function plot_density_grid(
     return fig, ax
 end
 
+function plot_density_contour(
+    grid::InterpolationGrid;
+    fig=nothing,
+    ax=nothing,
+    cmap = "viridis",
+    vmin = nothing,
+    vmax = nothing,
+    xlim = nothing,
+    ylim = nothing,
+    levels=nothing,
+)
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
+    cm = ax.contourf(
+        grid.r_range,
+        grid.z_range,
+        grid.grid',
+        norm = LogNorm(),
+        cmap = cmap,
+        levels=levels
+    )
+    plt.colorbar(cm, ax = ax)
+    if xlim !== nothing
+        ax.set_xlim(xlim[1], xlim[2])
+    end
+    if ylim !== nothing
+        ax.set_ylim(ylim[1], ylim[2])
+    end
+    return fig, ax
+end
+
 
 function plot_xray_grid(
     grid::InterpolationGrid,
@@ -137,6 +169,50 @@ function plot_xray_grid(
     return fig, ax
 end
 
+function plot_xray_contour(
+    grid::InterpolationGrid,
+    xray_luminosity,
+    Rg;
+    cmap = "viridis",
+    levels = nothing,
+    xlim = nothing,
+    ylim = nothing,
+    rmin = 0,
+    rmax = 1000,
+    zmin = 1e-6,
+    zmax = 1000,
+    nr = 100,
+    nz = 101,
+    zx = 6.0,
+    fig=nothing,
+    ax=nothing
+)
+    r_range = range(rmin, rmax, length=nr)
+    z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
+    r_range_grid = r_range .* ones(nz)'
+    z_range_grid = z_range' .* ones(nr)
+    ret = compute_xray_tau.(Ref(grid), 0.0, zx, r_range_grid, z_range_grid, xray_luminosity, Rg)
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
+    cm = ax.contourf(
+        r_range,
+        z_range,
+        ret',
+        norm = LogNorm(),
+        levels=levels,
+        cmap = cmap,
+    )
+    plt.colorbar(cm, ax = ax)
+    if xlim !== nothing
+        ax.set_xlim(xlim[1], xlim[2])
+    end
+    if ylim !== nothing
+        ax.set_ylim(ylim[1], ylim[2])
+    end
+    return fig, ax
+end
+
 function plot_wind_hull(
     hull::ConcaveHull.Hull;
     rmin = 1,
@@ -148,8 +224,12 @@ function plot_wind_hull(
     cmap = "viridis",
     xlim = nothing,
     ylim = nothing,
+    fig = nothing,
+    ax= nothing
 )
-    fig, ax = plt.subplots()
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
     r_range = 10 .^ range(log10(rmin), log10(rmax), length=nr)
     z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
     r_range_grid = r_range .* ones(nz)'

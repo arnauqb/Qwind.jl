@@ -43,13 +43,15 @@ function WindInterpolator(
     return WindInterpolator(grid, hull, vacuum_density, n_timesteps)
 end
 
-function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64})
+function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdigits=2)
+    r = r[z .> 0]
+    z = z[z .> 0]
     r_log = log10.(r)
     z_log = log10.(z)
     r0_log = log10.(r0)
     r_range_log = log10.(range(minimum(r), maximum(r), step = 5))
     r_range_log = sort(vcat(r_range_log, r0_log))
-    z_range_log = range(max(minimum(z_log), -8), maximum(z_log), length = 1000)
+    z_range_log = range(max(minimum(z_log), -8), maximum(z_log), length = 250)
 
     zmax_hull = -Inf .* ones(length(r_range_log))
     rmax_hull = -Inf .* ones(length(z_range_log))
@@ -91,8 +93,11 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
         push!(points, [rp, zp])
     end
     points = reduce(hcat, points)
-    points = round.(points, sigdigits = 3)
+    #return points
+    points = round.(points, sigdigits = sigdigits)
     points = unique(points, dims = 2)
+    #unique_idcs = (i -> findfirst(points_unique[:,i] .== points_rounded)[2]).(1:size(points_unique)[2])
+    #points = points[:, unique_idcs]
     points = [[points[1, i], points[2, i]] for i = 1:size(points)[2]]
     #return points
     hull = ConcaveHull.concave_hull(points)
@@ -113,11 +118,12 @@ end
 function construct_wind_hull(integrators)
     r0 = [integ.p.r0 for integ in integrators]
     hull = nothing
-    for nt in [100, 1000, 5000]
-        @info "Trying wind hull with $nt time steps..."
+    r, z = get_dense_line_positions(integrators, n_timesteps = 100)
+    for sigdigits in [6, 5, 4]
+        @info "Trying wind hull with $sigdigits sig digits..."
         flush()
-        r, z = get_dense_line_positions(integrators, n_timesteps = nt)
-        hull = construct_wind_hull(r, z, r0)
+        hull = construct_wind_hull(r, z, r0, sigdigits=sigdigits)
+        #return hull
         hull.converged && break
     end
     if hull === nothing 
