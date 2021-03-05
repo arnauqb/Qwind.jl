@@ -588,14 +588,14 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         push!(lines_widths, delta_r)
         rc += delta_r
     end
-    # discard last width
-    lines_widths = lines_widths[1:end-1]
     # distribute remaining ones logarithmically
     additional_range = 10 .^ range(log10(rc), log10(rfi), length=50)
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)
     lines_widths = vcat(lines_widths, additional_widths)
+    # discard last radius
+    lines_range = lines_range[1:end-1]
     return lines_range, lines_widths
 end
 
