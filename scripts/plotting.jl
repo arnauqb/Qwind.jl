@@ -16,9 +16,9 @@ using ColorSchemes
 using ColorSchemes: colorschemes
 
 function plot_streamlines(
-    integrators,
+    integrators;
     fig = nothing,
-    ax = nothing;
+    ax = nothing,
     alpha = 1.0,
     xl = nothing,
     xh = nothing,

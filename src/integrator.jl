@@ -30,13 +30,13 @@ function make_save_data(line_id = -1)
         :vr,
         :vz,
         :n,
-    #    :ar,
-    #    :az,
+        #    :ar,
+        #    :az,
         :fm,
         :xi,
         :dvdr,
-    #    :disc_radiation_field_r,
-    #    :disc_radiation_field_z,
+        #    :disc_radiation_field_r,
+        #    :disc_radiation_field_z,
         :xi,
         :taueff,
         :taux,
@@ -542,42 +542,60 @@ end
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity, zx)
     lines_range = [rin]
     lines_widths = []
-    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000);
-    z_range = [0.0, 1.0];
-    density_grid = zeros((length(r_range), length(z_range)));
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range);
+    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
+    z_range = [0.0, 1.0]
+    density_grid = zeros((length(r_range), length(z_range)))
+    density_grid[:, 1] .= getn0.(Ref(ic), r_range)
     interp_grid = InterpolationGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
     fx(delta_r, rc, delta_tau, tau_x) =
-        delta_tau -
-        (compute_xray_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, xray_luminosity, Rg) - tau_x)
+        delta_tau - (
+            compute_xray_tau(
+                interp_grid,
+                0.0,
+                0.0,
+                rc + delta_r,
+                0.0,
+                xray_luminosity,
+                Rg,
+            ) - tau_x
+        )
     fuv(delta_r, rc, delta_tau, tau_uv) =
-        delta_tau -
-        (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
+        delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
     rc = rin
     while rc < rfi
-        if tau_x < 50
+        if tau_x < 100
             tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             if tau_x < 1
                 delta_tau = 0.01
-            elseif tau_x < 10
+            elseif tau_x < 100
                 delta_tau = 0.1
             else
                 delta_tau = 1
             end
-            delta_r = find_zero(delta_r ->fx(delta_r, rc, delta_tau, tau_x), 0.1, atol=1e-7, rtol=1e-3)
+            delta_r = find_zero(
+                delta_r -> fx(delta_r, rc, delta_tau, tau_x),
+                0.1,
+                atol = 1e-7,
+                rtol = 1e-3,
+            )
         elseif tau_uv < 50
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
             if tau_uv < 1
                 delta_tau = 0.01
-            elseif tau_uv < 10
+            elseif tau_uv < 50
                 delta_tau = 0.1
             else
                 delta_tau = 1
             end
             try
-                delta_r = find_zero(delta_r ->fuv(delta_r, rc, delta_tau, tau_uv), 10, atol=1e-6, rtol=1e-3)
+                delta_r = find_zero(
+                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
+                    10,
+                    atol = 1e-6,
+                    rtol = 1e-3,
+                )
             catch
                 break
             end
@@ -589,14 +607,21 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         rc += delta_r
     end
     # distribute remaining ones logarithmically
-    additional_range = 10 .^ range(log10(rc), log10(rfi), length=50)
+    additional_range = 10 .^ range(log10(rc), log10(rfi), length = 1000)
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)
     lines_widths = vcat(lines_widths, additional_widths)
     # discard last radius
-    lines_range = lines_range[1:end-1]
+    lines_range = lines_range[1:(end - 1)]
     return lines_range, lines_widths
 end
 
-compute_lines_range(model) = compute_lines_range(model.ic, model.ic.rin, model.ic.rfi, model.bh.Rg, model.rad.xray_luminosity, 0.0)
+compute_lines_range(model) = compute_lines_range(
+    model.ic,
+    model.ic.rin,
+    model.ic.rfi,
+    model.bh.Rg,
+    model.rad.xray_luminosity,
+    0.0,
+)

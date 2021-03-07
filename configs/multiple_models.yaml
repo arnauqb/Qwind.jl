@@ -27,7 +27,7 @@ radiative_transfer:
     type: WindInterpolator #"@vary grid VIGrid,WindInterpolator"
     vacuum_density: 1e2
     n_timesteps: 10000
-    nz: 500 #"@vary grid 50,100,500,1000"
+    nz: 1000 #"@vary grid 50,100,500,1000"
     nr: auto
 
 grid:
@@ -53,6 +53,6 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution50"
-  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/tests_rin50_500_hull"
+  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/tests_rin50_500_noaverage"
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/multinode_tests_nthreads"
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/big_job_changelines"
