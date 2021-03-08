@@ -1,11 +1,9 @@
 using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
-#@everywhere using Qwind
 using Qwind
-using YAML
-#include("scripts/plotting.jl")
-#matplotlib.rcParams["figure.dpi"] = 300
+using YAML, Profile, PProf, PyCall
+include("scripts/plotting.jl")
 
 config_path = "configs/config_test.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
@@ -13,109 +11,118 @@ try
     mv(config[:integrator][:save_path], "backup", force = true)
 catch
 end
-model = Model(config_path);
-iterations_dict = Dict();
-run!(model, iterations_dict)
+model1 = Model(config_path);
+iterations_dict1 = Dict();
+#do_iteration!(model1, iterations_dict1, it_num=1);
+run!(model1, iterations_dict1)
 
-#do_iteration!(model, iterations_dict, it_num=1);
-#
-#
-#
-pdfp = matplotlib.backends.backend_pdf.PdfPages
-pdfile = pdfp("multipage_pdf.pdf")
-for it in 1:length(iterations_dict)
-    try
-        println(it)
-        fig, ax = plt.subplots()
-        plot_streamlines(iterations_dict[it]["integrators"], fig, ax)
-        pdfile.savefig(fig)
-        plt.close("all")
-    catch
-        continue
-    end
-end
-pdfile.close()
+integs = iterations_dict1[2]["integrators"];
+r0 = [integ.p.r0 for integ in integs];
+r, z, n = Qwind.reduce_integrators(integs, n_timesteps=100);
 
-rt = iterations_dict[19]["radiative_transfer"]
-r_range = range(6, 1000, length=100)
-z_range = range(6, 1000, length=100)
-tauxg = zeros((length(r_range), length(z_range)))
-for (i,r ) in enumerate(r_range)
-    for (j,z ) in enumerate(z_range)
-        tauxg[i,j] = compute_xray_tau(rt, r, z)
-    end
-end
+hull = Qwind.construct_wind_hull(r,z,r0);
+
+vs = 10 .^ reduce(hcat, hull.vertices)
+ps = 10 .^ reduce(hcat, points)
+
+#fig, ax = plt.subplots()
+
+fig, ax = QwindPlotting.plot_wind_hull(hull, nr=500, nz=500,rmin=49.999, rmax=50.01, zmax=10)
+QwindPlotting.plot_streamlines(integs, fig, ax)
+ax.set_xlim(49.999, 50.01)
+ax.set_ylim(0, 10)
+ax.scatter(vs[1,:], vs[2,:], color="blue", alpha=0.5)
+#ax.scatter(ps[1,:], ps[2,:], color="red", alpha=0.5)
+#ax.set_xlim(49.999, 50.003)
+#ax.set_ylim(0, 1)
+#ax.set_xlim(50.0, 50.03)
+#ax.set_ylim(1e-6, 1)
+
+r, z, n = Qwind.reduce_integrators(integs, n_timesteps=10000);
+
+grid = Qwind.construct_interpolation_grid(r, z, n, r0, hull, nr="auto", nz=50);
+
 fig, ax = plt.subplots()
-cm = ax.pcolormesh(r_range, z_range, tauxg', norm=LogNorm(vmin=1e-3, vmax=1e1))
+cm = ax.pcolormesh(grid.r_range, grid.z_range, grid.grid', norm=LogNorm())
 plt.colorbar(cm, ax=ax)
-fig.savefig("asd.pdf")
-
-
-
-
-
 
 fig, ax = plt.subplots()
-plot_streamlines(iterations_dict[21]["integrators"], fig, ax)
-fig.savefig("asd.pdf")
+cm = ax.pcolormesh(r_range, z_range, ret', norm=LogNorm(vmin=1e5, vmax=1e10))
+#QwindPlotting.plot_streamlines(integs, fig, ax, color="white", alpha=0.1)
+ax.scatter(r[1:100:end], z[1:100:end], c=n[1:100:end], s=10, cmap="viridis", norm=LogNorm(vmin=1e5, vmax=1e10), edgecolor="black", linewidth=0.1)
+plt.colorbar(cm, ax=ax)
+ax.set_xlim(50, 50.05)
+ax.set_ylim(0, 2)
+#ax.set_xscale("log")
 
 
-lkdt = Qwind.create_lines_kdtrees(iterations_dict[1]["integrators"]);
-
-using BenchmarkTools
-
-vig = VIGrid(lkdt, 500, 50);
+#yym = reshape(yy, (length(z_range), length(r_range)))
 
 
-fig, ax = plt.subplots()
-gg = vig.grid
-ax.pcolormesh(gg.r_range, gg.z_range, gg.grid', norm=LogNorm());
+#wi = WindInterpolator(integs);
+
+#run!(model1, iterations_dict1)
+
+#Profile.clear()
+#@profile do_iteration!(model1, iterations_dict1, it_num=2);
+
+xray_luminosity = model1.rad.xray_luminosity
+Rg = model1.bh.Rg
+
+# XRAY
+it_num = 4
+di = iterations_dict1[it_num]["radiative_transfer"].density_interpolator;
+#di2 = iterations_dict2[it_num]["radiative_transfer"].density_interpolator;
+fig, ax = QwindPlotting.plot_xray_grid(di.grid, xray_luminosity, Rg, rmin=0, rmax=1000, nr=250, nz=250, vmin=1e-1, vmax=1e4)
+#ax.set_yscale("log")
+#ax.set_xscale("log")
+ax.set_title("New")
+
+fig, ax = QwindPlotting.plot_xray_grid(di2.grid, xray_luminosity, Rg, rmin=0, rmax=200, nr=250, nz=250, vmin=1e-1, vmax=1e4)
+ax.set_title("Old")
+ax.set_yscale("log")
+#ax.set_xscale("log")
 
 
-r_range, z_range = get_spatial_grid(lkdt, 1000, 50);
-
-gg = pmap(z -> get_density.(Ref(lkdt), r_range, z), z_range);
-gg = hcat(gg...)
 
 
+# DENSITY
+it_num = 3
+di = iterations_dict1[it_num]["radiative_transfer"].density_interpolator;
+#di2 = iterations_dict2[it_num]["radiative_transfer"].density_interpolator;
+fig, ax = QwindPlotting.plot_density_grid(di.grid)
+#ax.set_yscale("log")
+#ax.set_xscale("log")
+ax.set_title("New")
+
+fig, ax = QwindPlotting.plot_density_grid(di2.grid, xlim=(0,1e3), ylim=(1e-6,1e3))
+ax.set_title("Old")
+ax.set_yscale("log")
+#ax.set_xscale("log")
+
+QwindPlotting.plot_streamlines(iterations_dict1[4]["integrators"])
+QwindPlotting.plot_streamlines(iterations_dict2[4]["integrators"])
 
 
+integ2 = iterations_dict2[3]["integrators"];
+old_rt = iterations_dict2[4]["radiative_transfer"];
+old_di = old_rt.density_interpolator;
+new_rt = update_radiative_transfer(model1.rt, integ2);
+new_di = new_rt.density_interpolator;
 
+fig, ax = QwindPlotting.plot_xray_grid(new_di.grid, xray_luminosity, Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+ax.set_yscale("log")
+ax.set_xscale("log")
+ax.set_title("New")
+fig, ax = QwindPlotting.plot_xray_grid(old_di.grid, xray_luminosity, Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+ax.set_title("Old")
+ax.set_yscale("log")
+ax.set_xscale("log")
 
-
-#########################
-
-using JLD2, Profile, PProf
-@load "big_rt.jld2" rt
-
-iterations_dict[1] = Dict();
-model.rt = rt;
-iterations_dict[1]["radiative_transfer"] = rt;
-
-
-do_iteration!(model, iterations_dict, it_num=1);
-
-lines_range, lines_widths = get_initial_radii_and_linewidths(model.ic, model.bh.Rg);
-i = 100
-integrator = Qwind.create_and_run_integrator(
-    model,
-    linewidth = lines_widths[i],
-    r0 = lines_range[i],
-    atol = model.config[:integrator][:atol],
-    rtol = model.config[:integrator][:rtol],
-    line_id = i,
-)
-
-
-#run!(model, iterations_dict1)
-#do_iteration!(model, iterations_dict, it_num=1);
-#do_iteration!(model, iterations_dict, it_num=2);
-
-Profile.clear()
-@profile rt = update_radiative_transfer(model.rt, iterations_dict[1]["integrators"]);
-pprof()
-
-rt = iterations_dict[2]["radiative_transfer"];
-
-#using JLD2
-#@save "big_rt.jld2" rt
+it_num = 2
+integ1 = iterations_dict1[it_num]["integrators"];
+integ2 = iterations_dict2[it_num]["integrators"];
+fig, ax = QwindPlotting.plot_streamlines(integ1)
+ax.set_title("new")
+fig, ax = QwindPlotting.plot_streamlines(integ2)
+ax.set_title("old")

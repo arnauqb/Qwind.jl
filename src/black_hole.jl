@@ -9,18 +9,18 @@ export BlackHole,
     compute_angular_momentum
 
 
-struct BlackHole
-    M::Float64
-    mdot::Float64
-    spin::Float64
-    isco::Float64
-    efficiency::Float64
-    Rg::Float64
+struct BlackHole{T<:AbstractFloat} 
+    M::T
+    mdot::T
+    spin::T
+    isco::T
+    efficiency::T
+    Rg::T
     function BlackHole(M, mdot, spin)
         Rg = G * M / C^2
         isco = compute_isco(spin)
         eff = compute_efficiency(spin)
-        new(M, mdot, spin, isco, eff, Rg)
+        new{typeof(M)}(M, mdot, spin, isco, eff, Rg)
     end
 end
 

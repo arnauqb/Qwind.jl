@@ -15,7 +15,7 @@ radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
   relativistic: true
   f_x: 0.15
-  n_r: 1000
+  n_r: 2000
   z_xray: 0.0
 
 radiative_transfer:
@@ -38,7 +38,7 @@ initial_conditions:
   mode: CAKIC #UniformIC
   r_in: 50.0
   r_fi: 1300.0
-  n_lines: "auto" #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: 50 #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
@@ -49,4 +49,4 @@ integrator:
   n_iterations: 5
   atol: 1e-8
   rtol: 1e-3
-  save_path: "papers/paper2/data"
+  save_path: "./data"

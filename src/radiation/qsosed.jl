@@ -1,16 +1,23 @@
 export QsosedRadiation, from_quadtree, get_fuv_mdot, relativistic_correction
 
-struct QsosedRadiation <: Radiation
-    disk_grid::Vector{Float64}
-    fuv_grid::Vector{Float64}
-    mdot_grid::Vector{Float64}
-    xray_luminosity::Float64
-    efficiency::Float64
-    spin::Float64
-    isco::Float64
-    Rg::Float64
+struct QsosedRadiation{T} <: Radiation{T}
+    disk_grid::Vector{T}
+    fuv_grid::Vector{T}
+    mdot_grid::Vector{T}
+    xray_luminosity::T
+    efficiency::T
+    spin::T
+    isco::T
+    z_xray::T
+    Rg::T
     flux_correction::FluxCorrection
 end
+
+function compute_ionization_parameter(radiation::QsosedRadiation, r, z, number_density, tau_x)
+    d2 = (r^2 + (z - radiation.z_xray)^2) * radiation.Rg^2
+    return max(radiation.xray_luminosity * exp(-tau_x) / (number_density * d2), 1e-20)
+end
+
 
 flux_correction(::Relativistic, beta) = ((1 - beta) / (1 + beta))^2
 flux_correction(::NoRelativistic, beta) = 1.0
@@ -22,9 +29,9 @@ function compute_mass_accretion_rate(radiation::Radiation, r)
 end
 
 
-function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, relativistic::FluxCorrection)
+function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, z_xray::Float64, relativistic::FluxCorrection)
     rmin = bh.isco
-    rmax = 1400
+    rmax = 1400.0
     disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     uvf = uv_fractions(bh, disk_grid)
     if any(isnan.(uvf))
@@ -40,6 +47,7 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, relativistic::Flux
         bh.efficiency,
         bh.spin,
         bh.isco,
+        z_xray,
         bh.Rg,
         relativistic,
     )
@@ -51,7 +59,7 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
     else
         mode = NoRelativistic()
     end
-    return QsosedRadiation(bh, radiation_config[:n_r], radiation_config[:f_x], mode)
+    return QsosedRadiation(bh, radiation_config[:n_r], radiation_config[:f_x], radiation_config[:z_xray], mode)
 end
 
 function get_fuv_mdot(radiation::QsosedRadiation, r)

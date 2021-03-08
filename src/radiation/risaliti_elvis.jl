@@ -10,18 +10,18 @@ export RERadiation,
     compute_radiation_constant,
     get_fuv_mdot
 
-struct RERadiation <: Radiation
-    mdot::Float64
-    efficiency::Float64
-    isco::Float64
-    spin::Float64
-    fuv::Float64
-    xray_luminosity::Float64
-    Rg::Float64
-    function RERadiation(bh::BlackHole, fuv, fx)
+struct RERadiation{T} <: Radiation{T}
+    mdot::T
+    efficiency::T
+    isco::T
+    spin::T
+    fuv::T
+    xray_luminosity::T
+    Rg::T
+    function RERadiation(bh::BlackHole, fuv::T, fx::T) where {T<:AbstractFloat}
         bolometric_luminosity = compute_bolometric_luminosity(bh)
         xray_luminosity = fx * bolometric_luminosity
-        new(
+        new{typeof(fx)}(
             bh.mdot,
             compute_efficiency(bh),
             compute_isco(bh),

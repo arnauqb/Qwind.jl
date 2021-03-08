@@ -2,28 +2,28 @@ using CSV, DataFrames, YAML, HDF5
 export save_integrator, save_integrators, save_wind
 
 
-function save_integrator(data::Dict, save_path)
-    if save_path === nothing
-        return
-    end
-    append = false
-    if isfile(save_path)
-        ret = CSV.read(save_path, DataFrame)
-        append = true
-    end
-    df = DataFrame()
-    line_id = pop!(data, :line_id)
-    df[!, :line_id] = line_id * ones(Int64, length(data[:r]))
-    for key in keys(data)
-        df[!, key] = data[key]
-    end
-    if append
-        append!(ret, df)
-    else
-        ret = df
-    end
-    CSV.write(save_path, ret)
-end
+#function save_integrator(data::Dict, save_path)
+#    if save_path === nothing
+#        return
+#    end
+#    append = false
+#    if isfile(save_path)
+#        ret = CSV.read(save_path, DataFrame)
+#        append = true
+#    end
+#    df = DataFrame()
+#    #line_id = pop!(data, :line_id)
+#    #df[!, :line_id] = line_id * ones(Int64, length(data[:r]))
+#    for key in keys(data)
+#        df[!, key] = data[key]
+#    end
+#    if append
+#        append!(ret, df)
+#    else
+#        ret = df
+#    end
+#    CSV.write(save_path, ret)
+#end
 
 function create_integrators_df(integrators)
     df = DataFrame()
@@ -122,6 +122,7 @@ end
 function save_wind_properties(integrators, save_path, bh::BlackHole)
     ret = create_wind_properties(integrators, bh)
     YAML.write_file(save_path, ret)
+    return ret
 end
 
 function save_wind(integrators, model, save_path, it_num)
@@ -133,7 +134,8 @@ function save_wind(integrators, model, save_path, it_num)
     lines_save_path = iteration_save_path * "/streamlines.csv"
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
     save_integrators(integrators, lines_save_path)
-    save_wind_properties(integrators, properties_save_path, model.bh)
+    properties = save_wind_properties(integrators, properties_save_path, model.bh)
+    return properties
 end
 
 

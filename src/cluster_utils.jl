@@ -2,7 +2,7 @@ using ArgParse, Printf
 
 function parse_cl()
     s = ArgParseSettings()
-    @add_arg_table s begin
+    @add_arg_table! s begin
         "--model", "-m"
         help = "Model number to run"
         arg_type = Int

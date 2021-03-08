@@ -3,8 +3,6 @@ using QuadGK
 
 function make_lines_kdtrees(
     density_func;
-    r_norm = 1000,
-    z_norm = 100,
     n_timesteps = 1000,
     n_lines = 10,
 )
@@ -14,7 +12,7 @@ function make_lines_kdtrees(
         r_range = i * dr .* ones(n_timesteps)
         z_range = range(0, 100, length = n_timesteps)
         n_range = density_func.(r_range, z_range)
-        width_range = dr .* ones(n_timesteps)
+        width_range = 2 * dr .* ones(n_timesteps)
         zmax_range = 2000 .* ones(n_timesteps)
         z0_range = zeros(n_timesteps)
         lkt =
@@ -45,7 +43,7 @@ end
 
     #density_func = (r, z) -> 1e8 
     density_func = (r, z) -> 1e8 ./ (r^2 + z^2);
-    lkdt = make_lines_kdtrees(density_func, n_lines = 1000, r_norm = 1000, z_norm = 100);
+    lkdt = make_lines_kdtrees(density_func, n_lines = 1000);
 
     @testset "Test lines kdtrees" begin
         for r in range(1, 1000, length = 50)
@@ -82,13 +80,9 @@ end
                     tau_grid = compute_uv_tau(vi_grid, ri, zi, rf, zf, Rg)
                     tau2_grid_highxr = compute_xray_tau(vi_grid, ri, zi, rf, zf, 1e80, Rg)
                     tau2_grid_lowxr = compute_xray_tau(vi_grid, ri, zi, rf, zf, 1, Rg)
-                    #if ! (isapprox(tau2_grid, tau_expected, rtol=0.25))
-                    #    println("ri $ri rf $rf zf $zf")
-                    #    println("tau2 $tau2_grid exp $tau_expected")
-                    #end
-                    @test tau_grid ≈ tau_expected rtol=0.25
-                    @test tau2_grid_highxr ≈ tau_expected rtol=0.25
-                    @test tau2_grid_lowxr ≈ 100 * tau_expected rtol=0.25
+                    @test tau_grid ≈ tau_expected rtol=0.5
+                    @test tau2_grid_highxr ≈ tau_expected rtol=0.5
+                    @test tau2_grid_lowxr ≈ 100 * tau_expected rtol=0.5
                 end
             end
         end
