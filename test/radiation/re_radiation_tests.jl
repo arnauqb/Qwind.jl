@@ -13,26 +13,26 @@ end
 
 @testset "RE X-ray optical depth" begin
       # r<= r_in
-      Rg = 2
-      @test compute_xray_tau(4, 3, 10, 20, 5, 100, 2, Rg) / SIGMA_T == 0.0
+      Rg = 2.0
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 5.0, 100.0, 2.0, Rg) / SIGMA_T == 0.0
       # r < r_0, r_x < r
-      @test compute_xray_tau(4, 3, 10, 20, 1, 2, 6, Rg) / SIGMA_T ≈
-            4010 / cos(4 / 5) atol = 0 rtol = 0.1
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 1.0, 2.0, 6.0, Rg) / SIGMA_T ≈
+            4010 / cos(4 / 5) atol = 0.0 rtol = 0.1
       # r < r_0, r_x > r
-      @test compute_xray_tau(4, 3, 10, 20, 1, 5, 6, Rg) / SIGMA_T ≈
-            60 / cos(4 / 5) atol = 0 rtol = 0.1
-      # r > r_0, r_in < r_x < r_0
-      @test compute_xray_tau(4, 3, 10, 20, 1, 2, 3, Rg) / SIGMA_T ≈
-            6010 / cos(4 / 5) atol = 0 rtol = 0.1
-      # r > r_0, r_in < r_x < r_0
-      @test compute_xray_tau(4, 3, 10, 20, 1, 3.5, 3, Rg) / SIGMA_T ≈
-            2030 / cos(4 / 5) atol = 0 rtol = 0.1
-      # r > r_0, r_in < r_0 < r < r
-      @test compute_xray_tau(4, 3, 10, 20, 1, 5, 2, Rg) / SIGMA_T ≈
-            100 / cos(4 / 5) atol = 0 rtol = 0.1
-      # r > r_0, r_in < r_0 < r_x < r
-      @test compute_xray_tau(4, 3, 10, 20, 1, 3, 2, Rg) / SIGMA_T ≈
-            4030 / cos(4 / 5) atol = 0 rtol = 0.1
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 1.0, 5.0, 6.0, Rg) / SIGMA_T ≈
+            60 / cos(4 / 5) atol = 0.0 rtol = 0.1
+      # r > r_0, r_in < r_x < .0r_0.0
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 1.0, 2.0, 3.0, Rg) / SIGMA_T ≈
+            6010 / cos(4 / 5) atol = 0.0 rtol = 0.1
+      # r > r_0, r_in < r_x < .0r_0.0
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 1.0, 3.5, 3.0, Rg) / SIGMA_T ≈
+            2030 / cos(4 / 5) atol = 0.0 rtol = 0.1
+      # r > r_0, r_in < r_0 < .0r <.0 r
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 1.0, 5.0, 2.0, Rg) / SIGMA_T ≈
+            100 / cos(4 / 5) atol = 0.0 rtol = 0.1
+      # r > r_0, r_in < r_0 < .0r_x.0 < r.0
+      @test compute_xray_tau(4.0, 3.0, 10.0, 20.0, 1.0, 3.0, 2.0, Rg) / SIGMA_T ≈
+            4030 / cos(4 / 5) atol = 0.0 rtol = 0.1
 end
 
 @testset "Ionization radius" begin
