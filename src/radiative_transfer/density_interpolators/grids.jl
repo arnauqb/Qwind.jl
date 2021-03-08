@@ -37,19 +37,6 @@ struct InterpolationGrid{T<:Float64}
     end
 end
 
-#function get_spatial_grid(kdtree::KDTree, nr, nz)
-#    max_width = maximum(kdtree.width)
-#    r_min = kdtree.r[1] - kdtree.width[1] / 2
-#    r_max = maximum(kdtree.r) + max_width
-#    z_min = max(1e-6, minimum(kdtree.z))
-#    z_max = maximum(kdtree.z) + max_width
-#    r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
-#    z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
-#    z_range = pushfirst!(z_range, 0.0)
-#    points = hcat([[r, z] for r in r_range for z in z_range]...)
-#    return r_range, z_range
-#end
-
 function point_outside_grid(grid::InterpolationGrid, r, z)
     if r < grid.r_range[1] || r > grid.r_range[end]
         return true
@@ -67,7 +54,6 @@ function get_density(grid::InterpolationGrid, r, z)
     ridx = searchsorted_nearest(grid.r_range, r)
     zidx = searchsorted_nearest(grid.z_range, z)
     return grid.grid[ridx, zidx]
-    #return grid.interpolator(r, z)
 end
 
 get_density(grid::InterpolationGrid, point::Vector{Float64}) =

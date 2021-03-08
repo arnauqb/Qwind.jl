@@ -2,7 +2,6 @@ using DiffEqBase, DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
 using Roots: find_zero, Bisection
 using Distributed
-using QuadGK
 import Qwind.out_of_grid, Qwind.compute_density
 import Base.push!
 export initialize_integrator,

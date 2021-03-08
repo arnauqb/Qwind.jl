@@ -1,14 +1,7 @@
-#__precompile__()
 using PyCall, BasisFunctionExpansions
-import ConcaveHull, Interpolations
+import ConcaveHull, Interpolations, Sundials
 export WindInterpolator, get_density
 
-#scipy_interpolate = PyNULL()
-
-#function __init__()
-#    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
-#end
-#
 struct WindInterpolator{T} <: GridInterpolator{T}
     grid::InterpolationGrid{T}
     hull::Union{ConcaveHull.Hull,Nothing}
@@ -93,15 +86,11 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
         push!(points, [rp, zp])
     end
     points = reduce(hcat, points)
-    #return points
     points = round.(points, sigdigits = sigdigits)
     points = unique(points, dims = 2)
-    #unique_idcs = (i -> findfirst(points_unique[:,i] .== points_rounded)[2]).(1:size(points_unique)[2])
-    #points = points[:, unique_idcs]
     points = [[points[1, i], points[2, i]] for i = 1:size(points)[2]]
-    #return points
     hull = ConcaveHull.concave_hull(points)
-    return hull#, points
+    return hull
 end
 
 function get_dense_line_positions(integrators; n_timesteps = 1000)
@@ -171,10 +160,10 @@ function reduce_integrators(integrators; n_timesteps = 10000)
     return rs, zs, ns
 end
 
-function construct_interpolation_grid(nr, nz)
+function construct_interpolation_grid(nr, nz, vacuum_density=1e2)
     r_range = zeros(2)
     z_range = zeros(2)
-    density_grid = [[1e2, 1e2] [1e2, 1e2]]
+    density_grid = vacuum_density .* [[1.0, 1.0] [1.0, 1.0]]
     return InterpolationGrid(r_range, z_range, density_grid, nr, nz)
 end
 
@@ -205,24 +194,6 @@ function construct_interpolation_grid(
     r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
-    #r_range_grid_log = r_range_log .* ones(length(z_range_log))'
-    #z_range_grid_log = z_range_log' .* ones(length(r_range_log))
-    #density_grid = 10 .^ linear_int(log10.(r_range_grid), log10.(z_range_grid));
-    #density_grid = @showprogress pmap(
-    #    z_log -> 10 .^ linear_int(r_range_log, z_log),
-    #    z_range_log,
-    #    batch_size = Int(round(length(z_range) / nprocs())),
-    #)
-    #density_grid = reduce(hcat, density_grid)
-    #density_grid =
-    #    10 .^ scipy_interpolate.griddata(
-    #        (r_log, z_log),
-    #        log_n,
-    #        (r_range_grid_log, z_range_grid_log),
-    #        method = "linear",
-    #        fill_value = 2,
-    #    )
-    # remove points outside the wind
     density_grid = 1e2 .* ones((length(r_range), length(z_range)))
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
@@ -260,7 +231,6 @@ function get_spatial_grid(
         r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
     end
     z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
-    #z_range = pushfirst!(z_range, 0.0)
     r_range = round.(r_range, digits = 7)
     z_range = round.(z_range, digits = 7)
     points = hcat([[r, z] for r in r_range for z in z_range]...)
