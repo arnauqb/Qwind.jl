@@ -2,6 +2,12 @@ using PyCall, BasisFunctionExpansions
 import ConcaveHull, Interpolations, Sundials
 export WindInterpolator, get_density
 
+const scipy_interpolate = PyNULL()
+
+function __init__()
+    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
+end
+
 struct WindInterpolator{T} <: GridInterpolator{T}
     grid::InterpolationGrid{T}
     hull::Union{ConcaveHull.Hull,Nothing}
@@ -176,7 +182,6 @@ function get_density_interpolator(
     z_log = log10.(z)
     log_n = log10.(n)
     points = hcat(r_log, z_log)
-    scipy_interpolate = pyimport("scipy.interpolate")
     linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
     return linear_int
 end
