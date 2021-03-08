@@ -565,11 +565,11 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
     rc = rin
     while rc < rfi
-        if tau_x < 100
+        if tau_x < 50
             tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             if tau_x < 1
                 delta_tau = 0.01
-            elseif tau_x < 100
+            elseif tau_x < 20
                 delta_tau = 0.1
             else
                 delta_tau = 1
@@ -583,8 +583,8 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         elseif tau_uv < 50
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
             if tau_uv < 1
-                delta_tau = 0.01
-            elseif tau_uv < 50
+                delta_tau = 0.05
+            elseif tau_uv < 20
                 delta_tau = 0.1
             else
                 delta_tau = 1
@@ -607,7 +607,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         rc += delta_r
     end
     # distribute remaining ones logarithmically
-    additional_range = 10 .^ range(log10(rc), log10(rfi), length = 1000)
+    additional_range = 10 .^ range(log10(rc), log10(rfi), length = 200)
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)
