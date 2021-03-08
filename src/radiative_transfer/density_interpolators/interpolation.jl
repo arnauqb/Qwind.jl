@@ -289,8 +289,10 @@ function update_density_interpolator(wi::WindInterpolator, integrators)
     end
     old_grid = wi.grid
     @info "Constructing wind hull..."
+    flush()
     new_hull = construct_wind_hull(integrators)
     @info "Constructing interpolation grid..."
+    flush()
     r0s = [integ.p.r0 for integ in integrators]
     r, z, n = reduce_integrators(integrators, n_timesteps = 1000)
     r_range, z_range = get_spatial_grid(r, z, r0s, wi.grid.nr, wi.grid.nz)
@@ -298,6 +300,8 @@ function update_density_interpolator(wi::WindInterpolator, integrators)
     z_range_log = log10.(z_range)
     interpolator = get_density_interpolator(r, z, n)
     density_grid = 1e2 .* ones((length(r_range), length(z_range)))
+    @info "Averaging grids..."
+    flush()
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
             point = [r, z]

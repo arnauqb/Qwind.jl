@@ -6,7 +6,6 @@ using QuadGK
 import Qwind.out_of_grid, Qwind.compute_density
 import Base.push!
 export initialize_integrator,
-    initialize_integrators,
     run_integrator!,
     run_integrators!,
     run_integrators_parallel!,
@@ -17,7 +16,6 @@ export initialize_integrator,
     compute_d,
     failed,
     Parameters,
-    is_stalled,
     escaped,
     get_dense_solution_from_integrator,
     get_dense_solution_from_integrators
@@ -88,8 +86,6 @@ function initialize_integrator(
         save_positions = (false, false),
     )
     data = make_save_data(line_id)
-    stalling_cb =
-        DiscreteCallback(is_stalled, stalling_affect!, save_positions = (false, false))
     params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data)
     if save_results
         saved_data = SavedValues(Float64, Float64)
@@ -97,9 +93,9 @@ function initialize_integrator(
             (u, t, integrator) -> save(u, t, integrator, radiative_transfer, line_id),
             saved_data,
         )
-        callback_set = CallbackSet(termination_callback, saving_callback, stalling_cb)
+        callback_set = CallbackSet(termination_callback, saving_callback)
     else
-        callback_set = CallbackSet(termination_callback, stalling_cb)
+        callback_set = CallbackSet(termination_callback)
     end
     a₀ = compute_initial_acceleration(radiative_transfer, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
@@ -112,64 +108,42 @@ function initialize_integrator(
     return integrator
 end
 
-function get_initial_radii_and_linewidths(model)
-    Rg = model.bh.Rg
-    xray_luminosity = model.rad.xray_luminosity
-    initial_conditions = model.ic
+function get_initial_radii_and_linewidths(
+    initial_conditions::InitialConditions,
+    xray_luminosity,
+    Rg,
+)
     rin = getrin(initial_conditions)
     rfi = getrfi(initial_conditions)
     nlines = getnlines(initial_conditions)
-    if nlines == "auto"
-        lines_range, lines_widths = compute_lines_range(model)
-    else
-        if initial_conditions.logspaced
-            lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
-            lines_range = [rin + lines_widths[1] / 2.0]
-            for i = 2:nlines
-                r0 = lines_range[i - 1] + lines_widths[i - 1] / 2 + lines_widths[i] / 2
-                push!(lines_range, r0)
-            end
-        else
-            lines_widths = range(rin, rfi, length = nlines)
-            dr = (rfi - rin) / nlines
-            lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
-            lines_widths = diff([lines_range; rfi + dr / 2])
+    if initial_conditions.logspaced
+        lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
+        lines_range = [rin + lines_widths[1] / 2.0]
+        for i = 2:nlines
+            r0 = lines_range[i-1] + lines_widths[i-1] / 2 + lines_widths[i] / 2
+            push!(lines_range, r0)
         end
+    else
+        lines_widths = range(rin, rfi, length = nlines)
+        dr = (rfi - rin) / nlines
+        lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines-1)]
+        lines_widths = diff([lines_range; rfi + dr / 2])
     end
     return lines_range, lines_widths
 end
 
-function initialize_integrators(
-    radiative_transfer::RadiativeTransfer,
-    grid::Grid,
-    initial_conditions::InitialConditions;
-    atol = 1e-8,
-    rtol = 1e-3,
-    #save_path = nothing,
-)
-    lines_range, lines_widths = get_initial_radii_and_linewidths(
-        initial_conditions,
-        radiative_transfer.radiation.Rg,
-    )
-    #if isfile(save_path)
-    #    rm(save_path)
-    #end
-    integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-    for (i, (r0, linewidth)) in enumerate(zip(lines_range, lines_widths))
-        integrator = initialize_integrator(
-            radiative_transfer,
-            grid,
-            initial_conditions,
-            r0,
-            linewidth,
-            atol = atol,
-            rtol = rtol,
-            line_id = i,
-            #save_path = save_path,
+function get_initial_radii_and_linewidths(model)
+    nlines = getnlines(model.ic)
+    if nlines == "auto"
+        lines_range, lines_widths = compute_lines_range(model)
+    else
+        lines_range, lines_widths = get_initial_radii_and_linewidths(
+            model.ic,
+            model.rad.xray_luminosity,
+            model.bh.Rg,
         )
-        integrators[i] = integrator
     end
-    return integrators
+    return lines_range, lines_widths
 end
 
 function create_and_run_integrator(
@@ -244,42 +218,19 @@ function termination_condition(u, t, integrator)
     return out_of_grid_condition || failed_condition
 end
 
-function is_stalled(u, t, integrator)
-    return false
-    #min_length = 100
-    #if length(integrator.p.data[:vz]) <= min_length
-    #    return false
-    #end
-    #vz_std =
-    #    std(integrator.p.data[:vz][(end - min_length):end]) /
-    #    mean(integrator.p.data[:vz][(end - min_length):end])
-    #abs(vz_std) < 0.05
-end
-
-function stalling_affect!(integrator)
-    @warn "STALLING!"
-    flush(stdout)
-    integrator.u[2] += sign(integrator.u[4]) * 5e-2 * integrator.u[2]
-    integrator.u[1] += sign(integrator.u[3]) * 5e-2 * integrator.u[1]
-end
-
 function affect!(integrator)
-    if escaped(integrator)
-        #println("Line $(integrator.p.line_id) escaped!")
-        flush(stdout)
-        flush(stderr)
-        #println(" \U1F4A8")
-    elseif failed(integrator)
-        #println("Line $(integrator.p.line_id) failed!")
-        flush(stdout)
-        flush(stderr)
-        #println(" \U1F4A5")
-    else
-        #println("Line $(integrator.p.line_id) stalled!")
-        flush(stdout)
-        flush(stderr)
-        #println(" \U2753")
-    end
+    #if escaped(integrator)
+    #    #println("Line $(integrator.p.line_id) escaped!")
+    #    flush(stdout)
+    #    flush(stderr)
+    #    #println(" \U1F4A8")
+    #elseif failed(integrator)
+    #    #println("Line $(integrator.p.line_id) failed!")
+    #    #println(" \U1F4A5")
+    #else
+    #    #println("Line $(integrator.p.line_id) stalled!")
+    #    #println(" \U2753")
+    #end
     terminate!(integrator)
 end
 
@@ -460,14 +411,14 @@ end
 function get_dense_solution_from_integrator(integrator, n_timesteps = 10000)
     integration_time = unique(integrator.sol.t)
     tmin = integration_time[2]
-    tmax = integration_time[end - 1]
+    tmax = integration_time[end-1]
     if tmax <= tmin
         return [], [], [], [], [], []
     end
     t_range = 10 .^ range(log10(tmin), log10(tmax), length = n_timesteps)
     i = 1
     while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
-        t_range = t_range[1:(end - i)]
+        t_range = t_range[1:(end-i)]
         i += 1
     end
     if length(t_range) == 0
@@ -539,7 +490,7 @@ function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_lumin
     return lines_range, lines_widths
 end
 
-function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity, zx)
+function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]
     lines_widths = []
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
@@ -613,7 +564,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     lines_range = vcat(lines_range, additional_range)
     lines_widths = vcat(lines_widths, additional_widths)
     # discard last radius
-    lines_range = lines_range[1:(end - 1)]
+    lines_range = lines_range[1:(end-1)]
     return lines_range, lines_widths
 end
 
@@ -623,5 +574,4 @@ compute_lines_range(model) = compute_lines_range(
     model.ic.rfi,
     model.bh.Rg,
     model.rad.xray_luminosity,
-    0.0,
 )

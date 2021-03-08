@@ -3,22 +3,22 @@ using Test
 import Qwind.compute_radiation_acceleration
 import Qwind.compute_initial_acceleration
 import Qwind.residual!
-abstract type TestRadiation <: RadiativeTransfer end
-struct TestRadiation1 <: TestRadiation
-    bh::BlackHole
+abstract type TestRadiation{T} <: RadiativeTransfer{T} end
+struct TestRadiation1{T} <: TestRadiation{T}
+    bh::BlackHole{T}
 end
-struct TestRadiation2 <: TestRadiation
-    bh::BlackHole
+struct TestRadiation2{T} <: TestRadiation{T}
+    bh::BlackHole{T}
 end
 
 
 @testset "Get initial radii linewidths" begin
     # linear
-    ic = UniformIC(0, 100, 25, 2, 1e8, 1e6 / C, false)
+    ic = UniformIC(0.0, 100.0, 25, 2.0, 1e8, 1e6 / C, false)
     bh = BlackHole(1e8 *M_SUN, 0.5, 0.0)
     Rg = bh.Rg
     xray_lumin = 1e40
-    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg, xray_lumin)
+    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, xray_lumin, Rg)
     @test length(lines_range) == 25
     @test length(lines_widths) == 25
     @test lines_widths == 4 .* ones(25)
@@ -27,8 +27,8 @@ end
     @test lines_range[end-1] == 94
     @test lines_range[end] == 98
     # log 
-    ic = UniformIC(1, 1e4, 4, 2, 1e8, 1e6 / C, true)
-    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, Rg, xray_lumin)
+    ic = UniformIC(1.0, 1e4, 4, 2.0, 1e8, 1e6 / C, true)
+    lines_range, lines_widths = get_initial_radii_and_linewidths(ic, xray_lumin, Rg)
     @test diff(log10.(lines_widths)) ≈ ones(3)
     @test lines_range[1] == 5.5
     @test lines_range[2] == 55.0
@@ -84,7 +84,7 @@ end
 
 @testset "Test Free fall" begin
     ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
-    grid = Rectangular(-5, Inf, -5, Inf)
+    grid = Rectangular(-5.0, 1e10, -5.0, 1e10)
     radiation = TestRadiation1(earth)
     integrator = initialize_integrator(
         radiation,
@@ -109,7 +109,7 @@ end
 
 @testset "Test Free fall + constant radiation" begin
     ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
-    grid = Rectangular(-5, Inf, -5, Inf)
+    grid = Rectangular(-5.0, 1e10, -5.0, 1e10)
     radiation = TestRadiation2(earth)
     integrator = initialize_integrator(
         radiation,
