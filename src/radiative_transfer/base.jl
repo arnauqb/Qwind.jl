@@ -15,6 +15,7 @@ function radiation_force_integrand!(
     r,
     z,
 )
+    delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     nt = disk_nt_rel_factors(radiation, rd)
     tauuv = compute_uv_tau(
         interp_grid,
@@ -25,10 +26,11 @@ function radiation_force_integrand!(
         z,
         Rg,
     )
+    # deproject tauuv
+    tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
     r_projection = (r - rd * cos(phid))
-    delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
-    common_projection = 1.0 / (rd^2 * delta_sq^2)
+    common_projection = 1.0 / (rd^2 * delta^4)
     v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z]
 end
 
