@@ -5,24 +5,32 @@ Radiation force integrand for the RE model.
 """
 function radiation_force_integrand!(
     radiative_transfer::RadiativeTransfer,
+    radiation::Radiation,
+    interp_grid::InterpolationGrid,
     integration_type::IntegrationFromCenter,
+    Rg,
     v,
     rd,
     phid,
     r,
     z,
 )
-    nt = disk_nt_rel_factors(radiative_transfer.radiation, rd)
+    delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
+    nt = disk_nt_rel_factors(radiation, rd)
     tauuv = compute_uv_tau(
-        radiative_transfer,
+        interp_grid,
+        interp_grid.iterator,
         rd,
+        0.0,
         r,
         z,
+        Rg,
     )
-    fuv, mdot = get_fuv_mdot(radiative_transfer.radiation, rd)
+    # deproject tauuv
+    tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
+    fuv, mdot = get_fuv_mdot(radiation, rd)
     r_projection = (r - rd * cos(phid))
-    delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
-    common_projection = 1.0 / (rd^2 * delta_sq^2)
+    common_projection = 1.0 / (rd^2 * delta^4)
     v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z]
 end
 
@@ -83,7 +91,10 @@ function integrate_radiation_force_integrand(
     integration_type = IntegrationFromCenter()
     f(x, v) = radiation_force_integrand!(
         radiative_transfer,
+        radiative_transfer.radiation,
+        radiative_transfer.density_interpolator.grid,
         integration_type,
+        radiative_transfer.radiation.Rg,
         v,
         x[1],
         x[2],

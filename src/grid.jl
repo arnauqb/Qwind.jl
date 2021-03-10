@@ -1,10 +1,10 @@
 export Rectangular, out_of_grid
 
-struct Rectangular <: Grid
-    r_min::Float64
-    r_max::Float64
-    z_min::Float64
-    z_max::Float64
+struct Rectangular{T} <: Grid{T}
+    r_min::T
+    r_max::T
+    z_min::T
+    z_max::T
 end
 
 function Rectangular(config)

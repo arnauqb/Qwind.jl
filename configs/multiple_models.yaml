@@ -1,7 +1,6 @@
 system:
   qwind_path: /cosma5/data/durham/covid19/arnau/qwind/Qwind.jl
   #qwind_path: /home/arnau/code/Qwind.jl
-  #qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
   n_cpus: 16
   partition: cosma
   account: durham
@@ -18,30 +17,32 @@ radiation:
   relativistic: true
   f_x: 0.15
   n_r: 1000
+  z_xray: 0.0
+
 
 radiative_transfer:
   mode: RegularGrid
   density_interpolator: 
-    type: WindInterpolator
+    type: WindInterpolator #"@vary grid VIGrid,WindInterpolator"
     vacuum_density: 1e2
     n_timesteps: 10000
-    nz: 50 #"@vary grid 50,100,500,1000"
+    nz: 1000 #"@vary grid 50,100,500,1000"
     nr: auto
 
 grid:
   # units of Rg
   r_min: 6.0
-  r_max: 10000
+  r_max: 10000.0
   z_min: 0.0
-  z_max: 10000
+  z_max: 10000.0
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  r_in: 6.1
-  r_fi: 1300
+  r_in: 50.0
+  r_fi: 1300.0
   n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
-  z_0: 0 # Rg
+  z_0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.5
@@ -50,6 +51,4 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  #save_path: "/home/arnau/code/Qwind.jl/runs/test_resolution"
-  #save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/rin_tests_interpol"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/Qwind.jl/runs/newphysics_50"
+  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/tests_rin50_500_noaverage"

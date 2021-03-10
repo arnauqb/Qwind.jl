@@ -3,13 +3,13 @@ import Qwind: create_and_run_integrator
 
 using YAML, Printf, ProgressMeter
 
-mutable struct Model
+mutable struct Model{T<:AbstractFloat}
     config::Dict
-    wind_grid::Grid
-    bh::BlackHole
-    rad::Radiation
-    rt::RadiativeTransfer
-    ic::InitialConditions
+    wind_grid::Grid{T}
+    bh::BlackHole{T}
+    rad::Radiation{T}
+    rt::RadiativeTransfer{T}
+    ic::InitialConditions{T}
 end
 
 function Model(config::Dict)
@@ -64,8 +64,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         iterations_dict[1] = Dict()
     end
     save_path = model.config[:integrator][:save_path]
-    lines_range, lines_widths =
-        get_initial_radii_and_linewidths(model.ic, model.bh.Rg, model.rad.xray_luminosity)
+    lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
         model,
         linewidth = lines_widths[i],
@@ -75,52 +74,42 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         line_id = i,
     )
     @info "Iterating streamlines..."
+    #integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = Int(ceil(length(lines_range) / nprocs())))
     integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
-    #integrators_future = Array{Future}(undef, length(lines_range))
-    #for (i, (r0, lw)) in enumerate(zip(lines_range, lines_widths))
-    #    integrators_future[i] =
-    #        #@spawnat (i % nprocs() + 1) create_and_run_integrator(
-    #        @spawn create_and_run_integrator(
-    #            model,
-    #            linewidth = lw,
-    #            r0 = r0,
-    #            atol = model.config[:integrator][:atol],
-    #            rtol = model.config[:integrator][:rtol],
-    #            line_id = i,
-    #        )
-    #end
-    #println("done!")
-    #integrators = Array{Sundials.IDAIntegrator}(undef, length(lines_range))
-    #@sync for i in 1:length(integrators_future)
-    #    @async integrators[i] = fetch(integrators_future[i])
-    #end
-    #integrators[:] .= fetch.(integrators_future)
+    #integrators = f.(1:length(lines_range))
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
-    flush(stdout)
-    save_wind(integrators, model, save_path, it_num)
+    flush()
+    wind_properties = save_wind(integrators, model, save_path, it_num)
     @info "Done"
-    flush(stdout)
+    flush()
+    @info "Wind properties"
+    @info "Mass loss fraction $(wind_properties["mass_loss_fraction"])"
+    flush()
     radiative_transfer = update_radiative_transfer(model.rt, integrators)
     update_model!(model, radiative_transfer)
+    @info "Done"
+    flush()
     iterations_dict[it_num + 1] = Dict()
     iterations_dict[it_num + 1]["radiative_transfer"] = model.rt
     return
 end
 
-function run!(model::Model, iterations_dict = nothing)
+function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing)
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
     save_path = model.config[:integrator][:save_path]
     @info "Saving results to $save_path"
-    flush(stdout)
+    flush()
     # iterations
-    n_iterations = model.config[:integrator][:n_iterations]
+    if n_iterations === nothing
+        n_iterations = model.config[:integrator][:n_iterations]
+    end
     iterations_dict[1] = Dict()
     iterations_dict[1]["radiative_transfer"] = model.rt
-    for it = 1:n_iterations
+    for it = start_it:(start_it+n_iterations-1)
         do_iteration!(model, iterations_dict, it_num = it)
     end
     return
@@ -136,7 +125,12 @@ function parse_variation(value)
             length = parse(Int, value_split[4]),
         )
     elseif value_split[1] == "grid"
-        return parse.(Float64, split(value_split[2], ","))
+        values = nothing
+        try
+            return parse.(Float64, split(value_split[2], ","))
+        catch
+            return split(value_split[2], ",")
+        end
     else
         error("Type of variation not supported")
     end
@@ -167,7 +161,7 @@ end
 
 function create_running_script(save_path; n_cpus, max_time, account, partition)
     text = """using Distributed, ClusterManagers
-    pids = addprocs_slurm($n_cpus,
+    pids = addprocs_slurm($(n_cpus-1),
                           topology=:master_worker,
                           p=\"$partition\",
                           A=\"$account\",
@@ -210,7 +204,7 @@ function create_models_folders(config::Dict)
         i += 1
     end
     @info "Saving results to $save_folder"
-    flush(stdout)
+    flush()
     mkpath(save_folder)
     configs = parse_configs(config)
     model_dict = Dict()

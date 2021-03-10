@@ -31,7 +31,7 @@ function get_intersection_with_grid(r, z, r_range, z_range, ri, rf, zi, zf; from
         lambda_z = get_time_to_intersection(z_range[end], zi, zf)
     end
     if from_outside
-        if lambda_r > lambda_z 
+        if lambda_r > lambda_z
             direction = "r"
             lambda = lambda_r
         else
@@ -41,7 +41,7 @@ function get_intersection_with_grid(r, z, r_range, z_range, ri, rf, zi, zf; from
         #lambda = max(lambda_r, lambda_z)
     else
         #lambda = min(lambda_r, lambda_z)
-        if lambda_r < lambda_z 
+        if lambda_r < lambda_z
             direction = "r"
             lambda = lambda_r
         else
@@ -61,13 +61,13 @@ function get_intersection_with_grid(r, z, r_range, z_range, ri, rf, zi, zf; from
     return r, z
 end
 
-mutable struct GridIterator <: CellIterator
-    r_range::Vector{Float64}
-    z_range::Vector{Float64}
-    ri::Float64
-    zi::Float64
-    rf::Float64
-    zf::Float64
+mutable struct GridIterator{T} <: CellIterator{T}
+    r_range::Vector{T}
+    z_range::Vector{T}
+    ri::T
+    zi::T
+    rf::T
+    zf::T
     direction_r::Int
     direction_z::Int
     current_r_idx::Int
@@ -75,9 +75,22 @@ mutable struct GridIterator <: CellIterator
     intersection::Vector{Float64}
     finished::Bool
     function GridIterator(r_range, z_range)
-        r_range = round.(r_range, digits=6)
-        z_range = round.(z_range, digits=6)
-        new(r_range, z_range, 0.0, 0.0, 0.0, 0.0, 1, 1, 1, 1, [0.0, 0.0], false)
+        r_range = round.(r_range, digits = 6)
+        z_range = round.(z_range, digits = 6)
+        new{typeof(r_range[1])}(
+            r_range,
+            z_range,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1,
+            1,
+            1,
+            1,
+            [0.0, 0.0],
+            false,
+        )
     end
 end
 
@@ -279,15 +292,15 @@ function ionization_cell_xi_kernel(
 end
 
 function compute_xray_tau_cell(
-    intersection_size,
-    distance_from_source,
-    cell_density,
-    taux0,
-    xray_luminosity,
-    Rg;
+    intersection_size::T,
+    distance_from_source::T,
+    cell_density::T,
+    taux0::T,
+    xray_luminosity::T,
+    Rg::T;
     atol = 0,
     rtol = 1e-2,
-)
+) where {T<:AbstractFloat}
     f(t) = ionization_cell_xi_kernel(
         xray_luminosity,
         cell_density,
@@ -315,50 +328,40 @@ function compute_xray_tau_cell(
     end
 end
 
-function get_density(density_interpolator::Union{Nothing,DensityInterpolator}, point)
-    return density_interpolator.interpolator(point[1], point[2])
+function get_density(grid::InterpolationGrid, iterator::GridIterator)
+    return grid.grid[iterator.current_r_idx, iterator.current_z_idx]
 end
 
-function get_density(
-    density_interpolator::Union{Nothing,DensityInterpolator},
-    iterator::GridIterator,
-)
-    return density_interpolator.grid.grid[iterator.current_r_idx, iterator.current_z_idx]
-end
-
-function dist(p1, p2, Rg)
+function dist(p1::Vector{Float64}, p2::Vector{Float64}, Rg::Float64)
     return sqrt((p1[1] - p2[1])^2 + (p1[2] - p2[2])^2) * Rg
 end
 
 function compute_xray_tau(
-    density_interpolator::DensityInterpolator,
-    ri,
-    zi,
-    rf,
-    zf,
-    xray_luminosity,
-    Rg,
-)
-    if density_interpolator.grid.grid === nothing
+    grid::InterpolationGrid{T},
+    iterator::GridIterator{T},
+    ri::T,
+    zi::T,
+    rf::T,
+    zf::T,
+    xray_luminosity::T,
+    Rg::T,
+) where {T<:AbstractFloat}
+    if grid.grid === nothing
         return 0.0
     end
-    iterator = density_interpolator.grid.iterator
+    #iterator = grid.iterator
     set_iterator!(iterator, ri, zi, rf, zf)
     initial_point = [ri, zi]
     previous_point = copy(iterator.intersection)
-    ret = 0
+    ret = 0.0
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
-        #cell_density = get_density(density_interpolator, iterator)
-        cell_density = get_density(density_interpolator, iterator.intersection)
-        #println("##########")
-        #println("cell_density $cell_density")
+        cell_density = get_density(grid, iterator)
+        #cell_density = get_density(grid, iterator.intersection)
         distance_from_source = dist(initial_point, iterator.intersection, Rg)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
-        #println("previous $previous_point")
-        #println("intersect $(iterator.intersection)")
         ret = compute_xray_tau_cell(
             intersection_size,
             distance_from_source,
@@ -374,25 +377,41 @@ function compute_xray_tau(
     return ret
 end
 
-compute_uv_tau_cell(intersection_size, cell_density) =
+function compute_xray_tau(grid::InterpolationGrid, ri, zi, rf, zf, xray_luminosity, Rg)
+    compute_xray_tau(
+        grid::InterpolationGrid,
+        grid.iterator,
+        ri,
+        zi,
+        rf,
+        zf,
+        xray_luminosity,
+        Rg,
+    )
+end
+
+compute_uv_tau_cell(intersection_size, cell_density)::Float64 =
     intersection_size * cell_density * SIGMA_T
 
-function compute_uv_tau(density_interpolator::DensityInterpolator, ri, zi, rf, zf, Rg)
-    if density_interpolator.grid.grid === nothing
+function compute_uv_tau(grid::InterpolationGrid, iterator::CellIterator, ri, zi, rf, zf, Rg)
+    if grid.grid === nothing
         return 0.0
     end
-    iterator = density_interpolator.grid.iterator
+    #iterator = grid.iterator
     set_iterator!(iterator, ri, zi, rf, zf)
     previous_point = copy(iterator.intersection)
-    ret = 0
+    ret = 0.0
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
-        #cell_density = get_density(density_interpolator, iterator.intersection)
-        cell_density = get_density(density_interpolator, iterator)
+        #cell_density = get_density(grid, iterator.intersection)
+        cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection, Rg)
         ret += compute_uv_tau_cell(intersection_size, cell_density)
     end
     return ret
 end
+
+compute_uv_tau(grid::InterpolationGrid, ri, zi, rf, zf, Rg) =
+    compute_uv_tau(grid::InterpolationGrid, grid.iterator, ri, zi, rf, zf, Rg)

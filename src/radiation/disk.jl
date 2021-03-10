@@ -152,7 +152,7 @@ end
 
 function uv_fraction(bh::BlackHole, r)
     if r <= bh.isco
-        return 0
+        return 0.0
     end
     temperature = disk_temperature(bh, r)
     bb = BlackBody(temperature)
