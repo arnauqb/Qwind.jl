@@ -1,31 +1,7 @@
 using CSV, DataFrames, YAML, HDF5
 export save_integrator, save_integrators, save_wind
 
-
-#function save_integrator(data::Dict, save_path)
-#    if save_path === nothing
-#        return
-#    end
-#    append = false
-#    if isfile(save_path)
-#        ret = CSV.read(save_path, DataFrame)
-#        append = true
-#    end
-#    df = DataFrame()
-#    #line_id = pop!(data, :line_id)
-#    #df[!, :line_id] = line_id * ones(Int64, length(data[:r]))
-#    for key in keys(data)
-#        df[!, key] = data[key]
-#    end
-#    if append
-#        append!(ret, df)
-#    else
-#        ret = df
-#    end
-#    CSV.write(save_path, ret)
-#end
-
-function create_integrators_df(integrators)
+function create_integrators_df(integrators, Rg)
     df = DataFrame()
     for integrator in integrators
         df2 = DataFrame()
@@ -35,16 +11,19 @@ function create_integrators_df(integrators)
         for key in keys(data)
             df2[!, key] = data[key]
         end
+        # add integrator momentum
+        integrator_momentum = compute_integrator_momentum(integrator, Rg)
+        df2[!, "momentum"] = integrator_momentum
         append!(df, df2)
     end
     return df
 end
 
-function save_integrators(integrators, save_path)
+function save_integrators(integrators, save_path, Rg)
     if save_path === nothing
         return
     end
-    df = create_integrators_df(integrators)
+    df = create_integrators_df(integrators, Rg)
     CSV.write(save_path, df)
 end
 
@@ -59,6 +38,16 @@ function compute_integrator_mdot(integrator, Rg)
         return 0.
     end
 end
+
+function compute_integrator_momentum(integrator, Rg)
+    n0 = integrator.p.n0
+    v0 = integrator.p.v0
+    lw = integrator.p.lwnorm * integrator.p.r0
+    mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P
+    vt = sqrt.(integrator.p.data[:vr] .^ 2 + integrator.p.data[:vz] .^ 2) * C
+    return mw * vt
+end
+
 
 function compute_kinetic_luminosity(integrator, Rg)
     if !escaped(integrator)
@@ -133,7 +122,7 @@ function save_wind(integrators, model, save_path, it_num)
     save_hdf5(integrators, model, hdf5_save_path, it_num)
     lines_save_path = iteration_save_path * "/streamlines.csv"
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
-    save_integrators(integrators, lines_save_path)
+    save_integrators(integrators, lines_save_path, model.bh.Rg)
     properties = save_wind_properties(integrators, properties_save_path, model.bh)
     return properties
 end
