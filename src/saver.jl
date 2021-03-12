@@ -130,17 +130,17 @@ end
 
 function save_hdf5(integrators, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
-    grid = model.rt.density_interpolator.grid
+    density_grid = model.rt.interpolator.density_grid
     bh = model.bh
     h5open(hdf5_save_path,isfile(hdf5_save_path) ? "r+" : "w") do file
         g = create_group(file, iteration)
         dg = create_group(g, "density_grid")
-        dg["r"] = grid.r_range
-        dg["z"] = grid.z_range
-        if grid.grid === nothing
-            grid_to_save = zeros((length(grid.r_range), length(grid.z_range)))
+        dg["r"] = density_grid.r_range
+        dg["z"] = density_grid.z_range
+        if density_grid.grid === nothing
+            grid_to_save = zeros((length(density_grid.r_range), length(density_grid.z_range)))
         else
-            grid_to_save = grid.grid
+            grid_to_save = density_grid.grid
         end
         dg["grid"] = grid_to_save
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)

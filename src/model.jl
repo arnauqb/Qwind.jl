@@ -74,7 +74,6 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         line_id = i,
     )
     @info "Iterating streamlines..."
-    #integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = Int(ceil(length(lines_range) / nprocs())))
     integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
     #integrators = f.(1:length(lines_range))
     iterations_dict[it_num]["integrators"] = integrators

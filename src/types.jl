@@ -4,11 +4,10 @@ export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp
 
 abstract type Radiation{T<:AbstractFloat} end
 abstract type RadiativeTransfer{T<:AbstractFloat} end
-abstract type DensityInterpolator{T<:AbstractFloat} end
-abstract type GridInterpolator{T} <: DensityInterpolator{T} end
-abstract type NNInterpolator{T} <: DensityInterpolator{T} end
+abstract type Interpolator{T<:AbstractFloat} end
 abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
+abstract type InterpolationGrid{T<:AbstractFloat} end
 
 # Disk integration modes
 abstract type IntegrationType end

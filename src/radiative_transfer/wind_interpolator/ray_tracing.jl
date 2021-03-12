@@ -100,6 +100,7 @@ function GridIterator(r_range, z_range, ri, zi, rf, zf)
     return gi
 end
 
+
 function corner_sign(xcorner, ycorner, x1, y1, x2, y2)
     return ((y2 - y1) * xcorner + (x1 - x2) * ycorner + (x2 * y1 - x1 * y2)) >= 0
 end
@@ -212,10 +213,10 @@ previous_r(iterator::GridIterator) =
 previous_z(iterator::GridIterator) =
     iterator.z_range[iterator.current_z_idx - iterator.direction_z]
 
-function GridIterator(interpolator::DensityInterpolator, ri, zi, rf, zf)
+function GridIterator(interpolator::WindInterpolator, ri, zi, rf, zf)
     return GridIterator(
-        interpolator.grid.r_range,
-        interpolator.grid.z_range,
+        interpolator.density_grid.r_range,
+        interpolator.density_grid.z_range,
         ri,
         zi,
         rf,
@@ -271,6 +272,10 @@ function next_intersection!(iterator::GridIterator)
     iterator.intersection[1] = iterator.ri + lambda * (iterator.rf - iterator.ri)
     iterator.intersection[2] = iterator.zi + lambda * (iterator.zf - iterator.zi)
     return
+end
+
+function get_density(wi::WindInterpolator, iterator::GridIterator)
+    return wi.grid.grid[iterator.current_r_idx, iterator.current_z_idx]
 end
 
 function ionization_cell_xi_kernel(

@@ -1,5 +1,5 @@
 module QwindPlotting
-export plot_streamlines, plot_density_grid, plot_xray_grid, plot_wind_hull, plot_density_contour, plot_xray_contour
+export plot_streamlines, plot_density_grid, plot_xray_grid, plot_wind_hull, plot_density_contour, plot_xray_contour, plot_uv_grid
 #using PyPlot
 #LogNorm = matplotlib.colors.LogNorm
 #Normalize = matplotlib.colors.Normalize
@@ -71,40 +71,46 @@ end
 
 
 function plot_density_grid(
-    grid::InterpolationGrid;
+    grid::DensityGrid;
     fig = nothing,
     ax = nothing,
     cmap = "viridis",
     vmin = nothing,
     vmax = nothing,
-    xlim = nothing,
-    ylim = nothing,
+    rmin = 0,
+    rmax = 1000,
+    zmin = 1e-6,
+    zmax = 1000,
+    nr = 100,
+    nz = 101,
+    colorbar=true
 )
     if ax === nothing
         fig, ax = plt.subplots()
     end
+    r_range = range(rmin, rmax, length=nr)
+    z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
+    r_range_grid = r_range .* ones(nz)'
+    z_range_grid = z_range' .* ones(nr)
+    density_grid = get_density.(Ref(grid), r_range_grid, z_range_grid)
     cm = ax.pcolormesh(
-        grid.r_range,
-        grid.z_range,
-        grid.grid',
+        r_range,
+        z_range,
+        density_grid',
         norm = LogNorm(vmin = vmin, vmax = vmax),
         cmap = cmap,
         linewidth=0,
         rasterized=true
     )
-    cb = plt.colorbar(cm, ax = ax)
-    cb.set_label(L"Density [cm$^{-3}$]", rotation=-90, labelpad=15)
-    if xlim !== nothing
-        ax.set_xlim(xlim[1], xlim[2])
+    if colorbar
+        cb = plt.colorbar(cm, ax = ax)
+        cb.set_label(L"Density [cm$^{-3}$]", rotation=-90, labelpad=15)
     end
-    if ylim !== nothing
-        ax.set_ylim(ylim[1], ylim[2])
-    end
-    return fig, ax
+    return fig, ax, cm
 end
 
 function plot_density_contour(
-    grid::InterpolationGrid;
+    grid::DensityGrid;
     fig=nothing,
     ax=nothing,
     cmap = "viridis",
@@ -138,7 +144,7 @@ end
 
 
 function plot_xray_grid(
-    grid::InterpolationGrid,
+    grid::DensityGrid,
     xray_luminosity,
     Rg;
     fig = nothing,
@@ -154,7 +160,8 @@ function plot_xray_grid(
     zmax = 1000,
     nr = 100,
     nz = 101,
-    zx = 6.0
+    zx = 0.0,
+    colorbar=true
 )
     r_range = range(rmin, rmax, length=nr)
     z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
@@ -173,19 +180,21 @@ function plot_xray_grid(
         linewidth=0,
         rasterized=true
     )
-    cb = plt.colorbar(cm, ax = ax)
-    cb.set_label("X-Ray optical depth", rotation=-90, labelpad=15)
+    if colorbar
+        cb = plt.colorbar(cm, ax = ax)
+        cb.set_label("X-Ray optical depth", rotation=-90, labelpad=15)
+    end
     if xlim !== nothing
         ax.set_xlim(xlim[1], xlim[2])
     end
     if ylim !== nothing
         ax.set_ylim(ylim[1], ylim[2])
     end
-    return fig, ax
+    return fig, ax, cm
 end
 
 function plot_xray_contour(
-    grid::InterpolationGrid,
+    grid::DensityGrid,
     xray_luminosity,
     Rg;
     cmap = "viridis",
@@ -267,6 +276,56 @@ function plot_wind_hull(
         ax.set_ylim(ylim[1], ylim[2])
     end
     return fig, ax
+end
+
+function plot_uv_grid(
+    grid::DensityGrid,
+    rd,
+    Rg;
+    fig = nothing,
+    ax = nothing,
+    cmap = "viridis",
+    vmin = nothing,
+    vmax = nothing,
+    xlim = nothing,
+    ylim = nothing,
+    rmin = 0,
+    rmax = 1000,
+    zmin = 1e-6,
+    zmax = 1000,
+    nr = 100,
+    nz = 101,
+    zx = 0.0,
+    colorbar=true
+)
+    r_range = range(rmin, rmax, length=nr)
+    z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
+    r_range_grid = r_range .* ones(nz)'
+    z_range_grid = z_range' .* ones(nr)
+    ret = compute_uv_tau.(Ref(grid), rd, 0.0, r_range_grid, z_range_grid, Rg)
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
+    cm = ax.pcolormesh(
+        r_range,
+        z_range,
+        ret',
+        norm = LogNorm(vmin = vmin, vmax = vmax),
+        cmap = cmap,
+        linewidth=0,
+        rasterized=true
+    )
+    if colorbar
+        cb = plt.colorbar(cm, ax = ax)
+        cb.set_label("X-Ray optical depth", rotation=-90, labelpad=15)
+    end
+    if xlim !== nothing
+        ax.set_xlim(xlim[1], xlim[2])
+    end
+    if ylim !== nothing
+        ax.set_ylim(ylim[1], ylim[2])
+    end
+    return fig, ax, cm
 end
 
 

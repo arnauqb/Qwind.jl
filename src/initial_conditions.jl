@@ -90,7 +90,6 @@ getz0(ic::CAKIC, r0) = ic.z0
 getn0(ic::CAKIC, r0) = cak_density(ic.radiation, ic.bh, r0, ic.K)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
 
-const ALPHA = 0.6
 export cak_surface_mloss,
     cak_density, cak_normalized_mdot, cak_characteristic_mloss, cak_nozzle_function
 
@@ -101,11 +100,11 @@ function cak_nozzle_function(radiation::QsosedRadiation, bh::BlackHole, z, r_0)
     b = compute_thermal_velocity(25e3) * C
     M = bh.M
     R0 = r_0 * bh.Rg
-    numerator = (1 + x^2)^(1 / ALPHA)
+    numerator = (1 + x^2)^(1 / CAK_ALPHA)
     denom_1 = x / (1 + x^2)^(3 / 2)
     denom_2 = -SIGMA_E * SIGMA_SB * T^4 / (G * M * C) * R0^2
     denom_3 = -4 * b^2 * R0 * x / (G * M)
-    denom = (denom_1 + denom_2 + denom_3)^((1 - ALPHA) / ALPHA)
+    denom = (denom_1 + denom_2 + denom_3)^((1 - CAK_ALPHA) / CAK_ALPHA)
     return numerator / denom
 end
 
@@ -114,9 +113,9 @@ function cak_characteristic_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0
     b = compute_thermal_velocity(25e3) * C
     M = bh.M
     R0 = r_0 * bh.Rg
-    constant = ALPHA * (1 - ALPHA)^((1 - ALPHA) / ALPHA) / (b * SIGMA_E)
+    constant = CAK_ALPHA * (1 - CAK_ALPHA)^((1 - CAK_ALPHA) / CAK_ALPHA) / (b * SIGMA_E)
     term_1 = G * M / R0^2
-    term_2 = (SIGMA_E * SIGMA_SB * T^4 * K * R0^2 / (C * G * M))^(1 / ALPHA)
+    term_2 = (SIGMA_E * SIGMA_SB * T^4 * K * R0^2 / (C * G * M))^(1 / CAK_ALPHA)
     return constant * term_1 * term_2
 end
 
