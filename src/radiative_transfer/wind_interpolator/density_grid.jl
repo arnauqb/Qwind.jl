@@ -1,12 +1,5 @@
-using PyCall
 import ConcaveHull
-export DensityGrid, get_density, update_density_grid
-
-const scipy_interpolate = PyNULL()
-
-function __init__()
-    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
-end
+export DensityGrid, get_density, update_density_grid, interpolate_density
 
 struct DensityGrid{T} <: InterpolationGrid{T}
     r_range::Vector{T}
@@ -24,13 +17,9 @@ struct DensityGrid{T} <: InterpolationGrid{T}
             nz = length(z_range)
         end
         iterator = GridIterator(r_range, z_range)
-        if grid === nothing
-            interpolator = (r, z) -> 1e2
-        else
-            interpolator =
-                Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
-            interpolator = Interpolations.extrapolate(interpolator, 1e2)
-        end
+        interpolator =
+            Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
+        interpolator = Interpolations.extrapolate(interpolator, 1e2)
         return new{typeof(r_range[1])}(
             r_range,
             z_range,
@@ -52,6 +41,13 @@ function get_density(grid::DensityGrid, r, z)
     return grid.grid[ridx, zidx]
 end
 
+function interpolate_density(grid::DensityGrid, r, z)
+    if point_outside_grid(grid, r, z)
+        return 1e2
+    end
+    return grid.interpolator(r,z)
+end
+
 get_density(grid::DensityGrid, point::Vector{Float64}) =
     get_density(grid, point[1], point[2])
 
@@ -68,7 +64,7 @@ function get_density_interpolator(
     return linear_int
 end
 
-function construct_density_grid(nr, nz, vacuum_density=1e2)
+function construct_density_grid(nr, nz, vacuum_density = 1e2)
     r_range = zeros(2)
     z_range = zeros(2)
     density_grid = vacuum_density .* [[1.0, 1.0] [1.0, 1.0]]
@@ -84,9 +80,14 @@ function construct_density_grid(
     hull::ConcaveHull.Hull;
     nr = "auto",
     nz = 50,
+    log=true
 )
+    @info "Constructing density interpolator..."
     interpolator = get_density_interpolator(r, z, n)
-    r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz)
+    @info "Done"
+    @info "Filling density grid..."
+    flush()
+    r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log=log)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
     density_grid = 1e2 .* ones((length(r_range), length(z_range)))
@@ -104,37 +105,18 @@ function construct_density_grid(
     density_grid = [density_grid[:, 1] density_grid]
     pushfirst!(z_range, 0.0)
     grid = DensityGrid(r_range, z_range, density_grid, nr, nz)
+    @info "Done"
     return grid
 end
 
-function get_spatial_grid(
+function update_density_grid(
+    old_grid::DensityGrid,
+    hull::ConcaveHull.Hull,
     r::Vector{Float64},
     z::Vector{Float64},
+    n::Vector{Float64},
     r0s::Vector{Float64},
-    nr = "auto",
-    nz = 50,
 )
-    r_min = max(6.0, minimum(r))
-    z_min = max(minimum(z), 1e-6)
-    r_max = min(1e4, maximum(r))
-    z_max = min(1e4, maximum(z))
-    if nr == "auto"
-        r_range = r0s
-        additional_r = collect(range(r_range[end], r_max, step = 100)[2:end])
-        r_range = vcat(r_range, additional_r)
-    else
-        r_range = 10 .^ range(log10(r_min), log10(r_max), length = nr)
-    end
-    z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
-    r_range = round.(r_range, digits = 7)
-    z_range = round.(z_range, digits = 7)
-    points = hcat([[r, z] for r in r_range for z in z_range]...)
-    return r_range, z_range
-end
-
-function update_density_grid(old_grid::DensityGrid, hull::ConcaveHull.Hull, integrators)
-    r0s = [integ.p.r0 for integ in integrators]
-    r, z, n = reduce_integrators(integrators, n_timesteps = 1000)
     r_range, z_range = get_spatial_grid(r, z, r0s, old_grid.nr, old_grid.nz)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)

@@ -25,6 +25,7 @@ include("radiative_transfer/risaliti_elvis.jl")
 # wind interpolation
 include("radiative_transfer/wind_interpolator/base.jl")
 include("radiative_transfer/wind_interpolator/grids.jl")
+include("radiative_transfer/wind_interpolator/integrators_interpolator.jl")
 include("radiative_transfer/wind_interpolator/wind_hull.jl")
 include("radiative_transfer/wind_interpolator/density_grid.jl")
 include("radiative_transfer/wind_interpolator/velocity_grid.jl")

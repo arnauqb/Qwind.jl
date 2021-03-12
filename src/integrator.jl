@@ -494,7 +494,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     z_range = [0.0, 1.0]
     density_grid = zeros((length(r_range), length(z_range)))
     density_grid[:, 1] .= getn0.(Ref(ic), r_range)
-    interp_grid = InterpolationGrid(r_range, z_range, density_grid)
+    interp_grid = DensityGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
     fx(delta_r, rc, delta_tau, tau_x) =
