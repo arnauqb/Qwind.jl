@@ -127,22 +127,38 @@ function save_wind(integrators, model, save_path, it_num)
     return properties
 end
 
+function save_density_grid!(density_grid::DensityGrid, group)
+    dg = create_group(group, "density_grid")
+    dg["r"] = density_grid.r_range
+    dg["z"] = density_grid.z_range
+    if density_grid.grid === nothing
+        grid_to_save = zeros((length(density_grid.r_range), length(density_grid.z_range)))
+    else
+        grid_to_save = density_grid.grid
+    end
+    dg["grid"] = grid_to_save
+    return
+end
+
+function save_velocity_grid!(velocity_grid::VelocityGrid, group)
+    dg = create_group(group, "velocity_grid")
+    dg["r"] = velocity_grid.r_range
+    dg["z"] = velocity_grid.z_range
+    dg["vr_grid"] = velocity_grid.vr_grid
+    dg["vz_grid"] = velocity_grid.vz_grid
+    return
+end
+
 
 function save_hdf5(integrators, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
     density_grid = model.rt.interpolator.density_grid
+    velocity_grid = model.rt.interpolator.velocity_grid
     bh = model.bh
     h5open(hdf5_save_path,isfile(hdf5_save_path) ? "r+" : "w") do file
         g = create_group(file, iteration)
-        dg = create_group(g, "density_grid")
-        dg["r"] = density_grid.r_range
-        dg["z"] = density_grid.z_range
-        if density_grid.grid === nothing
-            grid_to_save = zeros((length(density_grid.r_range), length(density_grid.z_range)))
-        else
-            grid_to_save = density_grid.grid
-        end
-        dg["grid"] = grid_to_save
+        save_density_grid!(density_grid, g)
+        save_velocity_grid!(velocity_grid, g)
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)
         g["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
         macc = compute_mass_accretion_rate(bh)
