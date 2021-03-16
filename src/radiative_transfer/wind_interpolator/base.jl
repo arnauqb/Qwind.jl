@@ -39,7 +39,6 @@ function WindInterpolator(
         flush()
         @info "Constructing interpolation grid..."
         flush()
-        #r, z, vr, vz, n = reduce_integrators(integrators, n_timesteps = 1000)
         r, z, vr, vz, n = reduce_integrators(integrators, n_timesteps = 1000)
         density_grid = construct_density_grid(r, z, n, r0, hull, nr = nr, nz = nz)
         velocity_grid = construct_velocity_grid(r, z, vr, vz, r0, hull, nr = nr, nz = nz)

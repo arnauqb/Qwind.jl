@@ -191,11 +191,13 @@ function escaped(integrator::Sundials.IDAIntegrator)
 end
 
 function failed(integrator::Sundials.IDAIntegrator)
-    sign_changes1 = countsignchanges(integrator.p.data[:vz])
+    #sign_changes1 = countsignchanges(integrator.p.data[:vz])
+    intersects = self_intersects(integrator)
     #sign_changes2 = countsignchanges(diff(integrator.p.data[:vz]), 1e-4)
     integrator.u[1] < 0.0 ||
         integrator.u[2] < integrator.p.grid.z_min ||
-        (sign_changes1 >= 2)
+        intersects
+        #(sign_changes1 >= 2)
     #(sign_changes2 >= 2)
 end
 

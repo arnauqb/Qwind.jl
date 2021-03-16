@@ -23,6 +23,11 @@ using PyPlot
 LogNorm = matplotlib.colors.LogNorm
 Normalize = matplotlib.colors.Normalize
 
+fig, ax = plt.subplots()
+for integ in iterations_dict[2]["integrators"]
+    ax.plot(integ.p.data[:r], integ.p.data[:z], "o-")
+end
+
 function compute_momentum(r, z, vr, vz, n, Rg)
     θ = π / 2 - atan(z / r)
     sinθ = sin(θ)

@@ -1,6 +1,6 @@
-import Base: intersect!
-using LinearAlgebra
-export Segment, intersect, reduce_integrators
+import Base: intersect!, intersect
+using LinearAlgebra, ProgressMeter
+export Segment, intersect, reduce_integrators, self_intersects
 
 struct Segment{T<:AbstractFloat}
     p1x::T
@@ -44,7 +44,7 @@ function intersect!(s1::Segment, s2::Segment, A::Matrix{Float64}, b::Vector{Floa
 end
 
 
-function intersect!(
+function intersect(
     r1::Array{T},
     z1::Array{T},
     r2::Array{T},
@@ -65,14 +65,30 @@ function intersect!(
     return length(r1)
 end
 
-intersect!(
+intersect(
     integrator1::DenseIntegrator,
     integrator2::DenseIntegrator,
-) = intersect!(integrator1.r, integrator1.z, integrator2.r, integrator2.z)
+) = intersect(integrator1.r, integrator1.z, integrator2.r, integrator2.z)
+
+function self_intersects(integrator::Sundials.IDAIntegrator)
+    if length(integrator.p.data[:r]) < 2
+        return false
+    end
+    r1 = integrator.p.data[:r][1:end-1]
+    z1 = integrator.p.data[:z][1:end-1]
+    r2 = integrator.p.data[:r][end-1:end]
+    z2 = integrator.p.data[:z][end-1:end]
+    index = intersect(r1, z1, r2, z2)
+    if index < length(r1)
+        return true
+    else
+        return false
+    end
+end
 
 function reduce_integrators(
     integrators::Vector{<:Sundials.IDAIntegrator};
-    n_timesteps = 10000,
+    n_timesteps = 1000,
     log = true,
 )
     rs = Float64[]
@@ -83,12 +99,9 @@ function reduce_integrators(
     @info "Filtering intersections..."
     flush()
     dense_integrators = DenseIntegrator.(integrators, n_timesteps = n_timesteps, log = log)
-    for (i, integrator1) in enumerate(dense_integrators[1:end-1])
-        println("i $i")
-        f(integ2) = intersect!(integrator1, integ2)
-        indices = pmap(f, dense_integrators[i+1:end])
-        index = minimum(indices)
-        #end
+    @showprogress for (i, integrator1) in enumerate(dense_integrators[1:end-1])
+        f(integ2) = intersect(integrator1, integ2)
+        index = minimum(pmap(f, dense_integrators[i+1:end]))
         rs = vcat(rs, integrator1.r[1:index])
         zs = vcat(zs, integrator1.z[1:index])
         vrs = vcat(vrs, integrator1.vr[1:index])
