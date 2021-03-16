@@ -1,14 +1,14 @@
 using Qwind, Test
 
-@testset "Reduce line" begin
-    r = [1, 2, 3, 4, 5]
-    z = [1, 2, 3, 4, 3]
-    n = [10, 20, 30, 40, 50]
-    rr, zz, nn = Qwind.reduce_line(r, z, n)
-    @test rr == r[1:(end - 1)]
-    @test zz == z[1:(end - 1)]
-    @test nn == n[1:(end - 1)]
-end
+#@testset "Reduce line" begin
+#    r = [1, 2, 3, 4, 5]
+#    z = [1, 2, 3, 4, 3]
+#    n = [10, 20, 30, 40, 50]
+#    rr, zz, nn = Qwind.reduce_line(r, z, n)
+#    @test rr == r[1:(end - 1)]
+#    @test zz == z[1:(end - 1)]
+#    @test nn == n[1:(end - 1)]
+#end
 
 @testset "Get  spatial grid" begin
     r = [1.0, 2.0, 30.0, 4.0, 105.0]
@@ -80,7 +80,7 @@ end
     r0_range = collect(range(0.1, 100.0, step = 10));
     func(r, z) = 1e12 * exp(-z / 100) / r;
     n_range = func.(r_range, z_range);
-    grid = Qwind.construct_interpolation_grid(
+    grid = Qwind.construct_density_grid(
         r_range,
         z_range,
         n_range,
