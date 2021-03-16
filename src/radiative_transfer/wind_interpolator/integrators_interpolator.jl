@@ -43,11 +43,12 @@ struct DenseLine{T<:AbstractFloat}
     zmin::T
     zmax::T
     interpolator::Any
-    function DenseLine(integrator::Sundials.IDAIntegrator; n_timesteps = 10000, log=true)
-        r, z, vr, vz, n = reduce_line(integrator, n_timesteps = n_timesteps, log=log)
-        interpolator = Interpolations.interpolate((z,), r, Gridded(Linear()))
-        return new{typeof(r[1])}(r, z, vr, vz, n, minimum(z), maximum(z), interpolator)
-    end
+end
+
+function DenseLine(integrator::Sundials.IDAIntegrator; n_timesteps = 10000, log = true)
+    r, z, vr, vz, n = reduce_line(integrator, n_timesteps = n_timesteps, log = log)
+    interpolator = Interpolations.interpolate((z,), r, Gridded(Linear()))
+    return DenseLine(r, z, vr, vz, n, minimum(z), maximum(z), interpolator)
 end
 
 function interpolate(line::DenseLine, z)
@@ -78,6 +79,38 @@ function find_intersection(integ1::DenseLine, integ2::DenseLine)
     return Inf
 end
 
+function reduce_integrators_individual(integrators; n_timesteps = 10000, log = true)
+    reduced_lines = DenseLine[]
+    dense_lines = DenseLine.(integrators, n_timesteps = n_timesteps, log = log)
+    for (i, line) in enumerate(dense_lines)
+        zint = Inf
+        for (j, line2) in enumerate(dense_lines)
+            if j <= i
+                continue
+            end
+            zint = min(zint, find_intersection(line, line2))
+        end
+        z_idx = searchsorted_nearest(line.z, zint)
+        reduced_line = DenseLine(
+            line.r[1:z_idx],
+            line.z[1:z_idx],
+            line.vr[1:z_idx],
+            line.vz[1:z_idx],
+            line.n[1:z_idx],
+            0.0,
+            0.0,
+            nothing,
+        )
+        push!(reduced_lines, reduced_line)
+        #rs = vcat(rs, line.r[1:z_idx])
+        #zs = vcat(zs, line.z[1:z_idx])
+        #vrs = vcat(vrs, line.vr[1:z_idx])
+        #vzs = vcat(vzs, line.vz[1:z_idx])
+        #ns = vcat(ns, line.n[1:z_idx])
+    end
+    return reduced_lines
+end
+
 function reduce_integrators(integrators; n_timesteps = 10000, log = true)
     rs = Float64[]
     zs = Float64[]
@@ -86,7 +119,7 @@ function reduce_integrators(integrators; n_timesteps = 10000, log = true)
     ns = Float64[]
     @info "Reducing integrators..."
     flush()
-    dense_lines = DenseLine.(integrators, n_timesteps=n_timesteps, log=log)
+    dense_lines = DenseLine.(integrators, n_timesteps = n_timesteps, log = log)
     for (i, line) in enumerate(dense_lines)
         zint = Inf
         for (j, line2) in enumerate(dense_lines)
@@ -106,6 +139,7 @@ function reduce_integrators(integrators; n_timesteps = 10000, log = true)
     flush()
     return rs, zs, vrs, vzs, ns
 end
+
 
 function reduce_integrators_old(integrators; n_timesteps = 10000, log = true)
     rs = Float64[]

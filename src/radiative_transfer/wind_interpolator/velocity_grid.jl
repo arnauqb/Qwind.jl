@@ -58,13 +58,21 @@ function get_velocity_interpolators(
     r::Vector{Float64},
     z::Vector{Float64},
     vr::Vector{Float64},
-    vz::Vector{Float64},
+    vz::Vector{Float64};
+    type = "linear"
 )
     r_log = log10.(r)
     z_log = log10.(z)
     points = hcat(r_log, z_log)
-    vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
-    vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
+    if type == "linear"
+        vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
+        vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
+    elseif type == "nn"
+        vr_int = scipy_interpolate.NearestNDInterpolator(points, vr)
+        vz_int = scipy_interpolate.NearestNDInterpolator(points, vz)
+    else
+        error("interpolation type $type not supported")
+    end
     return vr_int, vz_int
 end
 
@@ -85,12 +93,13 @@ function construct_velocity_grid(
     hull::ConcaveHull.Hull;
     nr = "auto",
     nz = 50,
-    log=true
+    log=true,
+    interpolation_type="linear"
 )
     r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log=log)
     @info "Constructing velocity interpolators..."
     flush()
-    vr_interp, vz_interp = get_velocity_interpolators(r, z, vr, vz)
+    vr_interp, vz_interp = get_velocity_interpolators(r, z, vr, vz, type=interpolation_type)
     @info "Done"
     @info "Filling velocity grids..."
     flush()

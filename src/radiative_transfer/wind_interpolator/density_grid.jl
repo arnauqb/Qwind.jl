@@ -54,14 +54,21 @@ get_density(grid::DensityGrid, point::Vector{Float64}) =
 function get_density_interpolator(
     r::Vector{Float64},
     z::Vector{Float64},
-    n::Vector{Float64},
+    n::Vector{Float64};
+    type = "linear"
 )
     r_log = log10.(r)
     z_log = log10.(z)
     log_n = log10.(n)
     points = hcat(r_log, z_log)
-    linear_int = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
-    return linear_int
+    if type == "linear"
+        interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
+    elseif type == "nn"
+        interp = scipy_interpolate.NearestNDInterpolator(points, log_n)
+    else
+        error("interpolation type $type not supported")
+    end
+    return interp 
 end
 
 function construct_density_grid(nr, nz, vacuum_density = 1e2)
@@ -71,7 +78,6 @@ function construct_density_grid(nr, nz, vacuum_density = 1e2)
     return DensityGrid(r_range, z_range, density_grid, nr, nz)
 end
 
-
 function construct_density_grid(
     r::Vector{Float64},
     z::Vector{Float64},
@@ -80,10 +86,11 @@ function construct_density_grid(
     hull::ConcaveHull.Hull;
     nr = "auto",
     nz = 50,
-    log=true
+    log=true,
+    interpolation_type = "linear",
 )
     @info "Constructing density interpolator..."
-    interpolator = get_density_interpolator(r, z, n)
+    interpolator = get_density_interpolator(r, z, n, type=interpolation_type)
     @info "Done"
     @info "Filling density grid..."
     flush()
