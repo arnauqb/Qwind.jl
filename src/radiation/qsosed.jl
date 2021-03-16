@@ -13,6 +13,8 @@ struct QsosedRadiation{T} <: Radiation{T}
     flux_correction::FluxCorrection
 end
 
+QsosedRadiation() = QsosedRadiation([0.0], [0.0], [0.0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Relativistic())
+
 function compute_ionization_parameter(radiation::QsosedRadiation, r, z, number_density, tau_x)
     d2 = (r^2 + (z - radiation.z_xray)^2) * radiation.Rg^2
     return max(radiation.xray_luminosity * exp(-tau_x) / (number_density * d2), 1e-20)

@@ -8,6 +8,7 @@ export BlackBody,
     spectral_band_fraction_frequency,
     radiance,
     disk_nt_rel_factors,
+    gravity_radius,
     disk_flux,
     disk_flux_norel,
     disk_temperature,
@@ -20,7 +21,7 @@ end
 
 kev_to_hz(energy) = energy / ERG_TO_KEV / H_PLANCK
 
-lambda_peak(T) = 0.2897771955 / T 
+lambda_peak(T) = 0.2897771955 / T
 nu_peak(T) = C / lambda_peak(T)
 nu_peak(bb::BlackBody) = nu_peak(bb.T)
 
@@ -42,7 +43,7 @@ keV / (s cm² keV sr)
 function spectral_radiance(bb::BlackBody, energy)
     frequency = kev_to_hz(energy)
     rad = spectral_radiance_frequency(bb, frequency)
-    return rad 
+    return rad
 end
 
 """
@@ -67,7 +68,7 @@ function spectral_band_radiance(bb::BlackBody, low, high)
     return integral
 end
 
-radiance(bb::BlackBody) = SIGMA_SB * bb.T^4 / π 
+radiance(bb::BlackBody) = SIGMA_SB * bb.T^4 / π
 
 """
 Computes the amount of black body radiance that is emitted in
@@ -122,6 +123,17 @@ end
 disk_nt_rel_factors(bh::BlackHole, r) = disk_nt_rel_factors(r, bh.spin, bh.isco)
 
 """
+Self-gravity radius as described by Laor & Netzer (1989).
+"""
+function gravity_radius(bh::BlackHole)
+    mass = (bh.M / (1e9 * M_SUN))
+    alpha = 0.1 # assumption
+    r_sg = 2150 * mass^(-2 / 9) * bh.mdot^(4 / 9) * alpha^(2 / 9)# / bh.Rg
+    return r_sg
+end
+
+
+"""
 Computes the disk flux of the accretion disc of black hole ``bh``
 at a given radius ``r`` (in Rg). See equation 5 of https://arxiv.org/pdf/2001.04720.pdf
 """
@@ -147,7 +159,7 @@ Computes the temperature of the disk at a radius r (in units of Rg).
 """
 function disk_temperature(bh::BlackHole, r)
     flux = disk_flux(bh, r)
-    return (flux / SIGMA_SB)^(1/4)
+    return (flux / SIGMA_SB)^(1 / 4)
 end
 
 function uv_fraction(bh::BlackHole, r)
@@ -168,7 +180,7 @@ Disk spectrum
 """
 function disk_spectral_band_radiance(bh::BlackHole, low, high)
     f(r) = spectral_band_radiance(BlackBody(disk_temperature(bh, r)), low, high) * r
-    integral, err = quadgk(f, bh.isco, 1600, rtol = 1e-8, atol=0)
+    integral, err = quadgk(f, bh.isco, 1600, rtol = 1e-8, atol = 0)
     return integral * 4π^2 * bh.Rg^2
 end
 

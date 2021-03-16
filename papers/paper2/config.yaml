@@ -20,7 +20,7 @@ radiation:
 
 radiative_transfer:
   mode: RegularGrid
-  density_interpolator: 
+  interpolator: 
     type: WindInterpolator 
     vacuum_density: 1e2
     n_timesteps: 10000
