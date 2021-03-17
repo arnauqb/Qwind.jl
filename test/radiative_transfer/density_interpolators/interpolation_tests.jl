@@ -47,14 +47,14 @@ end
     rr = collect(range(1.0, 100, length = 10))
     rr = vcat(rr, 100.0 .* ones(10))
     zz = collect(range(1.0, 100, length = 10))
-    zz = vcat(zz, range(1.0, 100, length=10))
-    #rr = vcat(rr, range(0, 100, length = 20))
-    #zz = vcat(zz, zeros(20))
+    zz = vcat(zz, range(1.0, 100, length = 10))
+    rr = vcat(rr, range(0, 100, length = 20))
+    zz = vcat(zz, zeros(20))
     @test length(rr) == length(zz)
-    r0s = collect(range(1.0, 100.0, length = 5))
+    r0s = collect(range(1.0, 100.0, length = 20))
     hull = Qwind.construct_wind_hull(rr, zz, r0s)
     @test Qwind.is_point_in_wind(hull, [0, 10]) == false
-    @test Qwind.is_point_in_wind(hull, [50, 0]) == false
+    @test Qwind.is_point_in_wind(hull, [50, 0]) == true
     @test Qwind.is_point_in_wind(hull, [99, 99]) == true
     @test Qwind.is_point_in_wind(hull, [99, 100]) == false
     @test Qwind.is_point_in_wind(hull, [99, 98]) == true
