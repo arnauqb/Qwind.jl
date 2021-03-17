@@ -86,7 +86,7 @@ end
 
 function reduce_integrators(
     integrators::Vector{<:Sundials.IDAIntegrator};
-    no_interpolation = false,
+    no_interpolation = true,
     n_timesteps = 1000,
     log = true,
 )
@@ -121,7 +121,7 @@ function reduce_integrators(
     return rs, zs, vrs, vzs, ns
 end
 
-function reduce_integrators_individual(integrators; no_interpolation=false, n_timesteps = 1000, log = true)
+function reduce_integrators_individual(integrators; no_interpolation=true, n_timesteps = 1000, log = true)
     reduced_integrators = DenseIntegrator[]
     if no_interpolation
         dense_integrators = DenseIntegrator.(integrators)

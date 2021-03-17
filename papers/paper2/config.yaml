@@ -46,7 +46,7 @@ initial_conditions:
   mu: 0.5
 
 integrator:
-  n_iterations: 1
+  n_iterations: 5
   atol: 1e-8
   rtol: 1e-3
   save_path: "./data"
