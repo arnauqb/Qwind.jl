@@ -5,6 +5,9 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     # this stores the maximum heights of each streamline, roughly
     z_max = zeros(length(r0))
     for (rp, zp) in zip(r, z)
+        if rp > r0[end] + 1
+            continue
+        end
         ridx = searchsorted_nearest(r0, rp)
         z_max[ridx] = max(z_max[ridx], zp)
     end
@@ -30,13 +33,12 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     points = [[points[i, 1], points[i, 2]] for i = 1:size(points)[1]]
     @info "Constructing wind hull..."
     flush()
-    #return points
     hull = ConcaveHull.concave_hull(points)
     if !hull.converged
         error("Hull did not converge!")
     end
     @info "Done"
-    return hull#, points
+    return hull #, points
 end
 
 function construct_wind_hull(integrators; hull_sigdigits=6)
