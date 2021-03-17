@@ -68,14 +68,14 @@ end
 intersect(integrator1::DenseIntegrator, integrator2::DenseIntegrator) =
     intersect(integrator1.r, integrator1.z, integrator2.r, integrator2.z)
 
-function self_intersects(integrator::Sundials.IDAIntegrator)
+function self_intersects(integrator::Sundials.IDAIntegrator, r, z)
     if length(integrator.p.data[:r]) < 2
         return false
     end
     r1 = integrator.p.data[:r][1:(end - 1)]
     z1 = integrator.p.data[:z][1:(end - 1)]
-    r2 = integrator.p.data[:r][(end - 1):end]
-    z2 = integrator.p.data[:z][(end - 1):end]
+    r2 = [integrator.p.data[:r][end], r] #integrator.p.data[:r][(end - 1):end]
+    z2 = [integrator.p.data[:z][end], z] #integrator.p.data[:z][(end - 1):end]
     index = intersect(r1, z1, r2, z2)
     if index < length(r1)
         return true
@@ -102,14 +102,19 @@ function reduce_integrators(
     else
         dense_integrators = DenseIntegrator.(integrators, n_timesteps, log = log)
     end
-    @showprogress for (i, integrator1) in enumerate(dense_integrators[1:(end - 1)])
-        f(integ2) = intersect(integrator1, integ2)
-        index = minimum(pmap(f, dense_integrators[(i + 1):end], batch_size=5))
-        rs = vcat(rs, integrator1.r[1:index])
-        zs = vcat(zs, integrator1.z[1:index])
-        vrs = vcat(vrs, integrator1.vr[1:index])
-        vzs = vcat(vzs, integrator1.vz[1:index])
-        ns = vcat(ns, integrator1.n[1:index])
+    @showprogress for (i, integrator) in enumerate(dense_integrators)
+        if i == length(dense_integrators)
+            # last one has absolute priority.
+            index = length(integrator.r)
+        else
+            f(integ2) = intersect(integrator, integ2)
+            index = minimum(pmap(f, dense_integrators[(i + 1):end], batch_size=5))
+        end
+        rs = vcat(rs, integrator.r[1:index])
+        zs = vcat(zs, integrator.z[1:index])
+        vrs = vcat(vrs, integrator.vr[1:index])
+        vzs = vcat(vzs, integrator.vz[1:index])
+        ns = vcat(ns, integrator.n[1:index])
     end
     @info "Done"
     flush()
@@ -123,10 +128,14 @@ function reduce_integrators_individual(integrators; no_interpolation=false, n_ti
     else
         dense_integrators = DenseIntegrator.(integrators, n_timesteps, log = log)
     end
-    for (i, integrator) in enumerate(dense_integrators[1:(end - 1)])
-        f(integ2) = intersect(integrator, integ2)
-        indices = pmap(f, dense_integrators[(i + 1):end])
-        index = minimum(indices)
+    @showprogress for (i, integrator) in enumerate(dense_integrators)
+        if i == length(dense_integrators)
+            # last one has absolute priority.
+            index = length(integrator.r)
+        else
+            f(integ2) = intersect(integrator, integ2)
+            index = minimum(pmap(f, dense_integrators[(i + 1):end], batch_size=5))
+        end
         reduced_integrator = DenseIntegrator(
             integrator.r[1:index],
             integrator.z[1:index],

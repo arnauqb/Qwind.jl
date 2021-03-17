@@ -8,6 +8,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
         ridx = searchsorted_nearest(r0, rp)
         z_max[ridx] = max(z_max[ridx], zp)
     end
+    ridx = searchsorted_nearest(r0, r[end])
     r0 = r0[z_max .> 0]
     z_max = z_max[z_max .> 0]
 
@@ -29,12 +30,13 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     points = [[points[i, 1], points[i, 2]] for i = 1:size(points)[1]]
     @info "Constructing wind hull..."
     flush()
+    #return points
     hull = ConcaveHull.concave_hull(points)
     if !hull.converged
         error("Hull did not converge!")
     end
     @info "Done"
-    return hull
+    return hull#, points
 end
 
 function construct_wind_hull(integrators; hull_sigdigits=6)

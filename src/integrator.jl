@@ -55,6 +55,7 @@ struct Parameters
     lwnorm::Float64
     grid::Grid
     data::Any
+    finished::Vector{Bool}
 end
 
 function compute_density(r, z, vr, vz, parameters::Parameters)
@@ -85,7 +86,7 @@ function initialize_integrator(
         save_positions = (false, false),
     )
     data = make_save_data(line_id)
-    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data)
+    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data, [false])
     if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
@@ -190,13 +191,9 @@ function escaped(integrator::Sundials.IDAIntegrator)
     compute_vt(integrator) > compute_escape_velocity(compute_d(integrator))
 end
 
-function failed(integrator::Sundials.IDAIntegrator)
-    #sign_changes1 = countsignchanges(integrator.p.data[:vz])
-    intersects = self_intersects(integrator)
-    #sign_changes2 = countsignchanges(diff(integrator.p.data[:vz]), 1e-4)
+function failed(integrator::Sundials.IDAIntegrator, r, z)
+    intersects = self_intersects(integrator, r, z)
     integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || intersects
-    #(sign_changes1 >= 2)
-    #(sign_changes2 >= 2)
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -213,15 +210,19 @@ function termination_condition(u, t, integrator)
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
     out_of_grid_condition = out_of_grid(integrator)
-    failed_condition = failed(integrator)
+    failed_condition = failed(integrator, r, z)
     return out_of_grid_condition || failed_condition
 end
 
 function affect!(integrator)
+    integrator.p.finished[1] = true
     terminate!(integrator)
 end
 
 function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
+    if integrator.p.finished[1]
+        return 0.0
+    end
     data = integrator.p.data
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
@@ -253,6 +254,9 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
 end
 
 function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, line_id)
+    if integrator.p.finished[1]
+        return 0.0
+    end
     data = integrator.p.data
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
@@ -504,9 +508,9 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         if tau_x < 50
             tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             if tau_x < 1
-                delta_tau = 0.01
-            elseif tau_x < 20
                 delta_tau = 0.1
+            elseif tau_x < 20
+                delta_tau = 0.5
             else
                 delta_tau = 1
             end
