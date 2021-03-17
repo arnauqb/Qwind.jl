@@ -15,6 +15,11 @@ model = Model(config_path);
 iterations_dict = Dict();
 run!(model, iterations_dict)
 
+Profile.clear()
+@profile do_iteration!(model, iterations_dict, it_num=2);
+
+pprof()
+
 vel_grid = model.rt.interpolator.velocity_grid;
 den_grid = model.rt.interpolator.density_grid;
 Rg = model.bh.Rg;

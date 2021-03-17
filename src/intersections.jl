@@ -50,7 +50,7 @@ function intersect(
     r2::Array{T},
     z2::Array{T},
 ) where {T<:AbstractFloat}
-    A = zeros((2,2))
+    A = zeros((2, 2))
     b = zeros(2)
     for i = 1:(length(r1) - 1)
         s1 = Segment(r1[i], z1[i], r1[i + 1], z1[i + 1])
@@ -65,19 +65,17 @@ function intersect(
     return length(r1)
 end
 
-intersect(
-    integrator1::DenseIntegrator,
-    integrator2::DenseIntegrator,
-) = intersect(integrator1.r, integrator1.z, integrator2.r, integrator2.z)
+intersect(integrator1::DenseIntegrator, integrator2::DenseIntegrator) =
+    intersect(integrator1.r, integrator1.z, integrator2.r, integrator2.z)
 
 function self_intersects(integrator::Sundials.IDAIntegrator)
     if length(integrator.p.data[:r]) < 2
         return false
     end
-    r1 = integrator.p.data[:r][1:end-1]
-    z1 = integrator.p.data[:z][1:end-1]
-    r2 = integrator.p.data[:r][end-1:end]
-    z2 = integrator.p.data[:z][end-1:end]
+    r1 = integrator.p.data[:r][1:(end - 1)]
+    z1 = integrator.p.data[:z][1:(end - 1)]
+    r2 = integrator.p.data[:r][(end - 1):end]
+    z2 = integrator.p.data[:z][(end - 1):end]
     index = intersect(r1, z1, r2, z2)
     if index < length(r1)
         return true
@@ -98,10 +96,11 @@ function reduce_integrators(
     ns = Float64[]
     @info "Filtering intersections..."
     flush()
-    dense_integrators = DenseIntegrator.(integrators, n_timesteps = n_timesteps, log = log)
-    @showprogress for (i, integrator1) in enumerate(dense_integrators[1:end-1])
+    #dense_integrators = DenseIntegrator.(integrators, n_timesteps = n_timesteps, log = log)
+    dense_integrators = DenseIntegrator.(integrators, 0.1)#n_timesteps = n_timesteps, log = log)
+    @showprogress for (i, integrator1) in enumerate(dense_integrators[1:(end - 1)])
         f(integ2) = intersect(integrator1, integ2)
-        index = minimum(pmap(f, dense_integrators[i+1:end]))
+        index = minimum(pmap(f, dense_integrators[(i + 1):end], batch_size=5))
         rs = vcat(rs, integrator1.r[1:index])
         zs = vcat(zs, integrator1.z[1:index])
         vrs = vcat(vrs, integrator1.vr[1:index])
@@ -111,4 +110,23 @@ function reduce_integrators(
     @info "Done"
     flush()
     return rs, zs, vrs, vzs, ns
+end
+
+function reduce_integrators_individual(integrators; n_timesteps = 1000, log = true)
+    reduced_integrators = DenseIntegrator[]
+    dense_integrators = DenseIntegrator.(integrators, n_timesteps = n_timesteps, log = log)
+    for (i, integrator) in enumerate(dense_integrators[1:(end - 1)])
+        f(integ2) = intersect(integrator, integ2)
+        indices = pmap(f, dense_integrators[(i + 1):end])
+        index = minimum(indices)
+        reduced_integrator = DenseIntegrator(
+            integrator.r[1:index],
+            integrator.z[1:index],
+            integrator.vr[1:index],
+            integrator.vz[1:index],
+            integrator.n[1:index],
+        )
+        push!(reduced_integrators, reduced_integrator)
+    end
+    return reduced_integrators
 end

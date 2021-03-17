@@ -119,13 +119,13 @@ function get_initial_radii_and_linewidths(
         lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
         lines_range = [rin + lines_widths[1] / 2.0]
         for i = 2:nlines
-            r0 = lines_range[i-1] + lines_widths[i-1] / 2 + lines_widths[i] / 2
+            r0 = lines_range[i - 1] + lines_widths[i - 1] / 2 + lines_widths[i] / 2
             push!(lines_range, r0)
         end
     else
         lines_widths = range(rin, rfi, length = nlines)
         dr = (rfi - rin) / nlines
-        lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines-1)]
+        lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
         lines_widths = diff([lines_range; rfi + dr / 2])
     end
     return lines_range, lines_widths
@@ -194,10 +194,8 @@ function failed(integrator::Sundials.IDAIntegrator)
     #sign_changes1 = countsignchanges(integrator.p.data[:vz])
     intersects = self_intersects(integrator)
     #sign_changes2 = countsignchanges(diff(integrator.p.data[:vz]), 1e-4)
-    integrator.u[1] < 0.0 ||
-        integrator.u[2] < integrator.p.grid.z_min ||
-        intersects
-        #(sign_changes1 >= 2)
+    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || intersects
+    #(sign_changes1 >= 2)
     #(sign_changes2 >= 2)
 end
 
@@ -403,42 +401,72 @@ struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
     vr::T
     vz::T
     n::T
-    function DenseIntegrator(integrator::Sundials.IDAIntegrator; n_timesteps=10000, log=true)
-        integration_time = unique(integrator.sol.t)
-        tmin = integration_time[2]
-        tmax = integration_time[end-1]
-        if tmax <= tmin
-            return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-        end
-        if log
-            t_range = 10 .^ range(log10(tmin), log10(tmax), length = n_timesteps)
-        else
-            t_range = range(tmin, tmax, length = n_timesteps)
-        end
-        i = 1
-        while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
-            t_range = t_range[1:(end-i)]
-            i += 1
-        end
-        if length(t_range) == 0
-            return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-        end
-        dense_solution = integrator.sol(t_range)
-        r_dense = dense_solution[1, :]
-        z_dense = dense_solution[2, :]
-        vr_dense = dense_solution[3,:]
-        vz_dense = dense_solution[4,:]
-        line_width_dense = r_dense .* integrator.p.lwnorm
-        density_dense =
-            compute_density.(
-                r_dense,
-                z_dense,
-                vr_dense,
-                vz_dense,
-                Ref(integrator.p),
-            )
-        return new{typeof(r_dense)}(r_dense, z_dense, vr_dense, vz_dense, density_dense)
+end
+
+function calculate_delta_t(r, z, vr, vz, error)
+    delta_t = (r^2 + z^2) / abs(r*vr + z*vz) * error / 4
+    return delta_t
+end
+
+function DenseIntegrator(
+    integrator::Sundials.IDAIntegrator,
+    error = 0.1
+)
+    return DenseIntegrator(integrator.p.data[:r], integrator.p.data[:z], integrator.p.data[:vr], integrator.p.data[:vz], integrator.p.data[:n])
+    #r_dense = Float64[]
+    #z_dense = Float64[]
+    #vr_dense = Float64[]
+    #vz_dense = Float64[]
+    #t = integrator.sol.t[2]
+    #i = 2
+    #while t < integrator.sol.t[end]
+    #    r, z, vr, vz = integrator.sol(t)
+    #    delta_t = calculate_delta_t(r, z, vr, vz, error)
+    #    delta_t = min(integrator.sol.t[i], delta_t)
+    #    t += delta_t
+    #    i += 1
+    #    push!(r_dense, r)
+    #    push!(z_dense, z)
+    #    push!(vr_dense, vr)
+    #    push!(vz_dense, vz)
+    #end
+    #n_dense = compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
+    #return DenseIntegrator(r_dense, z_dense, vr_dense, vz_dense, n_dense)
+end
+
+function DenseIntegrator(
+    integrator::Sundials.IDAIntegrator;
+    n_timesteps = 10000,
+    log = true,
+)
+    integration_time = unique(integrator.sol.t)
+    tmin = integration_time[2]
+    tmax = integration_time[end - 1]
+    if tmax <= tmin
+        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
     end
+    if log
+        t_range = 10 .^ range(log10(tmin), log10(tmax), length = n_timesteps)
+    else
+        t_range = range(tmin, tmax, length = n_timesteps)
+    end
+    i = 1
+    while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
+        t_range = t_range[1:(end - i)]
+        i += 1
+    end
+    if length(t_range) == 0
+        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
+    end
+    dense_solution = integrator.sol(t_range)
+    r_dense = dense_solution[1, :]
+    z_dense = dense_solution[2, :]
+    vr_dense = dense_solution[3, :]
+    vz_dense = dense_solution[4, :]
+    line_width_dense = r_dense .* integrator.p.lwnorm
+    density_dense =
+        compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
+    return DenseIntegrator(r_dense, z_dense, vr_dense, vz_dense, density_dense)
 end
 
 struct DenseIntegrators{T<:Vector{<:AbstractFloat}}
@@ -447,10 +475,14 @@ struct DenseIntegrators{T<:Vector{<:AbstractFloat}}
     vr::T
     vz::T
     n::T
-    function DenseIntegrators(integrators::Vector{<:Sundials.IDAIntegrator}; n_timesteps = 10000, log=true)
+    function DenseIntegrators(
+        integrators::Vector{<:Sundials.IDAIntegrator};
+        n_timesteps = 10000,
+        log = true,
+    )
         @info "Getting dense solution from integrators..."
         flush()
-        f(i) = DenseIntegrator(integrators[i], n_timesteps=n_timesteps, log=log)
+        f(i) = DenseIntegrator(integrators[i], n_timesteps = n_timesteps, log = log)
         #dense_integrators = pmap(f, 1:length(integrators), batch_size=10)
         dense_integrators = f.(1:length(integrators)) #integrators)
         r = reduce(vcat, [integrator.r for integrator in dense_integrators])
@@ -563,7 +595,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     lines_range = vcat(lines_range, additional_range)
     lines_widths = vcat(lines_widths, additional_widths)
     # discard last radius
-    lines_range = lines_range[1:(end-1)]
+    lines_range = lines_range[1:(end - 1)]
     return lines_range, lines_widths
 end
 

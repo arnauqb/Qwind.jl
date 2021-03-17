@@ -64,7 +64,11 @@ function get_density_interpolator(
     if type == "linear"
         interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
     elseif type == "nn"
-        interp = scipy_interpolate.NearestNDInterpolator(points, log_n)
+        interp = scipy_interpolate.NearestNDInterpolator(points, log_n, rescale=true)
+    elseif type == "clough_tocher"
+        interp = scipy_interpolate.CloughTocher2DInterpolator(points, log_n, fill_value=2)
+    elseif type == "rbf"
+        interp = scipy_interpolate.Rbf(r_log, z_log, log_n)
     else
         error("interpolation type $type not supported")
     end
