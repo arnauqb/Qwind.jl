@@ -34,12 +34,8 @@ function WindInterpolator(
         velocity_grid = construct_velocity_grid(nr, nz)
     else
         r0 = [integ.p.r0 for integ in integrators]
-        @info "Constructing wind hull..."
-        hull = construct_wind_hull(integrators)
-        flush()
-        @info "Constructing interpolation grid..."
-        flush()
-        r, z, vr, vz, n = reduce_integrators(integrators, n_timesteps = 1000)
+        r, z, vr, vz, n = reduce_integrators(integrators, no_interpolation=true)
+        hull = construct_wind_hull(r, z, r0)
         density_grid = construct_density_grid(r, z, n, r0, hull, nr = nr, nz = nz)
         velocity_grid = construct_velocity_grid(r, z, vr, vz, r0, hull, nr = nr, nz = nz)
     end
@@ -57,20 +53,16 @@ function update_interpolator(wi::WindInterpolator, integrators)
             n_timesteps = wi.n_timesteps,
         )
     end
-    @info "Constructing wind hull..."
-    flush()
-    new_hull = construct_wind_hull(integrators)
-    @info "Constructing interpolation grid..."
-    r0s = [integ.p.r0 for integ in integrators]
-    r, z, vr, vz, n = reduce_integrators(integrators, n_timesteps = 1000)
-    flush()
-    density_grid = update_density_grid(wi.density_grid, new_hull, r, z, n, r0s)
+    r0 = [integ.p.r0 for integ in integrators]
+    r, z, vr, vz, n = reduce_integrators(integrators, no_interpolation=true)
+    new_hull = construct_wind_hull(r,z, r0)
+    density_grid = update_density_grid(wi.density_grid, new_hull, r, z, n, r0)
     velocity_grid = construct_velocity_grid(
         r,
         z,
         vr,
         vz,
-        r0s,
+        r0,
         new_hull,
         nr = wi.velocity_grid.nr,
         nz = wi.velocity_grid.nz,

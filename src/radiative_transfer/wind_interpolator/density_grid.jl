@@ -57,6 +57,10 @@ function get_density_interpolator(
     n::Vector{Float64};
     type = "linear"
 )
+    mask = (r .> 0) .& (z .> 0)
+    r = r[mask]
+    z = z[mask]
+    n = n[mask]
     r_log = log10.(r)
     z_log = log10.(z)
     log_n = log10.(n)
@@ -94,6 +98,7 @@ function construct_density_grid(
     interpolation_type = "linear",
 )
     @info "Constructing density interpolator..."
+    flush()
     interpolator = get_density_interpolator(r, z, n, type=interpolation_type)
     @info "Done"
     @info "Filling density grid..."
@@ -117,6 +122,7 @@ function construct_density_grid(
     pushfirst!(z_range, 0.0)
     grid = DensityGrid(r_range, z_range, density_grid, nr, nz)
     @info "Done"
+    flush()
     return grid
 end
 

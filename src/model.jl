@@ -1,4 +1,4 @@
-export Model, run!, run_parallel!, do_iteration!, create_models_folders
+export Model, run!, run_parallel!, run_iteration!, create_models_folders
 import Qwind: create_and_run_integrator
 
 using YAML, Printf, ProgressMeter
@@ -59,7 +59,7 @@ initialize_integrators(model::Model) = initialize_integrators(
 )
 
 
-function do_iteration!(model::Model, iterations_dict::Dict; it_num)
+function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=true)
     if it_num ∉ keys(iterations_dict)
         iterations_dict[1] = Dict()
     end
@@ -73,8 +73,14 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
+    @info "Starting iteration $it_num ..."
     @info "Iterating streamlines..."
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+    flush()
+    if parallel
+        integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+    else
+        integrators = f.(1:length(lines_range))
+    end
     #integrators = f.(1:length(lines_range))
     iterations_dict[it_num]["integrators"] = integrators
     @info "Integration of iteration $it_num ended!"
@@ -109,7 +115,7 @@ function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=
     iterations_dict[1] = Dict()
     iterations_dict[1]["radiative_transfer"] = model.rt
     for it = start_it:(start_it+n_iterations-1)
-        do_iteration!(model, iterations_dict, it_num = it)
+        run_iteration!(model, iterations_dict, it_num = it)
     end
     return
 end

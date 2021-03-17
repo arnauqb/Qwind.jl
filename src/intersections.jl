@@ -86,6 +86,7 @@ end
 
 function reduce_integrators(
     integrators::Vector{<:Sundials.IDAIntegrator};
+    no_interpolation = false,
     n_timesteps = 1000,
     log = true,
 )
@@ -96,8 +97,11 @@ function reduce_integrators(
     ns = Float64[]
     @info "Filtering intersections..."
     flush()
-    #dense_integrators = DenseIntegrator.(integrators, n_timesteps = n_timesteps, log = log)
-    dense_integrators = DenseIntegrator.(integrators, 0.1)#n_timesteps = n_timesteps, log = log)
+    if no_interpolation
+        dense_integrators = DenseIntegrator.(integrators)
+    else
+        dense_integrators = DenseIntegrator.(integrators, n_timesteps, log = log)
+    end
     @showprogress for (i, integrator1) in enumerate(dense_integrators[1:(end - 1)])
         f(integ2) = intersect(integrator1, integ2)
         index = minimum(pmap(f, dense_integrators[(i + 1):end], batch_size=5))
@@ -112,9 +116,13 @@ function reduce_integrators(
     return rs, zs, vrs, vzs, ns
 end
 
-function reduce_integrators_individual(integrators; n_timesteps = 1000, log = true)
+function reduce_integrators_individual(integrators; no_interpolation=false, n_timesteps = 1000, log = true)
     reduced_integrators = DenseIntegrator[]
-    dense_integrators = DenseIntegrator.(integrators, n_timesteps = n_timesteps, log = log)
+    if no_interpolation
+        dense_integrators = DenseIntegrator.(integrators)
+    else
+        dense_integrators = DenseIntegrator.(integrators, n_timesteps, log = log)
+    end
     for (i, integrator) in enumerate(dense_integrators[1:(end - 1)])
         f(integ2) = intersect(integrator, integ2)
         indices = pmap(f, dense_integrators[(i + 1):end])

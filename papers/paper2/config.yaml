@@ -24,7 +24,7 @@ radiative_transfer:
     type: WindInterpolator 
     vacuum_density: 1e2
     n_timesteps: 10000
-    nz: 100 #"@vary grid 50,100,500,1000"
+    nz: 500 #"@vary grid 50,100,500,1000"
     nr: "auto"
 
 grid:
@@ -38,7 +38,7 @@ initial_conditions:
   mode: CAKIC #UniformIC
   r_in: 50.0
   r_fi: 1300.0
-  n_lines: 50 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
@@ -46,7 +46,7 @@ initial_conditions:
   mu: 0.5
 
 integrator:
-  n_iterations: 5
+  n_iterations: 1
   atol: 1e-8
   rtol: 1e-3
   save_path: "./data"

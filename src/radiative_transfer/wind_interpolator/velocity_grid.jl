@@ -61,6 +61,11 @@ function get_velocity_interpolators(
     vz::Vector{Float64};
     type = "linear"
 )
+    mask = (r .> 0) .& (z .> 0)
+    r = r[mask]
+    z = z[mask]
+    vr = vr[mask]
+    vz = vz[mask]
     r_log = log10.(r)
     z_log = log10.(z)
     points = hcat(r_log, z_log)

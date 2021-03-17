@@ -403,40 +403,19 @@ struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
     n::T
 end
 
-function calculate_delta_t(r, z, vr, vz, error)
-    delta_t = (r^2 + z^2) / abs(r*vr + z*vz) * error / 4
-    return delta_t
+function DenseIntegrator(integrator::Sundials.IDAIntegrator)
+    return DenseIntegrator(
+        integrator.p.data[:r],
+        integrator.p.data[:z],
+        integrator.p.data[:vr],
+        integrator.p.data[:vz],
+        integrator.p.data[:n],
+    )
 end
 
 function DenseIntegrator(
     integrator::Sundials.IDAIntegrator,
-    error = 0.1
-)
-    return DenseIntegrator(integrator.p.data[:r], integrator.p.data[:z], integrator.p.data[:vr], integrator.p.data[:vz], integrator.p.data[:n])
-    #r_dense = Float64[]
-    #z_dense = Float64[]
-    #vr_dense = Float64[]
-    #vz_dense = Float64[]
-    #t = integrator.sol.t[2]
-    #i = 2
-    #while t < integrator.sol.t[end]
-    #    r, z, vr, vz = integrator.sol(t)
-    #    delta_t = calculate_delta_t(r, z, vr, vz, error)
-    #    delta_t = min(integrator.sol.t[i], delta_t)
-    #    t += delta_t
-    #    i += 1
-    #    push!(r_dense, r)
-    #    push!(z_dense, z)
-    #    push!(vr_dense, vr)
-    #    push!(vz_dense, vz)
-    #end
-    #n_dense = compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
-    #return DenseIntegrator(r_dense, z_dense, vr_dense, vz_dense, n_dense)
-end
-
-function DenseIntegrator(
-    integrator::Sundials.IDAIntegrator;
-    n_timesteps = 10000,
+    n_timesteps::Int;
     log = true,
 )
     integration_time = unique(integrator.sol.t)
@@ -494,31 +473,6 @@ struct DenseIntegrators{T<:Vector{<:AbstractFloat}}
         flush()
         return new{typeof(r)}(r, z, vr, vz, n)
     end
-end
-
-function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
-    rc = rin
-    lines_range = []
-    lines_widths = []
-    tau_x = 0
-    tau_uv = 0
-    while rc < rfi
-        if tau_x < 1
-            delta_r = 0.1 / (SIGMA_T * Rg * 100 * getn0(ic, rc))
-            tau_x += 0.1
-            tau_uv += 0.1 / 100
-        elseif (tau_x > 1) && (tau_uv < 1)
-            delta_r = 0.1 / (SIGMA_T * Rg * getn0(ic, rc))
-            tau_x += 10
-            tau_uv += 0.1
-        else
-            delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
-        end
-        push!(lines_range, rc + delta_r / 2)
-        push!(lines_widths, delta_r)
-        rc += delta_r
-    end
-    return lines_range, lines_widths
 end
 
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
