@@ -15,9 +15,7 @@ export initialize_integrator,
     compute_d,
     failed,
     Parameters,
-    escaped,
-    DenseIntegrator,
-    DenseIntegrators
+    escaped
 
 function make_save_data(line_id = -1)
     ret = Dict{Symbol,Any}(:line_id => line_id)
@@ -399,85 +397,6 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
-struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
-    r::T
-    z::T
-    vr::T
-    vz::T
-    n::T
-end
-
-function DenseIntegrator(integrator::Sundials.IDAIntegrator)
-    return DenseIntegrator(
-        integrator.p.data[:r],
-        integrator.p.data[:z],
-        integrator.p.data[:vr],
-        integrator.p.data[:vz],
-        integrator.p.data[:n],
-    )
-end
-
-function DenseIntegrator(
-    integrator::Sundials.IDAIntegrator,
-    n_timesteps::Int;
-    log = true,
-)
-    integration_time = unique(integrator.sol.t)
-    tmin = integration_time[2]
-    tmax = integration_time[end - 1]
-    if tmax <= tmin
-        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-    end
-    if log
-        t_range = 10 .^ range(log10(tmin), log10(tmax), length = n_timesteps)
-    else
-        t_range = range(tmin, tmax, length = n_timesteps)
-    end
-    i = 1
-    while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
-        t_range = t_range[1:(end - i)]
-        i += 1
-    end
-    if length(t_range) == 0
-        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-    end
-    dense_solution = integrator.sol(t_range)
-    r_dense = dense_solution[1, :]
-    z_dense = dense_solution[2, :]
-    vr_dense = dense_solution[3, :]
-    vz_dense = dense_solution[4, :]
-    line_width_dense = r_dense .* integrator.p.lwnorm
-    density_dense =
-        compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
-    return DenseIntegrator(r_dense, z_dense, vr_dense, vz_dense, density_dense)
-end
-
-struct DenseIntegrators{T<:Vector{<:AbstractFloat}}
-    r::T
-    z::T
-    vr::T
-    vz::T
-    n::T
-    function DenseIntegrators(
-        integrators::Vector{<:Sundials.IDAIntegrator};
-        n_timesteps = 10000,
-        log = true,
-    )
-        @info "Getting dense solution from integrators..."
-        flush()
-        f(i) = DenseIntegrator(integrators[i], n_timesteps = n_timesteps, log = log)
-        #dense_integrators = pmap(f, 1:length(integrators), batch_size=10)
-        dense_integrators = f.(1:length(integrators)) #integrators)
-        r = reduce(vcat, [integrator.r for integrator in dense_integrators])
-        z = reduce(vcat, [integrator.z for integrator in dense_integrators])
-        vr = reduce(vcat, [integrator.vr for integrator in dense_integrators])
-        vz = reduce(vcat, [integrator.vz for integrator in dense_integrators])
-        n = reduce(vcat, [integrator.n for integrator in dense_integrators])
-        @info "Done"
-        flush()
-        return new{typeof(r)}(r, z, vr, vz, n)
-    end
-end
 
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]

@@ -34,6 +34,7 @@ function WindInterpolator(
         velocity_grid = construct_velocity_grid(nr, nz)
     else
         r0 = [integ.p.r0 for integ in integrators]
+
         r, z, vr, vz, n = reduce_integrators(integrators, no_interpolation=true)
         hull = construct_wind_hull(r, z, r0)
         density_grid = construct_density_grid(r, z, n, r0, hull, nr = nr, nz = nz)

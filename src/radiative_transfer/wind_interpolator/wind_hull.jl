@@ -1,5 +1,5 @@
 import ConcaveHull
-export construct_wind_hull
+export construct_wind_hull, DenseIntegrator, DenseIntegrators
 
 function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdigits=6)
     # this stores the maximum heights of each streamline, roughly
