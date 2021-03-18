@@ -81,7 +81,7 @@ function update_interpolator(wi::WindInterpolator, integrators)
     integrators_interpolated_log = interpolate_integrators(
         integrators,
         max_times = max_times,
-        n_timesteps = n_timesteps,
+        n_timesteps = wi.n_timesteps,
         log = true,
     )
     r, z, vr, vz, n = reduce_integrators(integrators_interpolated_log)
