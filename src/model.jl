@@ -101,7 +101,7 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=tr
     return
 end
 
-function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing)
+function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing, parallel=true)
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
@@ -115,7 +115,7 @@ function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=
     iterations_dict[1] = Dict()
     iterations_dict[1]["radiative_transfer"] = model.rt
     for it = start_it:(start_it+n_iterations-1)
-        run_iteration!(model, iterations_dict, it_num = it)
+        run_iteration!(model, iterations_dict, it_num = it, parallel=parallel)
     end
     return
 end

@@ -81,6 +81,27 @@ function intersect(
     return length(r1)
 end
 
+function intersect(
+    r1::Array{T},
+    z1::Array{T},
+    r2::Array{T},
+    z2::Array{T},
+) where {T<:AbstractFloat}
+    A = zeros((2, 2))
+    b = zeros(2)
+    for i = 1:(length(r1) - 1)
+        s1 = Segment(r1[i], z1[i], r1[i + 1], z1[i + 1])
+        for j = 1:(length(r2) - 1)
+            s2 = Segment(r2[j], z2[j], r2[j + 1], z2[j + 1])
+            do_intersect = intersect!(s1, s2, A, b)
+            if do_intersect
+                return i
+            end
+        end
+    end
+    return length(r1)
+end
+
 struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
     t::T
     r::T
