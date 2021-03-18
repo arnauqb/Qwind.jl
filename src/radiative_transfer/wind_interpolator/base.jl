@@ -1,13 +1,6 @@
 using PyCall
 import ConcaveHull, Interpolations, Sundials
-export WindInterpolator, get_density, update_interpolator, scipy_interpolate
-
-const scipy_interpolate = PyNULL()
-
-function __init__()
-    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
-end
-
+export WindInterpolator, get_density, update_interpolator
 
 struct WindInterpolator{T} <: Interpolator{T}
     wind_hull::Union{ConcaveHull.Hull,Nothing}
@@ -34,9 +27,26 @@ function WindInterpolator(
         velocity_grid = construct_velocity_grid(nr, nz)
     else
         r0 = [integ.p.r0 for integ in integrators]
+        max_times = get_intersection_times(integrators)
 
-        r, z, vr, vz, n = reduce_integrators(integrators, no_interpolation=true)
-        hull = construct_wind_hull(r, z, r0)
+        # construct wind hull
+        integrators_interpolated_linear = interpolate_integrators(
+            integrators,
+            max_times = max_times,
+            n_timesteps = 100,
+            log = false,
+        )
+        rh, zh, _, _, _ = reduce_integrators(integrators_interpolated_linear)
+        hull = construct_wind_hull(rh, zh, r0)
+
+        # construct grids from dense interpolated integrators
+        integrators_interpolated_log = interpolate_integrators(
+            integrators,
+            max_times = max_times,
+            n_timesteps = n_timesteps,
+            log = true,
+        )
+        r, z, vr, vz, n = reduce_integrators(integrators_interpolated_log)
         density_grid = construct_density_grid(r, z, n, r0, hull, nr = nr, nz = nz)
         velocity_grid = construct_velocity_grid(r, z, vr, vz, r0, hull, nr = nr, nz = nz)
     end
@@ -55,21 +65,39 @@ function update_interpolator(wi::WindInterpolator, integrators)
         )
     end
     r0 = [integ.p.r0 for integ in integrators]
-    r, z, vr, vz, n = reduce_integrators(integrators, no_interpolation=true)
-    new_hull = construct_wind_hull(r,z, r0)
-    density_grid = update_density_grid(wi.density_grid, new_hull, r, z, n, r0)
+    max_times = get_intersection_times(integrators)
+
+    # construct wind hull
+    integrators_interpolated_linear = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = 100,
+        log = false,
+    )
+    rh, zh, _, _, _ = reduce_integrators(integrators_interpolated_linear)
+    hull = construct_wind_hull(rh, zh, r0)
+
+    # construct grids from dense interpolated integrators
+    integrators_interpolated_log = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = n_timesteps,
+        log = true,
+    )
+    r, z, vr, vz, n = reduce_integrators(integrators_interpolated_log)
+    density_grid = update_density_grid(wi.density_grid, hull, r, z, n, r0)
     velocity_grid = construct_velocity_grid(
         r,
         z,
         vr,
         vz,
         r0,
-        new_hull,
+        hull,
         nr = wi.velocity_grid.nr,
         nz = wi.velocity_grid.nz,
     )
     return WindInterpolator(
-        new_hull,
+        hull,
         density_grid,
         velocity_grid,
         wi.vacuum_density,

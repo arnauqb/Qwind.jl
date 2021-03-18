@@ -1,4 +1,4 @@
-using Dates
+using Dates, Logging, LoggingExtras
 import Base: flush
 export searchsorted_nearest,
     searchsorted_first,
@@ -11,10 +11,21 @@ export searchsorted_nearest,
     make_cosma_scripts,
     d_euclidean,
     get_time,
-    flush
+    flush,
+    setup_logging
 
 get_time() = Dates.format(now(), "HH:MM:SS")
 d_euclidean(r0, r1, z0, z1) = sqrt((r0-r1)^2 + (z0-z1)^2)
+const date_format = "yyyy-mm-dd HH:MM:SS"
+
+function setup_logging()
+    timestamp_logger(logger) = TransformerLogger(logger) do log
+        ret = merge(log, (; message = "$(Dates.format(now(), date_format)) $(log.message)"))
+        flush()
+        ret
+    end
+    ConsoleLogger(stdout, Logging.Debug) |> timestamp_logger |> global_logger
+end
 
 function flush()
     flush(stdout)

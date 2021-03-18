@@ -38,7 +38,7 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
         error("Hull did not converge!")
     end
     @info "Done"
-    return hull #, points
+    return hull#, points
 end
 
 function construct_wind_hull(integrators; hull_sigdigits=6)

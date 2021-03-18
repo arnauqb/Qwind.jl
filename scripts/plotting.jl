@@ -28,6 +28,7 @@ function plot_streamlines(
     linestyle = "o-",
     colorscheme = nothing,
     color = nothing,
+    markersize=nothing
 )
     if colorscheme === nothing
         colorscheme_plot = colorschemes[:RdBu_9]
@@ -54,8 +55,63 @@ function plot_streamlines(
             linestyle,
             color = color_toplot,
             alpha = alpha,
-            markersize = 1,
             linewidth = linewidth,
+            markersize=markersize,
+        )
+    end
+    ax.set_xlabel(L"R [$R_g$]")
+    ax.set_ylabel(L"z [$R_g$]")
+    if xl !== nothing && xh !== nothing
+        ax.set_xlim(xl, xh)
+    end
+    if yl !== nothing && yh !== nothing
+        ax.set_ylim(yl, yh)
+    end
+    return fig, ax
+end
+
+function plot_streamlines(
+    integrators::Vector{<:DenseIntegrator};
+    fig = nothing,
+    ax = nothing,
+    alpha = 1.0,
+    xl = nothing,
+    xh = nothing,
+    yl = nothing,
+    yh = nothing,
+    linewidth = 1,
+    linestyle = "o-",
+    colorscheme = nothing,
+    color = nothing,
+    markersize=nothing,
+)
+    if colorscheme === nothing
+        colorscheme_plot = colorschemes[:RdBu_9]
+    else
+        colorscheme_plot = colorscheme #colorschemes[Symbol(colorscheme)]
+    end
+    if ax === nothing
+        fig, ax = plt.subplots()
+    end
+    for i = 1:length(integrators)
+        if !isassigned(integrators, i)
+            continue
+        end
+        integrator = integrators[i]
+        if color === nothing
+            color_toplot = get(colorscheme_plot, i / length(integrators))
+            color_toplot = [color_toplot.r, color_toplot.g, color_toplot.b]
+        else
+            color_toplot = color
+        end
+        ax.plot(
+            integrator.r,
+            integrator.z,
+            linestyle,
+            color = color_toplot,
+            alpha = alpha,
+            linewidth = linewidth,
+            markersize=markersize,
         )
     end
     ax.set_xlabel(L"R [$R_g$]")
@@ -249,7 +305,8 @@ function plot_wind_hull(
     xlim = nothing,
     ylim = nothing,
     fig = nothing,
-    ax= nothing
+    ax= nothing,
+    alpha=1.0
 )
     if ax === nothing
         fig, ax = plt.subplots()
@@ -267,7 +324,9 @@ function plot_wind_hull(
         cmap = cmap,
         shading="auto",
         linewidth=0,
-        rasterized=true
+        alpha=alpha,
+        rasterized=true,
+        antialiased=true
     )
     if xlim !== nothing
         ax.set_xlim(xlim[1], xlim[2])

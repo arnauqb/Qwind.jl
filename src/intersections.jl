@@ -53,18 +53,28 @@ end
 function intersect(
     r1::Array{T},
     z1::Array{T},
+    n1::Array{T},
+    v1::Array{T},
     r2::Array{T},
     z2::Array{T},
+    n2::Array{T},
+    v2::Array{T},
 ) where {T<:AbstractFloat}
     A = zeros((2, 2))
     b = zeros(2)
     for i = 1:(length(r1) - 1)
         s1 = Segment(r1[i], z1[i], r1[i + 1], z1[i + 1])
+        m1 = n1[i] * v1[i]^2
         for j = 1:(length(r2) - 1)
             s2 = Segment(r2[j], z2[j], r2[j + 1], z2[j + 1])
+            m2 = n2[j] * v2[j]^2
             do_intersect = intersect!(s1, s2, A, b)
             if do_intersect
-                return i
+                if m2 > m1 # terminate when intersecting has higher momentum
+                    return i
+                else
+                    continue
+                end
             end
         end
     end
@@ -80,8 +90,20 @@ struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
     n::T
 end
 
-intersect(integrator1::DenseIntegrator, integrator2::DenseIntegrator) =
-    intersect(integrator1.r, integrator1.z, integrator2.r, integrator2.z)
+function intersect(integrator1::DenseIntegrator, integrator2::DenseIntegrator)
+    v1 = sqrt.(integrator1.vr .^ 2 + integrator1.vz .^ 2)
+    v2 = sqrt.(integrator2.vr .^ 2 + integrator2.vz .^ 2)
+    intersect(
+        integrator1.r,
+        integrator1.z,
+        integrator1.n,
+        v1,
+        integrator2.r,
+        integrator2.z,
+        integrator2.n,
+        v2,
+    )
+end
 
 function DenseIntegrator(integrator::Sundials.IDAIntegrator)
     return DenseIntegrator(
@@ -110,19 +132,36 @@ function self_intersects(integrator::Sundials.IDAIntegrator, r, z)
     end
 end
 
+function slice_integrator(integrator::DenseIntegrator; in = 1, fi = nothing)
+    (fi === nothing) && (fi = length(integrator.t))
+    return DenseIntegrator(
+        integrator.t[in:fi],
+        integrator.r[in:fi],
+        integrator.z[in:fi],
+        integrator.vr[in:fi],
+        integrator.vz[in:fi],
+        integrator.n[in:fi],
+    )
+end
+
 function get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator})
     raw_integrators = DenseIntegrator.(integrators)
-    intersection_times = Float64[]
+    intersection_indices = [length(raw_integrator.t) for raw_integrator in raw_integrators]
+    @info "Calculating trajectory intersections..."
     @showprogress for (i, raw_integrator) in enumerate(raw_integrators)
-        if i == length(raw_integrators)
-            # last one has absolute priority.
-            index = length(raw_integrator.r)
-        else
-            f(integ2) = intersect(raw_integrator, integ2)
-            index = minimum(pmap(f, raw_integrators[(i + 1):end], batch_size = 5))
-        end
-        push!(intersection_times, raw_integrator.t[index])
+        integrators_sliced = [
+            slice_integrator(integrator, fi = index)
+            for (integrator, index) in zip(raw_integrators, intersection_indices)
+        ]
+        f(j) = intersect(raw_integrator, integrators_sliced[j])
+        integrator_indcs = [j for j in 1:length(raw_integrators) if j != i]
+        index = minimum(pmap(f, integrator_indcs, batch_size = 10))
+        intersection_indices[i] = index
     end
+    intersection_times = [
+        raw_integrator.t[index]
+        for (raw_integrator, index) in zip(raw_integrators, intersection_indices)
+    ]
     return intersection_times
 end
 
@@ -143,7 +182,7 @@ function interpolate_integrator(
     if log
         t_range = 10 .^ range(log10(tmin), log10(max_time), length = n_timesteps)
     else
-        t_range = range(tmin, max_time, length = n_timesteps)
+        t_range = collect(range(tmin, max_time, length = n_timesteps))
     end
     i = 1
     while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
@@ -238,11 +277,3 @@ function reduce_integrators(integrators::Vector{<:DenseIntegrator})
     return r, z, vr, vz, n
 end
 
-function reduce_integrators(integrators::Vector{<:DenseIntegrator})
-    r = reduce(vcat, [integrator.r for integrator in integrators])
-    z = reduce(vcat, [integrator.z for integrator in integrators])
-    vr = reduce(vcat, [integrator.vr for integrator in integrators])
-    vz = reduce(vcat, [integrator.vz for integrator in integrators])
-    n = reduce(vcat, [integrator.n for integrator in integrators])
-    return r, z, vr, vz, n
-end
