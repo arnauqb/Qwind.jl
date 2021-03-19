@@ -397,7 +397,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
     z_range = [0.0, 1.0]
     density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range)
+    density_grid[:, 1] .= getn0.(Ref(ic), r_range) 
     interp_grid = DensityGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
@@ -459,7 +459,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         rc += delta_r
     end
     # distribute remaining ones logarithmically
-    additional_range = 10 .^ range(log10(rc), log10(rfi), length = 100)
+    additional_range = range(rc, rfi, step=5)
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)
