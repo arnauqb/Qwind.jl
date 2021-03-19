@@ -165,26 +165,28 @@ function slice_integrator(integrator::DenseIntegrator; in = 1, fi = nothing)
     )
 end
 
-function get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator})
-    raw_integrators = DenseIntegrator.(integrators)
-    intersection_indices = [length(raw_integrator.t) for raw_integrator in raw_integrators]
+function get_intersection_times(integrators::Vector{<:DenseIntegrator})
+    intersection_indices = [length(integrator.t) for integrator in integrators]
     @info "Calculating trajectory intersections..."
-    @showprogress for (i, raw_integrator) in enumerate(raw_integrators)
+    @showprogress for (i, integrator) in enumerate(integrators)
         integrators_sliced = [
             slice_integrator(integrator, fi = index)
-            for (integrator, index) in zip(raw_integrators, intersection_indices)
+            for (integrator, index) in zip(integrators, intersection_indices)
         ]
-        f(j) = intersect(raw_integrator, integrators_sliced[j])
-        integrator_indcs = [j for j in 1:length(raw_integrators) if j != i]
+        f(j) = intersect(integrator, integrators_sliced[j])
+        integrator_indcs = [j for j in 1:length(integrators) if j != i]
         index = minimum(pmap(f, integrator_indcs, batch_size = 10))
         intersection_indices[i] = index
     end
     intersection_times = [
-        raw_integrator.t[index]
-        for (raw_integrator, index) in zip(raw_integrators, intersection_indices)
+        integrator.t[index]
+        for (integrator, index) in zip(integrators, intersection_indices)
     ]
     return intersection_times
 end
+
+get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator}) =
+    get_intersection_times(DenseIntegrator.(integrators))
 
 function interpolate_integrator(
     integrator::Sundials.IDAIntegrator;
