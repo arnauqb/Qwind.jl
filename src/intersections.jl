@@ -6,7 +6,8 @@ export Segment,
     self_intersects,
     interpolate_integrator,
     interpolate_integrators,
-    get_intersection_times
+    get_intersection_times,
+    load_trajectories
 
 struct Segment{T<:AbstractFloat}
     p1x::T
@@ -135,6 +136,38 @@ function DenseIntegrator(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vz],
         integrator.p.data[:n],
     )
+end
+
+function load_trajectory(tdata::Dict)
+    return DenseIntegrator(tdata["t"], tdata["r"], tdata["z"], tdata["vr"], tdata["vz"], tdata["n"])
+end
+
+function load_trajectories(tsdata::Dict)
+    t_ids = sort(parse.(Int, keys(tsdata)))
+    t_ids = string.(t_ids)
+    ret = DenseIntegrator[]
+    for i in t_ids
+        tdata = tsdata[i]
+        trajectory = load_trajectory(tdata)
+        push!(ret, trajectory)
+    end
+    return ret
+end
+
+function load_trajectories(h5_path::String, it_num)
+    it_name = @sprintf "iteration_%03d" it_num
+    tsdata = h5open(h5_path, "r") do file
+        read(file, it_name * "/trajectories")
+    end
+    return load_trajectories(tsdata)
+end
+
+function load_trajectories(h5_path::String)
+    it_keys = h5open(h5_path, "r") do file
+        keys(read(file))
+    end
+    it_nums = [parse(Int, split(key, "_")[end]) for key in it_keys]
+    return load_trajectories(h5_path, maximum(it_nums))
 end
 
 function self_intersects(integrator::Sundials.IDAIntegrator, r, z)

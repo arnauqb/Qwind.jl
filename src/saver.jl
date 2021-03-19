@@ -1,4 +1,4 @@
-using CSV, DataFrames, YAML, HDF5
+using CSV, DataFrames, YAML, HDF5, Printf
 export save_integrator, save_integrators, save_wind
 
 function create_integrators_df(integrators, Rg)
@@ -149,6 +149,21 @@ function save_velocity_grid!(velocity_grid::VelocityGrid, group)
     return
 end
 
+function save_trajectories!(integrators::Vector{<:Sundials.IDAIntegrator}, group)
+    g = create_group(group, "trajectories")
+    for (i, integrator) in enumerate(integrators)
+        integ = DenseIntegrator(integrator)
+        tgroup = create_group(g, "$i")
+        tgroup["t"] = integ.t
+        tgroup["r"] = integ.r
+        tgroup["z"] = integ.z
+        tgroup["vr"] = integ.vr
+        tgroup["vz"] = integ.vz
+        tgroup["n"] = integ.n
+    end
+    return
+end
+
 
 function save_hdf5(integrators, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
@@ -159,6 +174,7 @@ function save_hdf5(integrators, model, hdf5_save_path, it_num)
         g = create_group(file, iteration)
         save_density_grid!(density_grid, g)
         save_velocity_grid!(velocity_grid, g)
+        save_trajectories!(integrators, g)
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)
         g["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
         macc = compute_mass_accretion_rate(bh)
