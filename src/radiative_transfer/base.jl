@@ -181,7 +181,8 @@ function compute_disc_radiation_field(
     max_z_vertical_flux = 5e-1,
 )
     # sometimes the solver may try unphysical values of vr and vz, so we take the max
-    beta = min(1.0, sqrt(vr^2 + vz^2))
+    # Similarly for the lower bound as beta = 0 leads to numerical singularity
+    beta = max(min(1.0, sqrt(vr^2 + vz^2)), 1e-4)
     gamma = 1.0 / sqrt(1 - beta^2)
     if z < max_z_vertical_flux
         force = compute_disc_radiation_field_vertical(radiative_transfer, r, z, beta)
