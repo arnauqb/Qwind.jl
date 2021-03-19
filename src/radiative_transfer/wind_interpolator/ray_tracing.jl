@@ -244,8 +244,8 @@ function next_intersection!(iterator::GridIterator)
         return nothing
     end
     epsilon = 1e-10
-    @inbounds r0 = iterator.intersection[1] #current_r(iterator)
-    @inbounds z0 = iterator.intersection[2] #current_z(iterator)
+    r0 = iterator.intersection[1] #current_r(iterator)
+    z0 = iterator.intersection[2] #current_z(iterator)
     r1 = next_r(iterator)
     z1 = next_z(iterator)
     lambda_r = get_time_to_intersection(r1, iterator.ri, iterator.rf)
@@ -338,7 +338,7 @@ function get_density(grid::InterpolationGrid, iterator::GridIterator)
 end
 
 function dist(p1::Vector{Float64}, p2::Vector{Float64})
-    return @inbounds sqrt((p1[1] - p2[1])^2 + (p1[2] - p2[2])^2)# * Rg
+    return sqrt((p1[1] - p2[1])^2 + (p1[2] - p2[2])^2)# * Rg
 end
 
 function compute_xray_tau(
@@ -407,8 +407,8 @@ function compute_uv_tau(grid::InterpolationGrid, iterator::CellIterator, ri, zi,
     previous_point = copy(iterator.intersection)
     ret = 0.0
     while !iterator.finished
-        @inbounds previous_point[1] = iterator.intersection[1]
-        @inbounds previous_point[2] = iterator.intersection[2]
+        previous_point[1] = iterator.intersection[1]
+        previous_point[2] = iterator.intersection[2]
         #cell_density = get_density(grid, iterator.intersection)
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
