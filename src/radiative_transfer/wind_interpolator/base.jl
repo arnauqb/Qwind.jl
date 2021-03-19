@@ -33,7 +33,7 @@ function WindInterpolator(
         integrators_interpolated_linear = interpolate_integrators(
             integrators,
             max_times = max_times,
-            n_timesteps = 100,
+            n_timesteps = 200,
             log = false,
         )
         rh, zh, _, _, _ = reduce_integrators(integrators_interpolated_linear)
