@@ -58,39 +58,9 @@ vel_grid_z = zeros((length(r_range), length(z_range)));
     end
 end
 
-using PyPlot
-LogNorm = matplotlib.colors.LogNorm
+using HDF5
 
-vmin = 1e-8
-vmax = 1e-4
-fig, ax = plt.subplots(1, 2)
-cm1 = ax[1].pcolormesh(
-    r_range,
-    z_range,
-    rel_grid_r',
-    norm = LogNorm(vmin = vmin, vmax = vmax),
-    shading = "auto",
-)
-cm2 = ax[2].pcolormesh(
-    r_range,
-    z_range,
-    norel_grid_r',
-    norm = LogNorm(vmin = vmin, vmax = vmax),
-    shading = "auto",
-)
-plt.colorbar(cm2, ax = ax[2])
-for axis in ax
-    QwindPlotting.plot_streamlines(iterations_dict[2]["integrators"], fig=fig, ax=axis, color="white", linewidth=0.1, markersize=0.1)
-    axis.set_xlim(r_range[1], r_range[end])
-    axis.set_ylim(z_range[1], z_range[end])
-end
-
-fig, ax = plt.subplots(1, 2)
-cm = ax[1].pcolormesh(r_range, z_range, vel_grid_r', norm=LogNorm(vmin=1e-3, vmax=1e-1))
-cm = ax[2].pcolormesh(r_range, z_range, vel_grid_z', norm=LogNorm(vmin=1e-3, vmax=1e-1))
-for axis in ax
-    QwindPlotting.plot_streamlines(iterations_dict[2]["integrators"], fig=fig, ax=axis, color="black", linewidth=0.1, markersize=0.1)
-    axis.set_xlim(r_range[1], r_range[end])
-    axis.set_ylim(z_range[1], z_range[end])
+c = h5open("./runs/tests/results.hdf5", "r") do file
+    read(file, "iteration_001/velocity_grid")
 end
 

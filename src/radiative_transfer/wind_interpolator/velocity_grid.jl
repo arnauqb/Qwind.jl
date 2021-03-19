@@ -38,6 +38,24 @@ struct VelocityGrid{T} <: InterpolationGrid{T}
     end
 end
 
+VelocityGrid(grid_data::Dict) = VelocityGrid(grid_data["r"], grid_data["z"], grid_data["vr_grid"], grid_data["vz_grid"])
+
+function VelocityGrid(h5_path::String, it_num)
+    it_name = @sprintf "iteration_%03d" it_num
+    grid_data = h5open(h5_path, "r") do file
+        read(file, it_name * "/velocity_grid")
+    end
+    return VelocityGrid(grid_data)
+end
+
+function VelocityGrid(h5_path::String)
+    it_keys = h5open(h5_path, "r") do file
+        keys(read(file))
+    end
+    it_nums = [parse(Int, split(key, "_")[end]) for key in it_keys]
+    return VelocityGrid(h5_path, maximum(it_nums))
+end
+
 function get_velocity(grid::VelocityGrid, r, z)
     if point_outside_grid(grid, r, z)
         return [0.0, 0.0]

@@ -1,3 +1,4 @@
+using HDF5, Printf
 import ConcaveHull
 export DensityGrid, get_density, update_density_grid, interpolate_density
 
@@ -30,6 +31,24 @@ struct DensityGrid{T} <: InterpolationGrid{T}
             interpolator,
         )
     end
+end
+
+DensityGrid(grid_data::Dict) = DensityGrid(grid_data["r"], grid_data["z"], grid_data["grid"])
+
+function DensityGrid(h5_path::String, it_num)
+    it_name = @sprintf "iteration_%03d" it_num
+    grid_data = h5open(h5_path, "r") do file
+        read(file, it_name * "/density_grid")
+    end
+    return DensityGrid(grid_data)
+end
+
+function DensityGrid(h5_path::String)
+    it_keys = h5open(h5_path, "r") do file
+        keys(read(file))
+    end
+    it_nums = [parse(Int, split(key, "_")[end]) for key in it_keys]
+    return DensityGrid(h5_path, maximum(it_nums))
 end
 
 function get_density(grid::DensityGrid, r, z)
