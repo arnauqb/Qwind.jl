@@ -10,7 +10,6 @@ export initialize_integrator,
     run_integrators_parallel!,
     get_initial_radii_and_linewidths,
     compute_density,
-    compute_disc_radiation_field,
     compute_vt,
     compute_d,
     failed,
@@ -232,13 +231,10 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    #disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
     push!(data[:vz], vz)
-    #push!(data[:ar], ar)
-    #push!(data[:az], az)
     push!(data[:n], density)
     push!(data[:dvdr], dvdr)
     push!(data[:taux], taux)
@@ -246,8 +242,6 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     push!(data[:xi], ξ)
     push!(data[:taueff], taueff)
     push!(data[:fm], forcemultiplier)
-    #push!(data[:disc_radiation_field_r], disc_radiation_field[1])
-    #push!(data[:disc_radiation_field_z], disc_radiation_field[2])
     return 0.0
 end
 
@@ -366,9 +360,8 @@ function compute_radiation_acceleration(
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
-    fc = flux_correction(radiative_transfer.radiation.flux_correction, vt)
-    force_radiation = (1 + forcemultiplier) * disc_radiation_field * fc
+    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z, vr, vz)
+    force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end
 

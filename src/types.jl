@@ -9,11 +9,6 @@ abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
 abstract type InterpolationGrid{T<:AbstractFloat} end
 
-# Disk integration modes
-abstract type IntegrationType end
-struct IntegrationFromStreamline <: IntegrationType end
-struct IntegrationFromCenter <: IntegrationType end
-
 # Radiation
 # Force multiplier interpolation
 abstract type Flag end

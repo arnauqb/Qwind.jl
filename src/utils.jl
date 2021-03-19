@@ -24,7 +24,7 @@ function setup_logging()
         flush()
         ret
     end
-    ConsoleLogger(stdout, Logging.Debug) |> timestamp_logger |> global_logger
+    ConsoleLogger(stdout, Logging.Info) |> timestamp_logger |> global_logger
 end
 
 function flush()

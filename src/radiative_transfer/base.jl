@@ -1,31 +1,24 @@
 export compute_disc_radiation_field
 
-"""
-Radiation force integrand for the RE model.
-"""
 function radiation_force_integrand!(
+    flux_correction::NoRelativistic,
     radiative_transfer::RadiativeTransfer,
     radiation::Radiation,
     density_grid::InterpolationGrid,
-    integration_type::IntegrationFromCenter,
     Rg,
     v,
     rd,
     phid,
     r,
     z,
+    vr,
+    vz,
+    beta,
+    gamma
 )
     delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     nt = disk_nt_rel_factors(radiation, rd)
-    tauuv = compute_uv_tau(
-        density_grid,
-        density_grid.iterator,
-        rd,
-        0.0,
-        r,
-        z,
-        Rg,
-    )
+    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, 0.0, r, z, Rg)
     # deproject tauuv
     tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
@@ -34,30 +27,36 @@ function radiation_force_integrand!(
     v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z]
 end
 
+# Relativistic version
 function radiation_force_integrand!(
-    rt::RadiativeTransfer,
-    integration_type::IntegrationFromStreamline,
+    flux_correction::Relativistic,
+    radiative_transfer::RadiativeTransfer,
+    radiation::Radiation,
+    density_grid::InterpolationGrid,
+    Rg,
     v,
-    p,
-    psi,
+    rd,
+    phid,
     r,
     z,
+    vr,
+    vz,
+    beta,
+    gamma
 )
-    cosψ = cos(psi)
-    rd = sqrt(r^2 + p^2 - 2 * p * r * cosψ)
-    if rd <= 6.0 || rd > 1600.0
-        v[1] = 0.0
-        v[2] = 0.0
-        return
-    end
-    nt = disk_nt_rel_factors(rt.radiation, rd)
-    fuv, mdot = get_fuv_mdot(rt.radiation, rd)
-    delta2 = p^2 + z^2
-    tauuv = compute_uv_tau(rt, rd, r, z)
-    tauuv = tauuv / sqrt((r - rd)^2 + z^2) * sqrt(delta2)
-    common_part = nt * mdot * fuv * p / delta2^2 / rd^3 * exp(-tauuv)
-    v[1] = common_part * p * cosψ
-    v[2] = common_part
+    delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
+    nt = disk_nt_rel_factors(radiation, rd)
+    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, 0.0, r, z, Rg)
+    # deproject tauuv
+    tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
+    fuv, mdot = get_fuv_mdot(radiation, rd)
+    r_projection = (r - rd * cos(phid))
+    # relativistic correction to the flux
+    cosθ = (r_projection * vr + z * vz) / (delta * beta)
+    flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
+    # common geometric term for r and z
+    common_projection = 1.0 / (rd^2 * delta^4)
+    v[:] = exp(-tauuv) * flux_correction * fuv * mdot * nt * common_projection * [r_projection, z]
 end
 
 """
@@ -72,34 +71,34 @@ function integrate_radiation_force_integrand(
     radiative_transfer::RadiativeTransfer,
     r,
     z,
+    vr,
+    vz,
+    beta,
+    gamma,
     rmin,
     rmax = 1600;
     phi_min = 0.0,
     phi_max = π,
-    atol = 0,
+    atol = 0.0,
     rtol = 1e-4,
     norm = Cubature.INDIVIDUAL,
     maxevals = 50000,
-    zmax_fromstreamline = 1e-3,
 )
-    #if z < zmax_fromstreamline
-    #    #return [0.0, 0.0], [0.0, 0.0]
-    #    integration_type = IntegrationFromStreamline()
-    #else
-    #    integration_type = IntegrationFromCenter()
-    #end
-    integration_type = IntegrationFromCenter()
     f(x, v) = radiation_force_integrand!(
+        radiative_transfer.radiation.flux_correction,
         radiative_transfer,
         radiative_transfer.radiation,
         radiative_transfer.interpolator.density_grid,
-        integration_type,
         radiative_transfer.radiation.Rg,
         v,
         x[1],
         x[2],
         r,
         z,
+        vr,
+        vz,
+        beta,
+        gamma
     )
     return hcubature(
         2,
@@ -114,13 +113,50 @@ function integrate_radiation_force_integrand(
 end
 
 
-function compute_disc_radiation_field_vertical(rt::RadiativeTransfer, r, z)
-    constant = 3 / (2 * rt.radiation.efficiency)
-    fuv, mdot = get_fuv_mdot(rt.radiation, r)
-    tauuv = compute_uv_tau(rt, r, r, z)
-    nt = disk_nt_rel_factors(r, rt.radiation.spin, rt.radiation.isco)
+function compute_disc_radiation_field_vertical(
+    radiation::Radiation,
+    grid::InterpolationGrid,
+    r,
+    z,
+)
+    Rg = radiation.Rg
+    constant = 3 / (2 * radiation.efficiency)
+    fuv, mdot = get_fuv_mdot(radiation, r)
+    tauuv = compute_uv_tau(grid, r, r, z, Rg)
+    nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     return [0.0, nt * constant * mdot * exp(-tauuv) * fuv / r^3]
 end
+
+function compute_disc_radiation_field_vertical(
+    flux_correction::Relativistic,
+    radiation::Radiation,
+    grid::InterpolationGrid,
+    r,
+    z,
+    beta,
+)
+    flux_correction = ((1 - beta) / (1 + beta))^2
+    return flux_correction * compute_disc_radiation_field_vertical(radiation, grid, r, z)
+end
+
+compute_disc_radiation_field_vertical(
+    flux_correction::NoRelativistic,
+    radiation::Radiation,
+    grid::InterpolationGrid,
+    r,
+    z,
+    beta,
+) = compute_disc_radiation_field_vertical(radiation, grid, r, z)
+
+compute_disc_radiation_field_vertical(radiative_transfer::RadiativeTransfer, r, z, beta) =
+    compute_disc_radiation_field_vertical(
+        radiative_transfer.radiation.flux_correction,
+        radiative_transfer.radiation,
+        radiative_transfer.interpolator.density_grid,
+        r,
+        z,
+        beta,
+    )
 
 """
 Computes the disc radiation field at the point (r,z) by performing
@@ -134,7 +170,9 @@ an integral over the disc.
 function compute_disc_radiation_field(
     radiative_transfer::RadiativeTransfer,
     r,
-    z;
+    z,
+    vr,
+    vz;
     rmax = 1600,
     atol = 0,
     rtol = 1e-3,
@@ -142,14 +180,20 @@ function compute_disc_radiation_field(
     maxevals = 10000,
     max_z_vertical_flux = 5e-1,
 )
-    #println("r $r z $z")
+    # sometimes the solver may try unphysical values of vr and vz, so we take the max
+    beta = min(1.0, sqrt(vr^2 + vz^2))
+    gamma = 1.0 / sqrt(1 - beta^2)
     if z < max_z_vertical_flux
-        force = compute_disc_radiation_field_vertical(radiative_transfer, r, z)
+        force = compute_disc_radiation_field_vertical(radiative_transfer, r, z, beta)
     else
         res, err = integrate_radiation_force_integrand(
             radiative_transfer,
             r,
             z,
+            vr,
+            vz,
+            beta,
+            gamma,
             radiative_transfer.radiation.isco,
             rmax,
             atol = atol,

@@ -420,3 +420,6 @@ end
 
 compute_uv_tau(grid::InterpolationGrid, ri, zi, rf, zf, Rg) =
     compute_uv_tau(grid::InterpolationGrid, grid.iterator, ri, zi, rf, zf, Rg)
+
+compute_uv_tau(grid::InterpolationGrid, ri, rf, zf, Rg) =
+    compute_uv_tau(grid::InterpolationGrid, grid.iterator, ri, 0.0, rf, zf, Rg)

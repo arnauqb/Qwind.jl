@@ -58,12 +58,7 @@ initialize_integrators(model::Model) = initialize_integrators(
     rtol = model.config[:integrator][:rtol],
 )
 
-
-function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=true)
-    if it_num ∉ keys(iterations_dict)
-        iterations_dict[1] = Dict()
-    end
-    save_path = model.config[:integrator][:save_path]
+function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=true)
     lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
         model,
@@ -81,8 +76,16 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=tr
     else
         integrators = f.(1:length(lines_range))
     end
-    #integrators = f.(1:length(lines_range))
     iterations_dict[it_num]["integrators"] = integrators
+    return integrators
+end
+
+function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=true)
+    if it_num ∉ keys(iterations_dict)
+        iterations_dict[1] = Dict()
+    end
+    save_path = model.config[:integrator][:save_path]
+    integrators = run_integrators!(model, iterations_dict, it_num=it_num, parallel=parallel)
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush()
