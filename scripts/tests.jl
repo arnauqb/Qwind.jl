@@ -14,10 +14,7 @@ end
 model = Model(config_path);
 iterations_dict = Dict();
 iterations_dict[1] = Dict();
-integrators = run_integrators!(model, iterations_dict, it_num=1, parallel=true);
-save_path = model.config[:integrator][:save_path];
-save_wind(integrators, model, save_path, 1);
-#run!(model, iterations_dict, parallel = true)
+run!(model, iterations_dict, parallel = true)
 
 
 using HDF5
