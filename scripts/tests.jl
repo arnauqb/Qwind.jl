@@ -24,3 +24,5 @@ c = h5open("./runs/tests/results.hdf5", "r") do file
 end
 
 ts = load_trajectories("./runs/tests/results.hdf5")
+
+hull = Hull("./runs/tests/results.hdf5")

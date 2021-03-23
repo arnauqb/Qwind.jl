@@ -29,8 +29,8 @@ function WindInterpolator(
         r0 = [integ.p.r0 for integ in integrators]
         max_times = get_intersection_times(integrators)
         hull = Hull(integrators, max_times)
-        density_grid = DensityGrid(integrators, max_times, hull)
-        velocity_grid = VelocityGrid(integrators, max_times, hull)
+        density_grid = DensityGrid(integrators, max_times, hull, nr=nr, nz=nz)
+        velocity_grid = VelocityGrid(integrators, max_times, hull, nr=nr, nz=nz)
     end
     return WindInterpolator(hull, density_grid, velocity_grid, vacuum_density, n_timesteps)
 end
