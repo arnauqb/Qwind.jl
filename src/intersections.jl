@@ -201,6 +201,8 @@ end
 function get_intersection_times(integrators::Vector{<:DenseIntegrator})
     intersection_indices = [length(integrator.t) for integrator in integrators]
     @info "Calculating trajectory intersections..."
+    n_procs_to_use = min(10, nprocs() - 1)
+    worker_pool = WorkerPool(collect(1:n_procs_to_use))
     @showprogress for (i, integrator) in enumerate(integrators)
         integrators_sliced = [
             slice_integrator(integrator, fi = index)
@@ -208,13 +210,15 @@ function get_intersection_times(integrators::Vector{<:DenseIntegrator})
         ]
         index = length(integrator.t)
         integrator_indcs = [j for j in 1:length(integrators) if j != i]
-        @sync @distributed min for integrator2 = integrators_sliced[integrator_indcs]
-            intersect(integrator, integrator2)
-        end
-        #f(j) = intersect(integrator, integrators_sliced[j])
+        #@sync @distributed min for integrator2 = integrators_sliced[integrator_indcs]
+        #    intersect(integrator, integrator2)
+        #end
+        f(j) = intersect(integrator, integrators_sliced[j])
         #integrator_indcs = [j for j in 1:length(integrators) if j != i]
-        #batch = Int(floor(length(integrator_indcs) // 10))
-        #index = minimum(pmap(f, integrator_indcs, batch_size = batch))
+        #batch = Int(floor(length(integrator_indcs) // n_procs_to_use))
+        index = minimum(pmap(f, worker_pool, integrator_indcs, batch_size = 50))
+        #println(worker_pool)
+        #index = minimum(pmap(f, integrator_indcs, batch_size = 50))
         intersection_indices[i] = index
     end
     intersection_times = [
