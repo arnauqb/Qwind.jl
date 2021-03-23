@@ -1,5 +1,6 @@
 module Qwind
-export Radiation, RadiativeTransfer, InitialConditions, Model
+export Radiation, RadiativeTransfer, InitialConditions, Model, scipy_interpolate
+
 
 include("black_hole.jl")
 include("types.jl")
@@ -44,5 +45,13 @@ include("saver.jl")
 
 # model
 include("model.jl")
+
+
+# initialisation
+const scipy_interpolate = PyNULL()
+function __init__()
+    copy!(scipy_interpolate, pyimport_conda("scipy.interpolate", "scipy"))
+    setup_logging()
+end
 
 end # module

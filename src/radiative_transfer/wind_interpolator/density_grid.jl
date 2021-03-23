@@ -1,3 +1,4 @@
+using HDF5, Printf
 import ConcaveHull
 export DensityGrid, get_density, update_density_grid, interpolate_density
 
@@ -32,53 +33,34 @@ struct DensityGrid{T} <: InterpolationGrid{T}
     end
 end
 
-function get_density(grid::DensityGrid, r, z)
-    if point_outside_grid(grid, r, z)
-        return 1e2
+DensityGrid(grid_data::Dict) =
+    DensityGrid(grid_data["r"], grid_data["z"], grid_data["grid"])
+
+function DensityGrid(h5_path::String, it_num)
+    it_name = @sprintf "iteration_%03d" it_num
+    grid_data = h5open(h5_path, "r") do file
+        read(file, it_name * "/density_grid")
     end
-    ridx = searchsorted_nearest(grid.r_range, r)
-    zidx = searchsorted_nearest(grid.z_range, z)
-    return grid.grid[ridx, zidx]
+    return DensityGrid(grid_data)
 end
 
-function interpolate_density(grid::DensityGrid, r, z)
-    if point_outside_grid(grid, r, z)
-        return 1e2
+function DensityGrid(h5_path::String)
+    it_keys = h5open(h5_path, "r") do file
+        keys(read(file))
     end
-    return grid.interpolator(r,z)
+    it_nums = [parse(Int, split(key, "_")[end]) for key in it_keys]
+    return DensityGrid(h5_path, maximum(it_nums))
 end
 
-get_density(grid::DensityGrid, point::Vector{Float64}) =
-    get_density(grid, point[1], point[2])
 
-function get_density_interpolator(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    n::Vector{Float64};
-    type = "linear"
-)
-    r_log = log10.(r)
-    z_log = log10.(z)
-    log_n = log10.(n)
-    points = hcat(r_log, z_log)
-    if type == "linear"
-        interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
-    elseif type == "nn"
-        interp = scipy_interpolate.NearestNDInterpolator(points, log_n)
-    else
-        error("interpolation type $type not supported")
-    end
-    return interp 
-end
-
-function construct_density_grid(nr, nz, vacuum_density = 1e2)
+function DensityGrid(nr::Union{String, Int}, nz::Int, vacuum_density::Float64)
     r_range = zeros(2)
     z_range = zeros(2)
     density_grid = vacuum_density .* [[1.0, 1.0] [1.0, 1.0]]
     return DensityGrid(r_range, z_range, density_grid, nr, nz)
 end
 
-function construct_density_grid(
+function DensityGrid(
     r::Vector{Float64},
     z::Vector{Float64},
     n::Vector{Float64},
@@ -86,15 +68,16 @@ function construct_density_grid(
     hull::ConcaveHull.Hull;
     nr = "auto",
     nz = 50,
-    log=true,
+    log = true,
     interpolation_type = "linear",
 )
     @info "Constructing density interpolator..."
-    interpolator = get_density_interpolator(r, z, n, type=interpolation_type)
+    flush()
+    interpolator = get_density_interpolator(r, z, n, type = interpolation_type)
     @info "Done"
     @info "Filling density grid..."
     flush()
-    r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log=log)
+    r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log = log)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
     density_grid = 1e2 .* ones((length(r_range), length(z_range)))
@@ -113,7 +96,85 @@ function construct_density_grid(
     pushfirst!(z_range, 0.0)
     grid = DensityGrid(r_range, z_range, density_grid, nr, nz)
     @info "Done"
+    flush()
     return grid
+end
+
+function DensityGrid(
+    integrators::Vector{<:Sundials.IDAIntegrator},
+    max_times,
+    hull;
+    nr = "auto",
+    nz = 50,
+    interpolation_type = "linear",
+)
+    r0 = [integ.p.r0 for integ in integrators]
+    integrators_interpolated = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = 1000,
+        log = true,
+    )
+    r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
+    return DensityGrid(
+        r,
+        z,
+        n,
+        r0,
+        hull,
+        nr = nr,
+        nz = nz,
+        log = true,
+        interpolation_type = "linear",
+    )
+end
+
+function get_density(grid::DensityGrid, r, z)
+    if point_outside_grid(grid, r, z)
+        return 1e2
+    end
+    ridx = searchsorted_nearest(grid.r_range, r)
+    zidx = searchsorted_nearest(grid.z_range, z)
+    return grid.grid[ridx, zidx]
+end
+
+get_density(grid::DensityGrid, point::Vector{Float64}) =
+    get_density(grid, point[1], point[2])
+
+function interpolate_density(grid::DensityGrid, r, z)
+    if point_outside_grid(grid, r, z)
+        return 1e2
+    end
+    return grid.interpolator(r, z)
+end
+
+
+function get_density_interpolator(
+    r::Vector{Float64},
+    z::Vector{Float64},
+    n::Vector{Float64};
+    type = "linear",
+)
+    mask = (r .> 0) .& (z .> 0)
+    r = r[mask]
+    z = z[mask]
+    n = n[mask]
+    r_log = log10.(r)
+    z_log = log10.(z)
+    log_n = log10.(n)
+    points = hcat(r_log, z_log)
+    if type == "linear"
+        interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
+    elseif type == "nn"
+        interp = scipy_interpolate.NearestNDInterpolator(points, log_n, rescale = true)
+    elseif type == "clough_tocher"
+        interp = scipy_interpolate.CloughTocher2DInterpolator(points, log_n, fill_value = 2)
+    elseif type == "rbf"
+        interp = scipy_interpolate.Rbf(r_log, z_log, log_n)
+    else
+        error("interpolation type $type not supported")
+    end
+    return interp
 end
 
 function update_density_grid(
@@ -122,9 +183,9 @@ function update_density_grid(
     r::Vector{Float64},
     z::Vector{Float64},
     n::Vector{Float64},
-    r0s::Vector{Float64},
+    r0::Vector{Float64},
 )
-    r_range, z_range = get_spatial_grid(r, z, r0s, old_grid.nr, old_grid.nz)
+    r_range, z_range = get_spatial_grid(r, z, r0, old_grid.nr, old_grid.nz)
     r_range_log = log10.(r_range)
     z_range_log = log10.(z_range)
     interpolator = get_density_interpolator(r, z, n)
@@ -153,3 +214,21 @@ function update_density_grid(
     grid = DensityGrid(r_range, z_range, density_grid, old_grid.nr, old_grid.nz)
     return grid
 end
+
+function update_density_grid(
+    old_grid::DensityGrid,
+    integrators::Vector{<:Sundials.IDAIntegrator},
+    max_times,
+    hull,
+)
+    r0 = [integ.p.r0 for integ in integrators]
+    integrators_interpolated = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = 1000,
+        log = true,
+    )
+    r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
+    return update_density_grid(old_grid, hull, r, z, n, r0)
+end
+

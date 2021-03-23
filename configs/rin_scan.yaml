@@ -1,9 +1,9 @@
 system:
   qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
-  n_cpus: 112
-  partition: cosma7-shm
+  n_cpus: 128
+  partition: cosma8
   account: dp004
-  max_time: 72:00:00
+  max_time: 24:00:00
   job_name: qwind
   
 black_hole:
@@ -18,14 +18,15 @@ radiation:
   n_r: 2000
   z_xray: 0.0
 
+
 radiative_transfer:
   mode: RegularGrid
   interpolator: 
-    type: WindInterpolator 
+    type: WindInterpolator #"@vary grid VIGrid,WindInterpolator"
     vacuum_density: 1e2
     n_timesteps: 10000
-    nz: 100 #"@vary grid 50,100,500,1000"
-    nr: "auto"
+    nz: 500 #"@vary grid 50,100,500,1000"
+    nr: auto
 
 grid:
   # units of Rg
@@ -36,9 +37,10 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  r_in: 50.0
+  #r_in: "@vary grid 60,70,80,90,100,125,150,175,200"
+  r_in: "@vary grid 6.1,8,10,25,50,75,100"
   r_fi: 1300.0
-  n_lines: 50 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
@@ -46,7 +48,7 @@ initial_conditions:
   mu: 0.5
 
 integrator:
-  n_iterations: 5
+  n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "./data"
+  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/rin_scan_relativistic"

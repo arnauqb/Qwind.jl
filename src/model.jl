@@ -1,4 +1,4 @@
-export Model, run!, run_parallel!, do_iteration!, create_models_folders
+export Model, run!, run_parallel!, run_iteration!, create_models_folders
 import Qwind: create_and_run_integrator
 
 using YAML, Printf, ProgressMeter
@@ -58,12 +58,7 @@ initialize_integrators(model::Model) = initialize_integrators(
     rtol = model.config[:integrator][:rtol],
 )
 
-
-function do_iteration!(model::Model, iterations_dict::Dict; it_num)
-    if it_num ∉ keys(iterations_dict)
-        iterations_dict[1] = Dict()
-    end
-    save_path = model.config[:integrator][:save_path]
+function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=true)
     lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
         model,
@@ -73,10 +68,24 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
         rtol = model.config[:integrator][:rtol],
         line_id = i,
     )
+    @info "Starting iteration $it_num ..."
     @info "Iterating streamlines..."
-    integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
-    #integrators = f.(1:length(lines_range))
+    flush()
+    if parallel
+        integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+    else
+        integrators = f.(1:length(lines_range))
+    end
     iterations_dict[it_num]["integrators"] = integrators
+    return integrators
+end
+
+function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=true)
+    if it_num ∉ keys(iterations_dict)
+        iterations_dict[1] = Dict()
+    end
+    save_path = model.config[:integrator][:save_path]
+    integrators = run_integrators!(model, iterations_dict, it_num=it_num, parallel=parallel)
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush()
@@ -95,7 +104,7 @@ function do_iteration!(model::Model, iterations_dict::Dict; it_num)
     return
 end
 
-function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing)
+function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing, parallel=true)
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
@@ -109,7 +118,7 @@ function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=
     iterations_dict[1] = Dict()
     iterations_dict[1]["radiative_transfer"] = model.rt
     for it = start_it:(start_it+n_iterations-1)
-        do_iteration!(model, iterations_dict, it_num = it)
+        run_iteration!(model, iterations_dict, it_num = it, parallel=parallel)
     end
     return
 end

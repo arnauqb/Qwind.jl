@@ -1,6 +1,6 @@
 # general pieces of a model
 
-export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp
+export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp, Relativistic, NoRelativistic
 
 abstract type Radiation{T<:AbstractFloat} end
 abstract type RadiativeTransfer{T<:AbstractFloat} end
@@ -8,11 +8,6 @@ abstract type Interpolator{T<:AbstractFloat} end
 abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
 abstract type InterpolationGrid{T<:AbstractFloat} end
-
-# Disk integration modes
-abstract type IntegrationType end
-struct IntegrationFromStreamline <: IntegrationType end
-struct IntegrationFromCenter <: IntegrationType end
 
 # Radiation
 # Force multiplier interpolation

@@ -1,5 +1,5 @@
-using CSV, DataFrames, YAML, HDF5
-export save_integrator, save_integrators, save_wind
+using CSV, DataFrames, YAML, HDF5, Printf, JLD2
+export save_trajectories, save_wind
 
 function create_integrators_df(integrators, Rg)
     df = DataFrame()
@@ -19,12 +19,13 @@ function create_integrators_df(integrators, Rg)
     return df
 end
 
-function save_integrators(integrators, save_path, Rg)
-    if save_path === nothing
-        return
-    end
-    df = create_integrators_df(integrators, Rg)
-    CSV.write(save_path, df)
+function save_trajectories(integrators, save_path)
+    @save save_path integrators
+    #if save_path === nothing
+    #    return
+    #end
+    #df = create_integrators_df(integrators, Rg)
+    #CSV.write(save_path, df)
 end
 
 function compute_integrator_mdot(integrator, Rg)
@@ -120,9 +121,9 @@ function save_wind(integrators, model, save_path, it_num)
     mkpath(iteration_save_path)
     hdf5_save_path = save_path * "/results.hdf5"
     save_hdf5(integrators, model, hdf5_save_path, it_num)
-    lines_save_path = iteration_save_path * "/streamlines.csv"
+    lines_save_path = iteration_save_path * "/trajectories.jld2"
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
-    save_integrators(integrators, lines_save_path, model.bh.Rg)
+    save_trajectories(integrators, lines_save_path)
     properties = save_wind_properties(integrators, properties_save_path, model.bh)
     return properties
 end
@@ -149,16 +150,43 @@ function save_velocity_grid!(velocity_grid::VelocityGrid, group)
     return
 end
 
+function save_trajectories!(integrators::Vector{<:Sundials.IDAIntegrator}, group)
+    g = create_group(group, "trajectories")
+    for (i, integrator) in enumerate(integrators)
+        integ = DenseIntegrator(integrator)
+        tgroup = create_group(g, "$i")
+        tgroup["t"] = integ.t
+        tgroup["r"] = integ.r
+        tgroup["z"] = integ.z
+        tgroup["vr"] = integ.vr
+        tgroup["vz"] = integ.vz
+        tgroup["n"] = integ.n
+    end
+    return
+end
+
+function save_wind_hull!(hull::ConcaveHull.Hull, group)
+    g = create_group(group, "wind_hull")
+    g["k"] = hull.k
+    g["vertices_r"] = [v[1] for v in hull.vertices]
+    g["vertices_z"] = [v[2] for v in hull.vertices]
+    g["converged"] = hull.converged
+end
+save_wind_hull!(hull::Nothing, group) = nothing
+
 
 function save_hdf5(integrators, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
     density_grid = model.rt.interpolator.density_grid
     velocity_grid = model.rt.interpolator.velocity_grid
+    wind_hull = model.rt.interpolator.wind_hull
     bh = model.bh
     h5open(hdf5_save_path,isfile(hdf5_save_path) ? "r+" : "w") do file
         g = create_group(file, iteration)
         save_density_grid!(density_grid, g)
         save_velocity_grid!(velocity_grid, g)
+        save_trajectories!(integrators, g)
+        save_wind_hull!(wind_hull, g)
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)
         g["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
         macc = compute_mass_accretion_rate(bh)

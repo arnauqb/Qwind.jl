@@ -12,6 +12,7 @@ export BlackBody,
     disk_flux,
     disk_flux_norel,
     disk_temperature,
+    disk_temperature_norel,
     uv_fraction,
     uv_fractions
 
@@ -159,6 +160,11 @@ Computes the temperature of the disk at a radius r (in units of Rg).
 """
 function disk_temperature(bh::BlackHole, r)
     flux = disk_flux(bh, r)
+    return (flux / SIGMA_SB)^(1 / 4)
+end
+
+function disk_temperature_norel(bh::BlackHole, r)
+    flux = disk_flux_norel(bh, r)
     return (flux / SIGMA_SB)^(1 / 4)
 end
 

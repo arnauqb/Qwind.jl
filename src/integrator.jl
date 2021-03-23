@@ -10,14 +10,11 @@ export initialize_integrator,
     run_integrators_parallel!,
     get_initial_radii_and_linewidths,
     compute_density,
-    compute_disc_radiation_field,
     compute_vt,
     compute_d,
     failed,
     Parameters,
-    escaped,
-    DenseIntegrator,
-    DenseIntegrators
+    escaped
 
 function make_save_data(line_id = -1)
     ret = Dict{Symbol,Any}(:line_id => line_id)
@@ -55,6 +52,7 @@ struct Parameters
     lwnorm::Float64
     grid::Grid
     data::Any
+    finished::Vector{Bool}
 end
 
 function compute_density(r, z, vr, vz, parameters::Parameters)
@@ -85,7 +83,7 @@ function initialize_integrator(
         save_positions = (false, false),
     )
     data = make_save_data(line_id)
-    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data)
+    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data, [false])
     if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
@@ -119,13 +117,13 @@ function get_initial_radii_and_linewidths(
         lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
         lines_range = [rin + lines_widths[1] / 2.0]
         for i = 2:nlines
-            r0 = lines_range[i-1] + lines_widths[i-1] / 2 + lines_widths[i] / 2
+            r0 = lines_range[i - 1] + lines_widths[i - 1] / 2 + lines_widths[i] / 2
             push!(lines_range, r0)
         end
     else
         lines_widths = range(rin, rfi, length = nlines)
         dr = (rfi - rin) / nlines
-        lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines-1)]
+        lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
         lines_widths = diff([lines_range; rfi + dr / 2])
     end
     return lines_range, lines_widths
@@ -190,15 +188,9 @@ function escaped(integrator::Sundials.IDAIntegrator)
     compute_vt(integrator) > compute_escape_velocity(compute_d(integrator))
 end
 
-function failed(integrator::Sundials.IDAIntegrator)
-    #sign_changes1 = countsignchanges(integrator.p.data[:vz])
-    intersects = self_intersects(integrator)
-    #sign_changes2 = countsignchanges(diff(integrator.p.data[:vz]), 1e-4)
-    integrator.u[1] < 0.0 ||
-        integrator.u[2] < integrator.p.grid.z_min ||
-        intersects
-        #(sign_changes1 >= 2)
-    #(sign_changes2 >= 2)
+function failed(integrator::Sundials.IDAIntegrator, r, z)
+    intersects = self_intersects(integrator, r, z)
+    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || intersects
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -215,15 +207,19 @@ function termination_condition(u, t, integrator)
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
     out_of_grid_condition = out_of_grid(integrator)
-    failed_condition = failed(integrator)
+    failed_condition = failed(integrator, r, z)
     return out_of_grid_condition || failed_condition
 end
 
 function affect!(integrator)
+    integrator.p.finished[1] = true
     terminate!(integrator)
 end
 
 function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
+    if integrator.p.finished[1]
+        return 0.0
+    end
     data = integrator.p.data
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
@@ -235,13 +231,10 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    #disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
     push!(data[:vz], vz)
-    #push!(data[:ar], ar)
-    #push!(data[:az], az)
     push!(data[:n], density)
     push!(data[:dvdr], dvdr)
     push!(data[:taux], taux)
@@ -249,12 +242,13 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     push!(data[:xi], ξ)
     push!(data[:taueff], taueff)
     push!(data[:fm], forcemultiplier)
-    #push!(data[:disc_radiation_field_r], disc_radiation_field[1])
-    #push!(data[:disc_radiation_field_z], disc_radiation_field[2])
     return 0.0
 end
 
 function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, line_id)
+    if integrator.p.finished[1]
+        return 0.0
+    end
     data = integrator.p.data
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
@@ -366,9 +360,8 @@ function compute_radiation_acceleration(
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
-    fc = flux_correction(radiative_transfer.radiation.flux_correction, vt)
-    force_radiation = (1 + forcemultiplier) * disc_radiation_field * fc
+    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z, vr, vz)
+    force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end
 
@@ -397,97 +390,6 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
-struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
-    r::T
-    z::T
-    vr::T
-    vz::T
-    n::T
-    function DenseIntegrator(integrator::Sundials.IDAIntegrator; n_timesteps=10000, log=true)
-        integration_time = unique(integrator.sol.t)
-        tmin = integration_time[2]
-        tmax = integration_time[end-1]
-        if tmax <= tmin
-            return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-        end
-        if log
-            t_range = 10 .^ range(log10(tmin), log10(tmax), length = n_timesteps)
-        else
-            t_range = range(tmin, tmax, length = n_timesteps)
-        end
-        i = 1
-        while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
-            t_range = t_range[1:(end-i)]
-            i += 1
-        end
-        if length(t_range) == 0
-            return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-        end
-        dense_solution = integrator.sol(t_range)
-        r_dense = dense_solution[1, :]
-        z_dense = dense_solution[2, :]
-        vr_dense = dense_solution[3,:]
-        vz_dense = dense_solution[4,:]
-        line_width_dense = r_dense .* integrator.p.lwnorm
-        density_dense =
-            compute_density.(
-                r_dense,
-                z_dense,
-                vr_dense,
-                vz_dense,
-                Ref(integrator.p),
-            )
-        return new{typeof(r_dense)}(r_dense, z_dense, vr_dense, vz_dense, density_dense)
-    end
-end
-
-struct DenseIntegrators{T<:Vector{<:AbstractFloat}}
-    r::T
-    z::T
-    vr::T
-    vz::T
-    n::T
-    function DenseIntegrators(integrators::Vector{<:Sundials.IDAIntegrator}; n_timesteps = 10000, log=true)
-        @info "Getting dense solution from integrators..."
-        flush()
-        f(i) = DenseIntegrator(integrators[i], n_timesteps=n_timesteps, log=log)
-        #dense_integrators = pmap(f, 1:length(integrators), batch_size=10)
-        dense_integrators = f.(1:length(integrators)) #integrators)
-        r = reduce(vcat, [integrator.r for integrator in dense_integrators])
-        z = reduce(vcat, [integrator.z for integrator in dense_integrators])
-        vr = reduce(vcat, [integrator.vr for integrator in dense_integrators])
-        vz = reduce(vcat, [integrator.vz for integrator in dense_integrators])
-        n = reduce(vcat, [integrator.n for integrator in dense_integrators])
-        @info "Done"
-        flush()
-        return new{typeof(r)}(r, z, vr, vz, n)
-    end
-end
-
-function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
-    rc = rin
-    lines_range = []
-    lines_widths = []
-    tau_x = 0
-    tau_uv = 0
-    while rc < rfi
-        if tau_x < 1
-            delta_r = 0.1 / (SIGMA_T * Rg * 100 * getn0(ic, rc))
-            tau_x += 0.1
-            tau_uv += 0.1 / 100
-        elseif (tau_x > 1) && (tau_uv < 1)
-            delta_r = 0.1 / (SIGMA_T * Rg * getn0(ic, rc))
-            tau_x += 10
-            tau_uv += 0.1
-        else
-            delta_r = 1 / (SIGMA_T * Rg * getn0(ic, rc))
-        end
-        push!(lines_range, rc + delta_r / 2)
-        push!(lines_widths, delta_r)
-        rc += delta_r
-    end
-    return lines_range, lines_widths
-end
 
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]
@@ -495,7 +397,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
     z_range = [0.0, 1.0]
     density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range)
+    density_grid[:, 1] .= getn0.(Ref(ic), r_range) 
     interp_grid = DensityGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
@@ -518,9 +420,9 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         if tau_x < 50
             tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
             if tau_x < 1
-                delta_tau = 0.01
-            elseif tau_x < 20
                 delta_tau = 0.1
+            elseif tau_x < 20
+                delta_tau = 0.5
             else
                 delta_tau = 1
             end
@@ -530,12 +432,12 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
                 atol = 1e-7,
                 rtol = 1e-3,
             )
-        elseif tau_uv < 25
+        elseif tau_uv < 50
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
             if tau_uv < 1
-                delta_tau = 0.05
-            elseif tau_uv < 20
                 delta_tau = 0.1
+            elseif tau_uv < 20
+                delta_tau = 0.5
             else
                 delta_tau = 1
             end
@@ -557,13 +459,13 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         rc += delta_r
     end
     # distribute remaining ones logarithmically
-    additional_range = 10 .^ range(log10(rc), log10(rfi), length = 150)
+    additional_range = range(rc, rfi, step=5)
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)
     lines_widths = vcat(lines_widths, additional_widths)
     # discard last radius
-    lines_range = lines_range[1:(end-1)]
+    lines_range = lines_range[1:(end - 1)]
     return lines_range, lines_widths
 end
 

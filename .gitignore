@@ -39,6 +39,7 @@ docs/site/
 
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
+**/*.ipynb
 
 ################################################################################
 #                               Microsoft Office                               #
@@ -417,4 +418,4 @@ $RECYCLE.BIN/
 
 
 # My custom gitignore
-Manifest.toml
+#Manifest.toml
