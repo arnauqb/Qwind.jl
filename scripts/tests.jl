@@ -15,9 +15,13 @@ try
 catch
 end
 model = Model(config);
-#iterations_dict = Dict();
-#iterations_dict[1] = Dict();
-#run!(model, iterations_dict, parallel = true)
+iterations_dict = Dict();
+iterations_dict[1] = Dict();
+run!(model, iterations_dict, parallel = true)
+
+integrators = iterations_dict[1]["integrators"];
+
+intersection_times = get_intersection_times(integrators);
 
 lr, lw = Qwind.compute_lines_range(model);
 fig, ax = plt.subplots()

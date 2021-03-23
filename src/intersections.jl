@@ -206,10 +206,15 @@ function get_intersection_times(integrators::Vector{<:DenseIntegrator})
             slice_integrator(integrator, fi = index)
             for (integrator, index) in zip(integrators, intersection_indices)
         ]
-        f(j) = intersect(integrator, integrators_sliced[j])
+        index = length(integrator.t)
         integrator_indcs = [j for j in 1:length(integrators) if j != i]
-        batch = Int(floor(length(integrator_indcs) // 10))
-        index = minimum(pmap(f, integrator_indcs, batch_size = batch))
+        @sync @distributed min for integrator2 = integrators_sliced[integrator_indcs]
+            intersect(integrator, integrator2)
+        end
+        #f(j) = intersect(integrator, integrators_sliced[j])
+        #integrator_indcs = [j for j in 1:length(integrators) if j != i]
+        #batch = Int(floor(length(integrator_indcs) // 10))
+        #index = minimum(pmap(f, integrator_indcs, batch_size = batch))
         intersection_indices[i] = index
     end
     intersection_times = [
