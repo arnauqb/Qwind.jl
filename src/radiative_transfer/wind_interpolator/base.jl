@@ -23,13 +23,12 @@ function WindInterpolator(
     nz = Int(nz)
     if integrators === nothing
         hull = nothing
-        density_grid = construct_density_grid(nr, nz)
-        velocity_grid = construct_velocity_grid(nr, nz)
+        density_grid = DensityGrid(nr, nz, vacuum_density)
+        velocity_grid = VelocityGrid(nr, nz, 0.0)
     else
         r0 = [integ.p.r0 for integ in integrators]
         max_times = get_intersection_times(integrators)
-
-        hull = construct_wind_hull(integrators, max_times)
+        hull = Hull(integrators, max_times)
         density_grid = DensityGrid(integrators, max_times, hull)
         velocity_grid = VelocityGrid(integrators, max_times, hull)
     end
@@ -49,7 +48,7 @@ function update_interpolator(wi::WindInterpolator, integrators)
     end
     r0 = [integ.p.r0 for integ in integrators]
     max_times = get_intersection_times(integrators)
-    hull = construct_wind_hull(integrators, max_times)
+    hull = Hull(integrators, max_times)
     density_grid = update_density_grid(wi.density_grid, integrators, max_times, hull)
     velocity_grid = update_velocity_grid(wi.velocity_grid, integrators, max_times, hull)
     return WindInterpolator(

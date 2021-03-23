@@ -57,50 +57,7 @@ function VelocityGrid(h5_path::String)
     return VelocityGrid(h5_path, maximum(it_nums))
 end
 
-function get_velocity(grid::VelocityGrid, r, z)
-    if point_outside_grid(grid, r, z)
-        return [0.0, 0.0]
-    end
-    ridx = searchsorted_nearest(grid.r_range, r)
-    zidx = searchsorted_nearest(grid.z_range, z)
-    return [grid.vr_grid[ridx, zidx], grid.vz_grid[ridx, zidx]]
-end
-
-function interpolate_velocity(grid::VelocityGrid, r, z)
-    if point_outside_grid(grid, r, z)
-        return [0.0, 0.0]
-    end
-    return [grid.vr_interpolator(r, z), grid.vz_interpolator(r, z)]
-end
-
-function get_velocity_interpolators(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    vr::Vector{Float64},
-    vz::Vector{Float64};
-    type = "linear",
-)
-    mask = (r .> 0) .& (z .> 0)
-    r = r[mask]
-    z = z[mask]
-    vr = vr[mask]
-    vz = vz[mask]
-    r_log = log10.(r)
-    z_log = log10.(z)
-    points = hcat(r_log, z_log)
-    if type == "linear"
-        vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
-        vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
-    elseif type == "nn"
-        vr_int = scipy_interpolate.NearestNDInterpolator(points, vr)
-        vz_int = scipy_interpolate.NearestNDInterpolator(points, vz)
-    else
-        error("interpolation type $type not supported")
-    end
-    return vr_int, vz_int
-end
-
-function construct_velocity_grid(nr, nz)
+function VelocityGrid(nr::Union{String, Int}, nz::Int, fill::Float64)
     r_range = zeros(2)
     z_range = zeros(2)
     vr_grid = zeros((2, 2))
@@ -108,7 +65,7 @@ function construct_velocity_grid(nr, nz)
     return VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr, nz)
 end
 
-function construct_velocity_grid(
+function VelocityGrid(
     r::Vector{Float64},
     z::Vector{Float64},
     vr::Vector{Float64},
@@ -168,7 +125,7 @@ function VelocityGrid(
         log = false,
     )
     r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
-    return construct_velocity_grid(
+    return VelocityGrid(
         r,
         z,
         vr,
@@ -181,6 +138,50 @@ function VelocityGrid(
         interpolation_type = "linear",
     )
 end
+
+function get_velocity(grid::VelocityGrid, r, z)
+    if point_outside_grid(grid, r, z)
+        return [0.0, 0.0]
+    end
+    ridx = searchsorted_nearest(grid.r_range, r)
+    zidx = searchsorted_nearest(grid.z_range, z)
+    return [grid.vr_grid[ridx, zidx], grid.vz_grid[ridx, zidx]]
+end
+
+function interpolate_velocity(grid::VelocityGrid, r, z)
+    if point_outside_grid(grid, r, z)
+        return [0.0, 0.0]
+    end
+    return [grid.vr_interpolator(r, z), grid.vz_interpolator(r, z)]
+end
+
+function get_velocity_interpolators(
+    r::Vector{Float64},
+    z::Vector{Float64},
+    vr::Vector{Float64},
+    vz::Vector{Float64};
+    type = "linear",
+)
+    mask = (r .> 0) .& (z .> 0)
+    r = r[mask]
+    z = z[mask]
+    vr = vr[mask]
+    vz = vz[mask]
+    r_log = log10.(r)
+    z_log = log10.(z)
+    points = hcat(r_log, z_log)
+    if type == "linear"
+        vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
+        vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
+    elseif type == "nn"
+        vr_int = scipy_interpolate.NearestNDInterpolator(points, vr)
+        vz_int = scipy_interpolate.NearestNDInterpolator(points, vz)
+    else
+        error("interpolation type $type not supported")
+    end
+    return vr_int, vz_int
+end
+
 
 function update_velocity_grid(
     old_grid::VelocityGrid,
