@@ -41,10 +41,15 @@ function construct_wind_hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{
     return hull#, points
 end
 
-function construct_wind_hull(integrators; hull_sigdigits=6)
+function construct_wind_hull(integrators, max_times; hull_sigdigits=6)
     r0 = [integ.p.r0 for integ in integrators]
-    hull = nothing
-    r, z, _, _, _ = reduce_integrators(integrators, no_interpolation=true)
+    integrators_interpolated_linear = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = 50,
+        log = false,
+    )
+    r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
     hull = construct_wind_hull(r, z, r0, sigdigits=hull_sigdigits)
     return hull
 end

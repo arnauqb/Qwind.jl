@@ -1,4 +1,4 @@
-export VelocityGrid, get_velocity, interpolate_velocity
+export VelocityGrid, get_velocity, interpolate_velocity, update_velocity_grid
 
 struct VelocityGrid{T} <: InterpolationGrid{T}
     r_range::Vector{T}
@@ -33,12 +33,13 @@ struct VelocityGrid{T} <: InterpolationGrid{T}
             nz,
             iterator,
             vr_interpolator,
-            vz_interpolator
+            vz_interpolator,
         )
     end
 end
 
-VelocityGrid(grid_data::Dict) = VelocityGrid(grid_data["r"], grid_data["z"], grid_data["vr_grid"], grid_data["vz_grid"])
+VelocityGrid(grid_data::Dict) =
+    VelocityGrid(grid_data["r"], grid_data["z"], grid_data["vr_grid"], grid_data["vz_grid"])
 
 function VelocityGrid(h5_path::String, it_num)
     it_name = @sprintf "iteration_%03d" it_num
@@ -69,7 +70,7 @@ function interpolate_velocity(grid::VelocityGrid, r, z)
     if point_outside_grid(grid, r, z)
         return [0.0, 0.0]
     end
-    return [grid.vr_interpolator(r,z), grid.vz_interpolator(r,z)]
+    return [grid.vr_interpolator(r, z), grid.vz_interpolator(r, z)]
 end
 
 function get_velocity_interpolators(
@@ -77,7 +78,7 @@ function get_velocity_interpolators(
     z::Vector{Float64},
     vr::Vector{Float64},
     vz::Vector{Float64};
-    type = "linear"
+    type = "linear",
 )
     mask = (r .> 0) .& (z .> 0)
     r = r[mask]
@@ -102,8 +103,8 @@ end
 function construct_velocity_grid(nr, nz)
     r_range = zeros(2)
     z_range = zeros(2)
-    vr_grid = zeros((2,2))
-    vz_grid = zeros((2,2))
+    vr_grid = zeros((2, 2))
+    vz_grid = zeros((2, 2))
     return VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr, nz)
 end
 
@@ -112,17 +113,18 @@ function construct_velocity_grid(
     z::Vector{Float64},
     vr::Vector{Float64},
     vz::Vector{Float64},
-    r0s::Vector{Float64},
+    r0::Vector{Float64},
     hull::ConcaveHull.Hull;
     nr = "auto",
     nz = 50,
-    log=true,
-    interpolation_type="linear"
+    log = true,
+    interpolation_type = "linear",
 )
-    r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log=log)
+    r_range, z_range = get_spatial_grid(r, z, r0, nr, nz, log = log)
     @info "Constructing velocity interpolators..."
     flush()
-    vr_interp, vz_interp = get_velocity_interpolators(r, z, vr, vz, type=interpolation_type)
+    vr_interp, vz_interp =
+        get_velocity_interpolators(r, z, vr, vz, type = interpolation_type)
     @info "Done"
     @info "Filling velocity grids..."
     flush()
@@ -136,17 +138,55 @@ function construct_velocity_grid(
             if !is_point_in_wind(hull, point)
                 continue
             else
-                vr_grid[i,j] = vr_interp(log10(r), log10(z))[1]
-                vz_grid[i,j] = vz_interp(log10(r), log10(z))[1]
+                vr_grid[i, j] = vr_interp(log10(r), log10(z))[1]
+                vz_grid[i, j] = vz_interp(log10(r), log10(z))[1]
             end
         end
     end
     # add z = 0 line
-    vr_grid = [vr_grid[:,1] vr_grid]
-    vz_grid = [vz_grid[:,1] vz_grid]
+    vr_grid = [vr_grid[:, 1] vr_grid]
+    vz_grid = [vz_grid[:, 1] vz_grid]
     pushfirst!(z_range, 0.0)
     grid = VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr, nz)
     @info "Done"
     return grid
 end
 
+function VelocityGrid(
+    integrators::Vector{<:Sundials.IDAIntegrator},
+    max_times,
+    hull;
+    nr = "auto",
+    nz = 50,
+    interpolation_type = "linear",
+)
+    r0 = [integ.p.r0 for integ in integrators]
+    integrators_interpolated = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = 1000,
+        log = false,
+    )
+    r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
+    return construct_velocity_grid(
+        r,
+        z,
+        vr,
+        vz,
+        r0,
+        hull,
+        nr = nr,
+        nz = nz,
+        log = false,
+        interpolation_type = "linear",
+    )
+end
+
+function update_velocity_grid(
+    old_grid::VelocityGrid,
+    integrators::Vector{<:Sundials.IDAIntegrator},
+    max_times,
+    hull,
+)
+    return VelocityGrid(integrators, max_times, hull)
+end
