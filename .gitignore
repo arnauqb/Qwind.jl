@@ -39,6 +39,7 @@ docs/site/
 
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
+**/*.ipynb
 
 ################################################################################
 #                               Microsoft Office                               #
