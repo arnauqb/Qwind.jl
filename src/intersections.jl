@@ -208,7 +208,8 @@ function get_intersection_times(integrators::Vector{<:DenseIntegrator})
         ]
         f(j) = intersect(integrator, integrators_sliced[j])
         integrator_indcs = [j for j in 1:length(integrators) if j != i]
-        index = minimum(pmap(f, integrator_indcs, batch_size = 10))
+        batch = Int(floor(length(integrator_indcs) // nprocs()))
+        index = minimum(pmap(f, integrator_indcs, batch_size = batch))
         intersection_indices[i] = index
     end
     intersection_times = [

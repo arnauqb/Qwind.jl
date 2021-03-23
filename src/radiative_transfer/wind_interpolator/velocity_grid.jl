@@ -189,5 +189,5 @@ function update_velocity_grid(
     max_times,
     hull,
 )
-    return VelocityGrid(integrators, max_times, hull)
+    return VelocityGrid(integrators, max_times, hull, nr=old_grid.nr, nz=old_grid.nz)
 end
