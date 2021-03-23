@@ -128,7 +128,7 @@ uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 deps = ["LinearAlgebra", "NearestNeighbors", "RecipesBase"]
 git-tree-sha1 = "0241abe3f260f6e7e67dd81092a09d6328cd7464"
 repo-rev = "master"
-repo-url = "https://github.com/lstagner/ConcaveHull.jl"
+repo-url = "https://github.com/lstagner/ConcaveHull.jl.git"
 uuid = "7d11a335-8259-52c9-8750-e30c45c66484"
 version = "1.1.0"
 
@@ -217,9 +217,9 @@ version = "0.0.1+0"
 
 [[DiffEqBase]]
 deps = ["ArrayInterface", "ChainRulesCore", "DataStructures", "DocStringExtensions", "FunctionWrappers", "IterativeSolvers", "LabelledArrays", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "Printf", "RecursiveArrayTools", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "ZygoteRules"]
-git-tree-sha1 = "c2ff625248a0967adff1dc1f79c6a41e2531f081"
+git-tree-sha1 = "f5d290a67a2105b4cf531b0e3b5178106a661e39"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "6.57.8"
+version = "6.57.9"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays"]
@@ -251,9 +251,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[DocStringExtensions]]
 deps = ["LibGit2", "Markdown", "Pkg", "Test"]
-git-tree-sha1 = "50ddf44c53698f5e784bbebb3f4b21c5807401b1"
+git-tree-sha1 = "9d4f64f79012636741cf01133158a54b24924c32"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.8.3"
+version = "0.8.4"
 
 [[Downloads]]
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
@@ -713,9 +713,9 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "b85634c97d8b2df8f85d3ce7f7b78d794efea704"
+git-tree-sha1 = "9dd06ee4a1238265ddf512851682cb3db326a8a8"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.8.4"
+version = "1.8.5"
 
 [[SentinelArrays]]
 deps = ["Dates", "Random"]
@@ -791,9 +791,9 @@ version = "0.33.4"
 
 [[StructTypes]]
 deps = ["Dates", "UUIDs"]
-git-tree-sha1 = "d7f4287dbc1e590265f50ceda1b40ed2bb31bbbb"
+git-tree-sha1 = "89b390141d2fb2ef3ac2dc32e336f7a5c4810751"
 uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
-version = "1.4.0"
+version = "1.5.0"
 
 [[SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
