@@ -52,7 +52,7 @@ end
     zz = vcat(zz, zeros(20))
     @test length(rr) == length(zz)
     r0s = collect(range(1.0, 100.0, length = 20))
-    hull = Qwind.construct_wind_hull(rr, zz, r0s)
+    hull = Hull(rr, zz, r0s)
     @test Qwind.is_point_in_wind(hull, [0, 10]) == false
     @test Qwind.is_point_in_wind(hull, [50, 0]) == true
     @test Qwind.is_point_in_wind(hull, [99, 99]) == true
@@ -72,7 +72,7 @@ end
             push!(z_range, z)
         end
     end
-    hull = Qwind.construct_wind_hull(
+    hull = Hull(
         [0.01, 200, 0.01, 200],
         [0.01, 200, 200, 0.01],
         [0.01, 200.0, 0.01, 200.0]
@@ -80,7 +80,7 @@ end
     r0_range = collect(range(0.1, 100.0, step = 10));
     func(r, z) = 1e12 * exp(-z / 100) / r;
     n_range = func.(r_range, z_range);
-    grid = Qwind.construct_density_grid(
+    grid = DensityGrid(
         r_range,
         z_range,
         n_range,
