@@ -1,5 +1,5 @@
-using CSV, DataFrames, YAML, HDF5, Printf
-export save_integrator, save_integrators, save_wind
+using CSV, DataFrames, YAML, HDF5, Printf, JLD2
+export save_trajectories, save_wind
 
 function create_integrators_df(integrators, Rg)
     df = DataFrame()
@@ -19,12 +19,13 @@ function create_integrators_df(integrators, Rg)
     return df
 end
 
-function save_integrators(integrators, save_path, Rg)
-    if save_path === nothing
-        return
-    end
-    df = create_integrators_df(integrators, Rg)
-    CSV.write(save_path, df)
+function save_trajectories(integrators, save_path)
+    @save save_path integrators
+    #if save_path === nothing
+    #    return
+    #end
+    #df = create_integrators_df(integrators, Rg)
+    #CSV.write(save_path, df)
 end
 
 function compute_integrator_mdot(integrator, Rg)
@@ -120,9 +121,9 @@ function save_wind(integrators, model, save_path, it_num)
     mkpath(iteration_save_path)
     hdf5_save_path = save_path * "/results.hdf5"
     save_hdf5(integrators, model, hdf5_save_path, it_num)
-    lines_save_path = iteration_save_path * "/streamlines.csv"
+    lines_save_path = iteration_save_path * "/trajectories.jld2"
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
-    save_integrators(integrators, lines_save_path, model.bh.Rg)
+    save_trajectories(integrators, lines_save_path)
     properties = save_wind_properties(integrators, properties_save_path, model.bh)
     return properties
 end
