@@ -29,10 +29,12 @@ end
 using JLD2
 
 @load "./scratch/trajectories.jld2" integrators
-@load "./scratch/max_times.jld2" max_times
+#@load "./scratch/max_times.jld2" max_times
+
+max_times = get_intersection_times(integrators)
 
 
-integrators_interp = interpolate_integrators(integrators, max_times=max_times, n_timesteps=50, log=false);
+integrators_interp = interpolate_integrators(integrators, max_times=max_times, n_timesteps=100, log=false);
 
 using ConcaveHull
 
@@ -47,16 +49,19 @@ for integ in integrators
 end
 
 points = Hull(integrators, max_times, hull_sigdigits=6);
-#fig,ax = plt.subplots()
-#hull = ConcaveHull.concave_hull(points)
-#ax.scatter(hr, hz)
-#ax.set_xlim(0,500)
-#ax.set_ylim(0,500)
 
-hull = Hull(integrators, max_times)
+fig,ax = plt.subplots()
+ps = reduce(hcat, points)
+ax.scatter(ps[1,:], ps[2,:])
+hull = ConcaveHull.concave_hull(points)
+#ax.scatter(hr, hz)
+ax.set_xlim(0,1000)
+ax.set_ylim(0,1000)
+
+#hull = Hull(integrators, max_times)
 
 fig, ax = plt.subplots()
-QwindPlotting.plot_wind_hull(hull, fig=fig, ax=ax, rmin=40, rmax=100, zmax=100, nr=500, nz=500)
+QwindPlotting.plot_wind_hull(hull, fig=fig, ax=ax, rmin=40, rmax=5000, zmax=5000, nr=500, nz=500)
 #ps = reduce(hcat, points)
 #ax.scatter(ps[1,:], ps[2,:], s=10, alpha=0.5)
 #vs = reduce(hcat, hull.vertices)
@@ -64,8 +69,8 @@ QwindPlotting.plot_wind_hull(hull, fig=fig, ax=ax, rmin=40, rmax=100, zmax=100, 
 for integ in integrators_interp
     ax.plot(integ.r, integ.z)
 end
-ax.set_xlim(40, 100)
-ax.set_ylim(0, 100)
+ax.set_xlim(0, 5000)
+ax.set_ylim(0, 5000)
 
 
 

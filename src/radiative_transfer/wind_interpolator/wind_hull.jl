@@ -125,8 +125,8 @@ function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times; hull_sig
     integrators_interpolated_linear = interpolate_integrators(
         integrators,
         max_times = max_times,
-        n_timesteps = 50,
-        log = true,
+        n_timesteps = 100,
+        log = false,
     )
     r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
     hull = Hull(r, z, r0, sigdigits=hull_sigdigits)
