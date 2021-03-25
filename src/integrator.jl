@@ -16,6 +16,8 @@ export initialize_integrator,
     Parameters,
     escaped
 
+Base.length(integrator::Sundials.IDAIntegrator) = length(integrator.p.data[:r])
+
 function make_save_data(line_id = -1)
     ret = Dict{Symbol,Any}(:line_id => line_id)
     keys = [

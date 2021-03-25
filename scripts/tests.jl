@@ -1,9 +1,21 @@
 using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
-using YAML, Profile, PProf, PyCall, ProgressMeter, PyPlot
+using YAML, Profile, PProf, PyCall, ProgressMeter, PyPlot, JLD2
 using Qwind
 include("scripts/plotting.jl")
+
+@load "./scratch/trajectories_big.jld2"
+
+Qwind.get_intersection_times(integrators);
+
+Profile.clear()
+@profile Qwind.get_intersection_times(integrators);
+
+pprof()
+
+
+
 
 rin = 46.100482541805334
 #rin = 20.0
