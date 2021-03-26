@@ -52,3 +52,20 @@ QwindPlotting.plot_wind_hull(
 )
 ax.set_xlim(0, 500)
 ax.set_ylim(0, 50)
+
+
+fig, ax = plt.subplots()
+r_range = 10 .^ range(log10(6), log10(1000), length=50);
+ic = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, 0.03, 0.6, 0.5, true) 
+ax.loglog(r_range, getn0.(Ref(ic), r_range), label = "current")
+icp = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, 0.002, 0.6, 0.5, true) 
+ax.loglog(r_range, getn0.(Ref(icp), r_range), label = "Pereyra")
+#ic = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, 0.007, 0.75, 0.5, true) 
+#ax.loglog(r_range, getn0.(Ref(ic), r_range), label = "K = 0.03")
+#ic2 = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, 0.0026, 0.737, 0.5, true) 
+#ax.loglog(r_range, getn0.(Ref(ic2), r_range), label = "K = 0.2")
+#ic3 = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, 0.0021, 0.8, 0.5, true) 
+#ax.loglog(r_range, getn0.(Ref(ic3), r_range), label = "K = 0.002")
+icauto = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, "auto", 0.6, 0.5, true) 
+ax.loglog(r_range, getn0.(Ref(icauto), r_range), label = "K = auto")
+ax.legend()

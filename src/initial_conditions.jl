@@ -54,8 +54,8 @@ struct CAKIC{T} <: InitialConditions{T}
     rfi::T
     nlines::Union{Int, String}
     z0::T
-    K::T
-    alpha::T
+    K::Union{T, String}
+    alpha::Union{T,String}
     mu::T
     logspaced::Bool
 end
@@ -87,56 +87,79 @@ function CAKIC(radiation, black_hole, config)
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
-getn0(ic::CAKIC, r0) = cak_density(ic.radiation, ic.bh, r0, ic.K)
+getn0(ic::CAKIC, r0) = cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
+
+"""
+Computes k(T) and alpha(T) from CAK 1975 paper.
+"""
+function compute_cak_K(T)
+    if T < 30000
+        return 0.0076
+    elseif T < 40000
+        return 0.0026
+    else
+        return 0.0021
+    end
+end
+compute_cak_K(bh::BlackHole, r0) = compute_cak_K(disk_temperature(bh,r0))
+function compute_cak_alpha(T)
+    if T < 30000
+        return 0.742
+    elseif T < 40000
+        return 0.737
+    else
+        return 0.811
+    end
+end
+compute_cak_alpha(bh::BlackHole, r0) = compute_cak_alpha(disk_temperature(bh,r0))
 
 export cak_surface_mloss,
     cak_density, cak_normalized_mdot, cak_characteristic_mloss, cak_nozzle_function
 
 "Nozzle function defined in Pereyra et al. (2004) (Paper I)"
-function cak_nozzle_function(radiation::QsosedRadiation, bh::BlackHole, z, r_0)
+function cak_nozzle_function(radiation::QsosedRadiation, bh::BlackHole, z, r_0, alpha)
     x = z[1] / r_0
     T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(25e3) * C
     M = bh.M
     R0 = r_0 * bh.Rg
-    numerator = (1 + x^2)^(1 / CAK_ALPHA)
+    numerator = (1 + x^2)^(1 / alpha)
     denom_1 = x / (1 + x^2)^(3 / 2)
     denom_2 = -SIGMA_E * SIGMA_SB * T^4 / (G * M * C) * R0^2
     denom_3 = -4 * b^2 * R0 * x / (G * M)
-    denom = (denom_1 + denom_2 + denom_3)^((1 - CAK_ALPHA) / CAK_ALPHA)
+    denom = (denom_1 + denom_2 + denom_3)^((1 - alpha) / alpha)
     return numerator / denom
 end
 
-function cak_characteristic_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0, K = 0.03)
+function cak_characteristic_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0, K, alpha)
     T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(25e3) * C
     M = bh.M
     R0 = r_0 * bh.Rg
-    constant = CAK_ALPHA * (1 - CAK_ALPHA)^((1 - CAK_ALPHA) / CAK_ALPHA) / (b * SIGMA_E)
+    constant = alpha * (1 - alpha)^((1 - alpha) / alpha) / (b * SIGMA_E)
     term_1 = G * M / R0^2
-    term_2 = (SIGMA_E * SIGMA_SB * T^4 * K * R0^2 / (C * G * M))^(1 / CAK_ALPHA)
+    term_2 = (SIGMA_E * SIGMA_SB * T^4 * K * R0^2 / (C * G * M))^(1 / alpha)
     return constant * term_1 * term_2
 end
 
-function cak_normalized_mdot(radiation::QsosedRadiation, bh::BlackHole, r_0)
-    f(z) = cak_nozzle_function(radiation, bh, z, r_0)
+function cak_normalized_mdot(radiation::QsosedRadiation, bh::BlackHole, r_0, alpha)
+    f(z) = cak_nozzle_function(radiation, bh, z, r_0, alpha)
     mdot = optimize(f, 0, 2 * r_0, Brent()).minimum
     return mdot
 end
 
-function cak_surface_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0, K = 0.03)
-    f(z) = cak_nozzle_function(radiation, bh, z, r_0)
+function cak_surface_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0, K, alpha)
+    f(z) = cak_nozzle_function(radiation, bh, z, r_0, alpha)
     mdot = optimize(f, 0, 2 * r_0, Brent()).minimum
-    Sigma = cak_characteristic_mloss(radiation, bh, r_0) * mdot
+    Sigma = cak_characteristic_mloss(radiation, bh, r_0, K, alpha) * mdot
     return Sigma
 end
 
-function cak_density(radiation::QsosedRadiation, bh::BlackHole, r_0, K = nothing)
-    if K === nothing
-        K = 0.03
-    end
-    Sigma = cak_surface_mloss(radiation, bh, r_0, K)
+function cak_density(radiation::QsosedRadiation, bh::BlackHole, r_0, K="auto", alpha="auto")
+    (K=="auto") && (K=compute_cak_K(bh, r_0))
+    (alpha=="auto") && (alpha=compute_cak_alpha(bh, r_0))
+    Sigma = cak_surface_mloss(radiation, bh, r_0, K, alpha)
     T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(T) * C
     return Sigma / b / M_P
