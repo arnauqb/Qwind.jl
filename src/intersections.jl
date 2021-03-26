@@ -221,7 +221,7 @@ end
 function get_intersection_times(integrators::Vector{<:DenseIntegrator})
     intersection_indices = [length(integrator.t) for integrator in integrators]
     @info "Calculating trajectory intersections..."
-    @showprogress for i in 1:(length(integrators)-1)
+    for i in 1:(length(integrators)-1)
         integrators_sliced = [
             slice_integrator(integrator, fi = index)
             for (integrator, index) in zip(integrators, intersection_indices)

@@ -69,10 +69,15 @@ function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=
         line_id = i,
     )
     @info "Starting iteration $it_num ..."
-    @info "Iterating streamlines..."
+    @info "Integrating $(length(lines_range)) trajectories ..."
     flush()
     if parallel
-        integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+        if is_logging(stderr)
+            # in an hpc, don't show progress bar
+            integrators = pmap(f, 1:length(lines_range), batch_size = 10)
+        else
+            integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+        end
     else
         integrators = f.(1:length(lines_range))
     end

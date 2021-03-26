@@ -32,7 +32,13 @@ integs_interpol = interpolate_integrators(
 );
 r, z, _, _, _ = reduce_integrators(integs_interpol);
 r0 = [integ.p.r0 for integ in integrators];
-windh = Hull(r, z, r0, sigdigits = 6);
+
+fig, ax = plt.subplots()
+for integ in integs_interpol
+    ax.plot(integ.r, integ.z)
+end
+
+windh = Hull(r, z, r0, sigdigits = 2);
 
 
 fig, ax = plt.subplots()

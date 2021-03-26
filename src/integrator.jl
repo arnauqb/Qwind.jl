@@ -399,7 +399,7 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
     z_range = [0.0, 1.0]
     density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range) 
+    density_grid[:, 1] .= getn0.(Ref(ic), r_range)
     interp_grid = DensityGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
@@ -419,49 +419,90 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
     rc = rin
     while rc < rfi
-        if tau_x < 50
-            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-            if tau_x < 1
+        tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
+        xi = compute_ionization_parameter(
+            rc,
+            0.0,
+            get_density(interp_grid, rc, 0.0),
+            tau_x,
+            xray_luminosity,
+            Rg,
+        )
+        delta_r = 0.0
+        try
+            if xi > 1e5
                 delta_tau = 0.1
-            elseif tau_x < 20
-                delta_tau = 0.5
-            else
-                delta_tau = 1
-            end
-            delta_r = find_zero(
-                delta_r -> fx(delta_r, rc, delta_tau, tau_x),
-                0.1,
-                atol = 1e-7,
-                rtol = 1e-3,
-            )
-        elseif rc < 150 #tau_uv < 100
-            tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-            if tau_uv < 1
-                delta_tau = 0.1
-            elseif tau_uv < 20
-                delta_tau = 0.5
-            else
-                delta_tau = 1
-            end
-            try
                 delta_r = find_zero(
-                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
-                    10,
-                    atol = 1e-6,
+                    delta_r -> fx(delta_r, rc, delta_tau, tau_x),
+                    0.1,
+                    atol = 1e-7,
                     rtol = 1e-3,
                 )
-            catch
-                break
+                println(delta_r)
+            else
+                tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
+                delta_tau = 0.1
+                delta_r = find_zero(
+                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
+                    1,
+                    atol = 1e-7,
+                    rtol = 1e-3,
+                )
             end
-        else
+        catch
             break
         end
+        if delta_r > 5
+            break
+        end
+        ############################
+        #if tau_x < 50
+        #    tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
+        #    if tau_x < 1
+        #        delta_tau = 0.1
+        #    elseif tau_x < 20
+        #        delta_tau = 0.5
+        #    else
+        #        delta_tau = 1
+        #    end
+        #    delta_r = find_zero(
+        #        delta_r -> fx(delta_r, rc, delta_tau, tau_x),
+        #        0.1,
+        #        atol = 1e-7,
+        #        rtol = 1e-3,
+        #    )
+        #elseif rc < 150 #tau_uv < 100
+        #    println("rc $rc")
+        #    tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
+        #    if tau_uv < 1
+        #        delta_tau = 0.1
+        #    elseif tau_uv < 20
+        #        delta_tau = 0.5
+        #    else
+        #        delta_tau = 1
+        #    end
+        #    try
+        #        delta_r = find_zero(
+        #            delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
+        #            10,
+        #            atol = 1e-6,
+        #            rtol = 1e-3,
+        #        )
+        #    catch
+        #        break
+        #    end
+        #else
+        #    break
+        #end
+        #if delta_r > 5
+        #    break
+        #end
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)
         rc += delta_r
     end
-    # add 200 trajectories for the rest
-    additional_range = range(rc, rfi, length=200)
+    # add the same amount of trajectories for the rest
+    additional_range = range(rc, rfi, step = 5) #length=length(lines_range))
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)

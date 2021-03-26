@@ -12,11 +12,15 @@ export searchsorted_nearest,
     d_euclidean,
     get_time,
     flush,
-    setup_logging
+    setup_logging,
+    is_logging
 
 get_time() = Dates.format(now(), "HH:MM:SS")
 d_euclidean(r0, r1, z0, z1) = sqrt((r0-r1)^2 + (z0-z1)^2)
 const date_format = "yyyy-mm-dd HH:MM:SS"
+
+# checks for HPC use
+is_logging(io) = isa(io, Base.TTY) == false || (get(ENV, "CI", nothing) == "true")
 
 function setup_logging()
     timestamp_logger(logger) = TransformerLogger(logger) do log
