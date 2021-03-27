@@ -1,7 +1,5 @@
-import Base: intersect!, intersect
-using LinearAlgebra, ProgressMeter
+using LinearAlgebra, ProgressMeter, DataStructures
 export Segment,
-    intersect,
     reduce_integrators,
     self_intersects,
     interpolate_integrator,
@@ -37,9 +35,19 @@ function is_singular(s::Segment)
     end
 end
 
+struct Intersection
+    type::String
+    id1::Int
+    id2::Int
+    t1::Float64
+    t2::Float64
+end
+
+Base.isless(i1::Intersection, i2::Intersection) = i1.t1 < i2.t1
+
 function trivial_miss(s1::Segment, s2::Segment)
     if max_x(s1) < min_x(s2)
-        return true 
+        return true
     elseif max_x(s2) < min_x(s1)
         return true
     elseif max_y(s1) < min_y(s2)
@@ -50,7 +58,7 @@ function trivial_miss(s1::Segment, s2::Segment)
     return false
 end
 
-function intersect!(s1::Segment, s2::Segment, A::Matrix{Float64}, b::Vector{Float64})
+function Base.intersect!(s1::Segment, s2::Segment, A::Matrix{Float64}, b::Vector{Float64})
     if is_singular(s1) || is_singular(s2)
         return false
     end
@@ -71,11 +79,17 @@ function intersect!(s1::Segment, s2::Segment, A::Matrix{Float64}, b::Vector{Floa
     end
 end
 
-function intersect(
+
+function Base.intersect!(
+    intersections_dict::Dict{Int,SortedSet{Intersection}},
+    id1::Int,
+    t1::Array{T},
     r1::Array{T},
     z1::Array{T},
     n1::Array{T},
     v1::Array{T},
+    id2::Int,
+    t2::Array{T},
     r2::Array{T},
     z2::Array{T},
     n2::Array{T},
@@ -86,20 +100,25 @@ function intersect(
     for i = 1:(length(r1) - 1)
         s1 = Segment(r1[i], z1[i], r1[i + 1], z1[i + 1])
         m1 = n1[i] * v1[i]^2
-        for j = 1:(length(r2) - 1)
+        for j = (i + 1):(length(r2) - 1)
             s2 = Segment(r2[j], z2[j], r2[j + 1], z2[j + 1])
             m2 = n2[j] * v2[j]^2
             do_intersect = intersect!(s1, s2, A, b)
             if do_intersect
-                if m2 > m1 # terminate when intersecting has higher momentum
-                    return i
+                if m1 > m2
+                    intersection = Intersection("winner", id1, id2, t1[i], t2[i])
+                    insert_intersection!(intersections_dict, id1, intersection)
+                    intersection = Intersection("loser", id2, id1, t2[i], t1[i])
+                    insert_intersection!(intersections_dict, id2, intersection)
                 else
-                    continue
+                    intersection = Intersection("winner", id2, id1, t2[i], t1[i])
+                    insert_intersection!(intersections_dict, id2, intersection)
+                    intersection = Intersection("loser", id1, id2, t1[i], t2[i])
+                    insert_intersection!(intersections_dict, id1, intersection)
                 end
             end
         end
     end
-    return length(r1)
 end
 
 function intersect(
@@ -124,6 +143,7 @@ function intersect(
 end
 
 struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
+    id::Int
     t::T
     r::T
     z::T
@@ -132,14 +152,23 @@ struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
     n::T
 end
 
-function intersect(integrator1::DenseIntegrator, integrator2::DenseIntegrator)
+function Base.intersect!(
+    intersections_dict::Dict{Int,SortedSet{Intersection}},
+    integrator1::DenseIntegrator,
+    integrator2::DenseIntegrator,
+)
     v1 = sqrt.(integrator1.vr .^ 2 + integrator1.vz .^ 2)
     v2 = sqrt.(integrator2.vr .^ 2 + integrator2.vz .^ 2)
-    intersect(
+    intersect!(
+        intersections_dict,
+        integrator1.id,
+        integrator1.t,
         integrator1.r,
         integrator1.z,
         integrator1.n,
         v1,
+        integrator2.id,
+        integrator2.t,
         integrator2.r,
         integrator2.z,
         integrator2.n,
@@ -149,6 +178,7 @@ end
 
 function DenseIntegrator(integrator::Sundials.IDAIntegrator)
     return DenseIntegrator(
+        integrator.p.id,
         integrator.sol.t[1:(end - 2)],
         integrator.p.data[:r],
         integrator.p.data[:z],
@@ -159,7 +189,15 @@ function DenseIntegrator(integrator::Sundials.IDAIntegrator)
 end
 
 function load_trajectory(tdata::Dict)
-    return DenseIntegrator(tdata["t"], tdata["r"], tdata["z"], tdata["vr"], tdata["vz"], tdata["n"])
+    return DenseIntegrator(
+        tdata["id"],
+        tdata["t"],
+        tdata["r"],
+        tdata["z"],
+        tdata["vr"],
+        tdata["vz"],
+        tdata["n"],
+    )
 end
 
 function load_trajectories(tsdata::Dict)
@@ -209,6 +247,7 @@ end
 function slice_integrator(integrator::DenseIntegrator; in = 1, fi = nothing)
     (fi === nothing) && (fi = length(integrator.t))
     return DenseIntegrator(
+        integrator.id,
         integrator.t[in:fi],
         integrator.r[in:fi],
         integrator.z[in:fi],
@@ -218,26 +257,109 @@ function slice_integrator(integrator::DenseIntegrator; in = 1, fi = nothing)
     )
 end
 
-function get_intersection_times(integrators::Vector{<:DenseIntegrator})
-    intersection_indices = [length(integrator.t) for integrator in integrators]
-    @info "Calculating trajectory intersections..."
-    for i in 1:(length(integrators)-1)
-        integrators_sliced = [
-            slice_integrator(integrator, fi = index)
-            for (integrator, index) in zip(integrators, intersection_indices)
-        ]
-        integrator = integrators_sliced[i]
-        index = length(integrator.t)
-        for j in 1:length(integrators)
-            (j ==i) && continue
-            index = min(index, intersect(integrator, integrators_sliced[j]))
+function get_intersections(integrators::Vector{<:DenseIntegrator})
+    intersections_dict = Dict{Int,SortedSet{Intersection}}()
+    for i = 1:length(integrators)
+        intersections = SortedSet{Intersection}()
+        for j = 1:length(integrators)
+            (j == i) && continue
+            intersect!(intersections_dict, integrators[i], integrators[j])
         end
-        intersection_indices[i] = index
     end
-    intersection_times = [
-        integrator.t[index]
-        for (integrator, index) in zip(integrators, intersection_indices)
-    ]
+    return intersections_dict
+end
+
+function insert_intersection!(dict, key, intersection)
+    if !haskey(dict, key)
+        dict[key] = SortedSet([intersection])
+    else
+        push!(dict[key], intersection)
+    end
+end
+
+function delete_intersection!(
+    dict::Dict{Int,SortedSet{Intersection}},
+    key::Int,
+    intersection::Intersection,
+)
+    if intersection ∉ dict[key]
+        error()
+    end
+    delete!(dict[key], intersection)
+    if length(dict[key]) == 0
+        delete!(dict, key)
+    end
+end
+
+function clear_remaining_trajectory_intersections!(intersections_dict, traj_id, max_time)
+    todelete_dict = Dict{Int,SortedSet{Intersection}}()
+    intersections = intersections_dict[traj_id]
+    for intersection in intersections
+        if intersection.t1 >= max_time
+            insert_intersection!(todelete_dict, traj_id, intersection)
+            # and eliminate the corresponding loser / winner
+            for intersection2 in intersections_dict[intersection.id2]
+                if intersection2.t2 == intersection.t1
+                    insert_intersection!(todelete_dict, intersection.id2, intersection2)
+                end
+            end
+        end
+    end
+    println(todelete_dict)
+    for (key, todelete) in todelete_dict
+        for tod in todelete
+            delete_intersection!(intersections_dict, key, tod)
+        end
+    end
+end
+
+function merge_trajectory_intersections_dicts(winner_traj_dict, loser_traj_dict)
+    ret = Dict{Int,SortedSet{Intersection}}
+    ret = copy(winner_traj_dict)
+    for (key, set) in loser_traj_dict
+        if haskey(ret, key)
+            ret[key] = union(ret[key], set)
+        else
+            ret[key] = set
+        end
+    end
+    return ret
+end
+
+function get_intersection_times(integrators::Vector{<:DenseIntegrator})
+    intersection_times =
+        Dict(integrator.id => integrator.t[end] for integrator in integrators)
+    intersections_dict = get_intersections(integrators)
+    asd = 0
+    while length(intersections_dict) > 0
+        asd += 1
+        if asd > 4
+            break
+        end
+        all_keys = keys(intersections_dict)
+        for traj_id in all_keys
+            intersections = intersections_dict[traj_id]
+            found = false
+            for intersection in intersections
+                if intersection.type == "loser"
+                    break
+                end
+                loser_id = intersection.id2
+                max_time = intersection.t2
+                intersection_times[loser_id] = min(intersection_times[loser_id], max_time)
+                println(intersection_times[loser_id])
+                #delete_intersection!(intersections_dict, intersection.id1, intersection)
+                clear_remaining_trajectory_intersections!(
+                    intersections_dict,
+                    loser_id,
+                    max_time,
+                )
+                found = true
+                break# to clear index
+            end
+            (found == true) && break
+        end
+    end
     return intersection_times
 end
 
@@ -279,7 +401,15 @@ function interpolate_integrator(
     line_width_dense = r_dense .* integrator.p.lwnorm
     density_dense =
         compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
-    return DenseIntegrator(t_range, r_dense, z_dense, vr_dense, vz_dense, density_dense)
+    return DenseIntegrator(
+        integrator.p.id,
+        t_range,
+        r_dense,
+        z_dense,
+        vr_dense,
+        vz_dense,
+        density_dense,
+    )
 end
 
 function interpolate_integrators(
@@ -289,7 +419,8 @@ function interpolate_integrators(
     log = true,
 )
     ret = DenseIntegrator[]
-    for (integrator, max_time) in zip(integrators, max_times)
+    for integrator in integrators
+        max_time = max_times[integrator.p.id]
         push!(
             ret,
             interpolate_integrator(
@@ -307,6 +438,7 @@ function reduce_integrators(
     integrators::Vector{<:Sundials.IDAIntegrator};
     max_times = nothing,
 )
+    max_times = [max_times[integrator.id] for integrator in integrators]
     time_indices =
         searchsorted_nearest.([integrator.sol.t for integrator in integrators], max_times)
     r = reduce(

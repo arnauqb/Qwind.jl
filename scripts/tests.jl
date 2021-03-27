@@ -13,26 +13,38 @@ catch
 end
 model = Model(config);
 iterations_dict = Dict();
-run!(model, iterations_dict, parallel = true)
+iterations_dict[1] = Dict();
+run_integrators!(model, iterations_dict, it_num=1, parallel=true);
+#run!(model, iterations_dict, parallel = false)
 
 QwindPlotting.plot_wind_hull(
     iterations_dict[2]["radiative_transfer"].interpolator.wind_hull,
     nr = 500,
     nz = 500,
+    rmax=20,
     zmax=20
 )
 
 integrators = iterations_dict[1]["integrators"];
+
+fig, ax = plt.subplots()
+for integ in integrators
+    ax.plot(integ.p.data[:r], integ.p.data[:z])
+end
+
 intersection_times = get_intersection_times(integrators);
+
+#using JLD2
+#@save "integrators.jld2" integrators
+
 integs_interpol = interpolate_integrators(
     integrators,
     max_times = intersection_times,
-    n_timesteps = 100,
+    n_timesteps = 200,
     log = true,
 );
 r, z, _, _, _ = reduce_integrators(integs_interpol);
 r0 = [integ.p.r0 for integ in integrators];
-
 fig, ax = plt.subplots()
 for integ in integs_interpol
     ax.plot(integ.r, integ.z)
@@ -75,3 +87,32 @@ ax.loglog(r_range, getn0.(Ref(icp), r_range), label = "Pereyra")
 icauto = CAKIC(model.rad, model.bh, 50.0, 1500.0, 100, 0.0, "auto", 0.6, 0.5, true) 
 ax.loglog(r_range, getn0.(Ref(icauto), r_range), label = "K = auto")
 ax.legend()
+
+
+
+
+integ1 = integrators[11];
+integ2 = integrators[12];
+integ3 = integrators[13];
+integ11 = integs_interpol[11];
+integ22 = integs_interpol[12];
+integ33 = integs_interpol[13];
+fig, ax = plt.subplots()
+ax.plot(integ1.p.data[:r], integ1.p.data[:z], linewidth=5)
+ax.plot(integ2.p.data[:r], integ2.p.data[:z], linewidth=5)
+ax.plot(integ3.p.data[:r], integ3.p.data[:z], linewidth=5)
+ax.plot(integ11.r, integ11.z, color="black", linewidth=2)
+ax.plot(integ22.r, integ22.z, color="black", linewidth=2)
+ax.plot(integ33.r, integ33.z, color="black", linewidth=2)
+
+fig, ax = plt.subplots()
+vt(integ) = sqrt.(integ.p.data[:vr] .^2 + integ.p.data[:vz] .^ 2)
+ax.semilogy(integ2.p.data[:r], vt(integ2))
+ax.semilogy(integ3.p.data[:r], vt(integ3))
+
+momentum1 = integ2.p.data[:n]# .* vt(integ2) .^ 2
+momentum2 = integ3.p.data[:n]# .* vt(integ3) .^ 2
+fig, ax = plt.subplots()
+ax.semilogy(momentum1)
+ax.semilogy(momentum2)
+

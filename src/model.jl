@@ -28,14 +28,14 @@ end
 Model(config_path::String) = Model(YAML.load_file(config_path, dicttype = Dict{Symbol,Any}))
 update_model!(model::Model, rt::RadiativeTransfer) = model.rt = rt
 
-create_and_run_integrator(model::Model; r0, linewidth, line_id, atol, rtol) =
+create_and_run_integrator(model::Model; r0, linewidth, trajectory_id, atol, rtol) =
     create_and_run_integrator(
         model.rt,
         model.wind_grid,
         model.ic,
         r0 = r0,
         linewidth = linewidth,
-        line_id = line_id,
+        trajectory_id= trajectory_id,
         atol = atol,
         rtol = rtol,
         #save_path = save_path,
@@ -66,7 +66,7 @@ function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=
         r0 = lines_range[i],
         atol = model.config[:integrator][:atol],
         rtol = model.config[:integrator][:rtol],
-        line_id = i,
+        trajectory_id= i,
     )
     @info "Starting iteration $it_num ..."
     @info "Integrating $(length(lines_range)) trajectories ..."

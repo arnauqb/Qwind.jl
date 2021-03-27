@@ -18,8 +18,8 @@ export initialize_integrator,
 
 Base.length(integrator::Sundials.IDAIntegrator) = length(integrator.p.data[:r])
 
-function make_save_data(line_id = -1)
-    ret = Dict{Symbol,Any}(:line_id => line_id)
+function make_save_data(trajectory_id = -1)
+    ret = Dict{Symbol,Any}(:trajectory_id => trajectory_id)
     keys = [
         :r,
         :z,
@@ -45,7 +45,7 @@ function make_save_data(line_id = -1)
 end
 
 struct Parameters
-    line_id::Int
+    id::Int
     r0::Float64
     z0::Float64
     v0::Float64
@@ -70,9 +70,8 @@ function initialize_integrator(
     atol = 1e-8,
     rtol = 1e-3,
     tmax = 1e8,
-    line_id = -1,
+    trajectory_id = -1,
     save_results = true,
-    #save_path = nothing,
 )
     l0 = getl0(initial_conditions, r0)
     z0 = getz0(initial_conditions, r0)
@@ -84,12 +83,12 @@ function initialize_integrator(
         integrator -> affect!(integrator),
         save_positions = (false, false),
     )
-    data = make_save_data(line_id)
-    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data, [false])
+    data = make_save_data(trajectory_id)
+    params = Parameters(trajectory_id, r0, z0, v0, n0, l0, lwnorm, grid, data, [false])
     if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
-            (u, t, integrator) -> save(u, t, integrator, radiative_transfer, line_id),
+            (u, t, integrator) -> save(u, t, integrator, radiative_transfer, trajectory_id),
             saved_data,
         )
         callback_set = CallbackSet(termination_callback, saving_callback)
@@ -151,7 +150,7 @@ function create_and_run_integrator(
     initial_conditions::InitialConditions;
     r0,
     linewidth,
-    line_id,
+    trajectory_id,
     atol,
     rtol,
 )
@@ -163,8 +162,7 @@ function create_and_run_integrator(
         linewidth,
         atol = atol,
         rtol = rtol,
-        line_id = line_id,
-        #save_path = save_path,
+        trajectory_id = trajectory_id,
     )
     solve!(integrator)
     return integrator
@@ -218,7 +216,7 @@ function affect!(integrator)
     terminate!(integrator)
 end
 
-function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
+function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajectory_id)
     if integrator.p.finished[1]
         return 0.0
     end
@@ -247,7 +245,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     return 0.0
 end
 
-function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, line_id)
+function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, trajectory_id)
     if integrator.p.finished[1]
         return 0.0
     end
@@ -392,6 +390,54 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
+function compute_delta_r_x(grid::DensityGrid, rc, xray_luminosity, Rg, tau_x, delta_tau)
+    delta_r = find_zero(
+        delta_r ->
+            delta_tau - (
+                compute_xray_tau(grid, 0.0, 0.0, rc + delta_r, 0.0, xray_luminosity, Rg) - tau_x
+            ),
+        1,
+        atol = 1e-7,
+        rtol = 1e-3,
+    )
+    return delta_r
+end
+
+function compute_delta_r_uv(grid::DensityGrid, rc, Rg, tau_uv, delta_tau)
+    delta_r = find_zero(
+        delta_r ->
+            delta_tau - (compute_uv_tau(grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv),
+        1.0,
+        atol = 1e-7,
+        rtol = 1e-3,
+    )
+    return delta_r
+end
+
+function compute_delta_r(grid::DensityGrid, rc, xray_luminosity, Rg)
+    density = get_density(grid, rc, 0.0)
+    tau_x_0 = log(xray_luminosity / (1e5 * density))
+    tau_x = compute_xray_tau(grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
+    tau_uv = compute_uv_tau(grid, 0.0, 0.0, rc, 0.0, Rg)
+    delta_tau = 0.1
+    delta_r = 0.0
+    if tau_x < 2 * tau_x_0
+        try
+            delta_r = compute_delta_r_x(grid, rc, xray_luminosity, Rg, tau_x, delta_tau)
+        catch
+            return 0.0
+        end
+        return min(delta_r, 0.1)
+    else
+        try
+            delta_r = compute_delta_r_uv(grid, rc, Rg, tau_uv, delta_tau)
+            return min(delta_r, 5)
+        catch
+            return 0.0
+        end
+    end
+end
+
 
 function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]
@@ -419,42 +465,45 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
     rc = rin
     while rc < rfi
-        tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-        xi = compute_ionization_parameter(
-            rc,
-            0.0,
-            get_density(interp_grid, rc, 0.0),
-            tau_x,
-            xray_luminosity,
-            Rg,
-        )
-        delta_r = 0.0
-        try
-            if xi > 1e5
-                delta_tau = 0.1
-                delta_r = find_zero(
-                    delta_r -> fx(delta_r, rc, delta_tau, tau_x),
-                    0.1,
-                    atol = 1e-7,
-                    rtol = 1e-3,
-                )
-                println(delta_r)
-            else
-                tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-                delta_tau = 0.1
-                delta_r = find_zero(
-                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
-                    1,
-                    atol = 1e-7,
-                    rtol = 1e-3,
-                )
-            end
-        catch
+        delta_r = compute_delta_r(interp_grid, rc, xray_luminosity, Rg)
+        if delta_r == 0.0
             break
         end
-        if delta_r > 5
-            break
-        end
+        #tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
+        #xi = compute_ionization_parameter(
+        #    rc,
+        #    0.0,
+        #    get_density(interp_grid, rc, 0.0),
+        #    tau_x,
+        #    xray_luminosity,
+        #    Rg,
+        #)
+        #delta_r = 0.0
+        #try
+        #    if xi > 1e5
+        #        delta_tau = 0.1
+        #        delta_r = find_zero(
+        #            delta_r -> fx(delta_r, rc, delta_tau, tau_x),
+        #            0.1,
+        #            atol = 1e-7,
+        #            rtol = 1e-3,
+        #        )
+        #    else
+        #        tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
+        #        delta_tau = 0.1
+        #        delta_r = find_zero(
+        #            delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
+        #            1,
+        #            atol = 1e-7,
+        #            rtol = 1e-3,
+        #        )
+        #    end
+        #catch
+        #    break
+        #end
+        #if delta_r > 5
+        #    break
+        #end
         ############################
         #if tau_x < 50
         #    tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)

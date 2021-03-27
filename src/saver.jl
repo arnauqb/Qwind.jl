@@ -155,6 +155,7 @@ function save_trajectories!(integrators::Vector{<:Sundials.IDAIntegrator}, group
     for (i, integrator) in enumerate(integrators)
         integ = DenseIntegrator(integrator)
         tgroup = create_group(g, "$i")
+        tgroup["id"] = integ.id
         tgroup["t"] = integ.t
         tgroup["r"] = integ.r
         tgroup["z"] = integ.z
