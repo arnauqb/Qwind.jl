@@ -35,15 +35,26 @@ function is_singular(s::Segment)
     end
 end
 
-struct Intersection
-    type::String
-    id1::Int
-    id2::Int
-    t1::Float64
-    t2::Float64
+struct Intersection{S<:String, I<:Int, T<:Float64}
+    type::S
+    id1::I
+    id2::I
+    t1::T
+    t2::T
 end
 
-Base.isless(i1::Intersection, i2::Intersection) = i1.t1 < i2.t1
+function Base.isless(i1::Intersection{S, I, T}, i2::Intersection{S, I, T}) where {S<:String, I<:Int, T<:Float64}
+    if (i1.t1 < i2.t1)
+        return true
+    elseif i1.t1 == i2.t1
+        if i1.t2 < i2.t2
+            return true
+        elseif i1.t2 == i2.t2
+            return i1.id1 < i2.id1
+        end
+    end
+    return false
+end
 
 function trivial_miss(s1::Segment, s2::Segment)
     if max_x(s1) < min_x(s2)
@@ -99,21 +110,21 @@ function Base.intersect!(
     b = zeros(2)
     for i = 1:(length(r1) - 1)
         s1 = Segment(r1[i], z1[i], r1[i + 1], z1[i + 1])
-        m1 = n1[i] * v1[i]^2
-        for j = (i + 1):(length(r2) - 1)
+        m1 = sign(v1[i]) * n1[i] * v1[i]^2
+        for j = 1:(length(r2) - 1)
             s2 = Segment(r2[j], z2[j], r2[j + 1], z2[j + 1])
-            m2 = n2[j] * v2[j]^2
+            m2 = sign(v2[j]) * n2[j] * v2[j]^2
             do_intersect = intersect!(s1, s2, A, b)
             if do_intersect
                 if m1 > m2
-                    intersection = Intersection("winner", id1, id2, t1[i], t2[i])
+                    intersection = Intersection("winner", id1, id2, t1[i], t2[j])
                     insert_intersection!(intersections_dict, id1, intersection)
-                    intersection = Intersection("loser", id2, id1, t2[i], t1[i])
+                    intersection = Intersection("loser", id2, id1, t2[j], t1[i])
                     insert_intersection!(intersections_dict, id2, intersection)
                 else
-                    intersection = Intersection("winner", id2, id1, t2[i], t1[i])
+                    intersection = Intersection("winner", id2, id1, t2[j], t1[i])
                     insert_intersection!(intersections_dict, id2, intersection)
-                    intersection = Intersection("loser", id1, id2, t1[i], t2[i])
+                    intersection = Intersection("loser", id1, id2, t1[i], t2[j])
                     insert_intersection!(intersections_dict, id1, intersection)
                 end
             end
@@ -157,8 +168,8 @@ function Base.intersect!(
     integrator1::DenseIntegrator,
     integrator2::DenseIntegrator,
 )
-    v1 = sqrt.(integrator1.vr .^ 2 + integrator1.vz .^ 2)
-    v2 = sqrt.(integrator2.vr .^ 2 + integrator2.vz .^ 2)
+    v1 = sign.(integrator1.vz) .* sqrt.(integrator1.vr .^ 2 + integrator1.vz .^ 2)
+    v2 = sign.(integrator2.vz) .* sqrt.(integrator2.vr .^ 2 + integrator2.vz .^ 2)
     intersect!(
         intersections_dict,
         integrator1.id,
@@ -259,17 +270,21 @@ end
 
 function get_intersections(integrators::Vector{<:DenseIntegrator})
     intersections_dict = Dict{Int,SortedSet{Intersection}}()
-    for i = 1:length(integrators)
+    @showprogress "Getting intersections" for i = 1:length(integrators)
         intersections = SortedSet{Intersection}()
-        for j = 1:length(integrators)
-            (j == i) && continue
+        for j = (i+1):length(integrators)
             intersect!(intersections_dict, integrators[i], integrators[j])
         end
     end
-    return intersections_dict
+    # Turn Sets to vectors
+    ret = Dict{Int, Vector{Intersection{String, Int, Float64}}}()
+    for (key, intersections) in intersections_dict
+        ret[key] = collect(intersections)
+    end
+    return ret
 end
 
-function insert_intersection!(dict, key, intersection)
+function insert_intersection!(dict::Dict{Int, SortedSet{Intersection}}, key, intersection)
     if !haskey(dict, key)
         dict[key] = SortedSet([intersection])
     else
@@ -277,14 +292,19 @@ function insert_intersection!(dict, key, intersection)
     end
 end
 
+function insert_intersection!(dict, key, intersection)
+    if !haskey(dict, key)
+        dict[key] = [intersection]
+    else
+        push!(dict[key], intersection)
+    end
+end
+
 function delete_intersection!(
-    dict::Dict{Int,SortedSet{Intersection}},
+    dict::Dict{Int,Vector{Intersection}},
     key::Int,
     intersection::Intersection,
 )
-    if intersection ∉ dict[key]
-        error()
-    end
     delete!(dict[key], intersection)
     if length(dict[key]) == 0
         delete!(dict, key)
@@ -292,51 +312,39 @@ function delete_intersection!(
 end
 
 function clear_remaining_trajectory_intersections!(intersections_dict, traj_id, max_time)
-    todelete_dict = Dict{Int,SortedSet{Intersection}}()
+    #todelete_dict = Dict{Int, Vector{Intersection}}()
     intersections = intersections_dict[traj_id]
-    for intersection in intersections
+    todelete_dict = DefaultDict{Int, Set{Int}}(() -> Set{Int}())
+    for (i, intersection) in enumerate(intersections)
         if intersection.t1 >= max_time
-            insert_intersection!(todelete_dict, traj_id, intersection)
+            # we need to append to avoid deleting in the loop
+            #insert_intersection!(todelete_dict, traj_id, intersection)
+            #delete_intersection!(ret, traj_id, intersection)
+            push!(todelete_dict[traj_id], i)
             # and eliminate the corresponding loser / winner
-            for intersection2 in intersections_dict[intersection.id2]
+            for (j, intersection2) in enumerate(intersections_dict[intersection.id2])
                 if intersection2.t2 == intersection.t1
-                    insert_intersection!(todelete_dict, intersection.id2, intersection2)
+                    #insert_intersection!(todelete_dict, intersection.id2, intersection2)
+                    #delete_intersection!(ret, intersection.id2, intersection2)
+                    push!(todelete_dict[intersection.id2], j)
                 end
             end
         end
     end
-    println(todelete_dict)
     for (key, todelete) in todelete_dict
-        for tod in todelete
-            delete_intersection!(intersections_dict, key, tod)
+        deleteat!(intersections_dict[key], sort(collect(todelete)))
+        if length(intersections_dict[key]) == 0
+            delete!(intersections_dict, key)
         end
     end
 end
 
-function merge_trajectory_intersections_dicts(winner_traj_dict, loser_traj_dict)
-    ret = Dict{Int,SortedSet{Intersection}}
-    ret = copy(winner_traj_dict)
-    for (key, set) in loser_traj_dict
-        if haskey(ret, key)
-            ret[key] = union(ret[key], set)
-        else
-            ret[key] = set
-        end
-    end
-    return ret
-end
-
-function get_intersection_times(integrators::Vector{<:DenseIntegrator})
-    intersection_times =
-        Dict(integrator.id => integrator.t[end] for integrator in integrators)
-    intersections_dict = get_intersections(integrators)
+function resolve_intersections!(intersection_times, intersections_dict)
     asd = 0
+    n_inters = length(intersections_dict)
     while length(intersections_dict) > 0
-        asd += 1
-        if asd > 4
-            break
-        end
         all_keys = keys(intersections_dict)
+        stuck = true
         for traj_id in all_keys
             intersections = intersections_dict[traj_id]
             found = false
@@ -344,11 +352,10 @@ function get_intersection_times(integrators::Vector{<:DenseIntegrator})
                 if intersection.type == "loser"
                     break
                 end
+                stuck = false
                 loser_id = intersection.id2
                 max_time = intersection.t2
                 intersection_times[loser_id] = min(intersection_times[loser_id], max_time)
-                println(intersection_times[loser_id])
-                #delete_intersection!(intersections_dict, intersection.id1, intersection)
                 clear_remaining_trajectory_intersections!(
                     intersections_dict,
                     loser_id,
@@ -359,7 +366,34 @@ function get_intersection_times(integrators::Vector{<:DenseIntegrator})
             end
             (found == true) && break
         end
+        if stuck
+            # this means that they all have a "losing intersection" as their first.
+            # Execute the innermost one
+            key = minimum(all_keys)
+            intersection = first(intersections_dict[key])
+            loser_id = intersection.id2
+            max_time = intersection.t2
+            intersection_times[loser_id] = min(intersection_times[loser_id], max_time)
+            clear_remaining_trajectory_intersections!(
+                intersections_dict,
+                loser_id,
+                max_time,
+            )
+        end
+        asd += 1
+        if asd >2
+            #break
+        end
+        #break #comment
     end
+    return intersection_times
+end
+
+function get_intersection_times(integrators::Vector{<:DenseIntegrator})
+    intersection_times =
+        Dict(integrator.id => integrator.t[end] for integrator in integrators)
+    intersections_dict = get_intersections(integrators)
+    resolve_intersections!(intersection_times, intersections_dict)
     return intersection_times
 end
 

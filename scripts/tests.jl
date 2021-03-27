@@ -26,16 +26,29 @@ QwindPlotting.plot_wind_hull(
 )
 
 integrators = iterations_dict[1]["integrators"];
+dense_integrators = DenseIntegrator.(integrators);
 
 fig, ax = plt.subplots()
-for integ in integrators
-    ax.plot(integ.p.data[:r], integ.p.data[:z])
+for integ in dense_integrators
+    ax.plot(integ.r, integ.z)
 end
 
-intersection_times = get_intersection_times(integrators);
+intersections_dict = Qwind.get_intersections(dense_integrators);
+intersection_times = Dict(integrator.id => integrator.t[end] for integrator in dense_integrators);
 
-#using JLD2
-#@save "integrators.jld2" integrators
+#Profile.clear()
+Qwind.resolve_intersections!(intersection_times, intersections_dict);
+#pprof()
+
+intersection_indices = [searchsortedfirst(integrator.t, intersection_times[integrator.id]) for integrator in dense_integrators];
+sliced_integs = [Qwind.slice_integrator(integrator, fi=index) for (integrator, index) in zip(dense_integrators, intersection_indices)];
+fig, ax = plt.subplots()
+for integ in sliced_integs
+    ax.plot(integ.r, integ.z)
+end
+
+
+#intersection_times = get_intersection_times(integrators);
 
 integs_interpol = interpolate_integrators(
     integrators,
@@ -49,6 +62,7 @@ fig, ax = plt.subplots()
 for integ in integs_interpol
     ax.plot(integ.r, integ.z)
 end
+ax.set_xlim(0,100)
 
 windh = Hull(r, z, r0, sigdigits = 2);
 
