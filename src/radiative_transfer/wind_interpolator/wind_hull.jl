@@ -13,11 +13,37 @@ function Hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdi
     points = round.(points, sigdigits = sigdigits)
     points = unique(points, dims = 1)
     points = [[points[i, 1], points[i, 2]] for i = 1:size(points)[1]]
-    hull = ConcaveHull.concave_hull(points, 1)
-    return hull#, points
+    hull = ConcaveHull.concave_hull(points)
+    #return points
+    return hull
+end
+
+function get_max_positions(integrator)
+    data = integrator.p.data
+    return [minimum(data[:r]), minimum(data[:z]), maximum(data[:r]), maximum(data[:z])]
+end
+
+function are_close(integ1, integ2, epsilon=1e-2)
+    max_pos1 = get_max_positions(integ1)
+    max_pos2 = get_max_positions(integ2)
+    dist = sum(abs.(max_pos1 .- max_pos2))
+    return dist < epsilon
+end
+
+function filter_close_trajectories(integrators::Vector{<:Sundials.IDAIntegrator}, epsilon=1e-2)
+    ret = [integrators[1]]
+    for i in 2:length(integrators)
+        if !are_close(ret[end], integrators[i], epsilon)
+            push!(ret, integrators[i])
+        end
+    end
+    push!(ret, integrators[end])
+    return ret
 end
 
 function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
+    integrators = filter_close_trajectories(integrators, 5e-2)
+    max_times = [max_times[integrator.p.id] for integrator in integrators]
     r0 = [integ.p.r0 for integ in integrators]
     integrators_interpolated_linear = interpolate_integrators(
         integrators,

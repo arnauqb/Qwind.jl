@@ -245,8 +245,8 @@ function self_intersects(integrator::Sundials.IDAIntegrator, r, z)
     end
     r1 = integrator.p.data[:r][1:(end - 1)]
     z1 = integrator.p.data[:z][1:(end - 1)]
-    r2 = [integrator.p.data[:r][end], r] #integrator.p.data[:r][(end - 1):end]
-    z2 = [integrator.p.data[:z][end], z] #integrator.p.data[:z][(end - 1):end]
+    r2 = [integrator.p.data[:r][end], r] 
+    z2 = [integrator.p.data[:z][end], z] 
     index = intersect(r1, z1, r2, z2)
     if index < length(r1)
         return true
@@ -312,20 +312,13 @@ function delete_intersection!(
 end
 
 function clear_remaining_trajectory_intersections!(intersections_dict, traj_id, max_time)
-    #todelete_dict = Dict{Int, Vector{Intersection}}()
     intersections = intersections_dict[traj_id]
     todelete_dict = DefaultDict{Int, Set{Int}}(() -> Set{Int}())
     for (i, intersection) in enumerate(intersections)
         if intersection.t1 >= max_time
-            # we need to append to avoid deleting in the loop
-            #insert_intersection!(todelete_dict, traj_id, intersection)
-            #delete_intersection!(ret, traj_id, intersection)
             push!(todelete_dict[traj_id], i)
-            # and eliminate the corresponding loser / winner
             for (j, intersection2) in enumerate(intersections_dict[intersection.id2])
                 if intersection2.t2 == intersection.t1
-                    #insert_intersection!(todelete_dict, intersection.id2, intersection2)
-                    #delete_intersection!(ret, intersection.id2, intersection2)
                     push!(todelete_dict[intersection.id2], j)
                 end
             end
@@ -340,7 +333,6 @@ function clear_remaining_trajectory_intersections!(intersections_dict, traj_id, 
 end
 
 function resolve_intersections!(intersection_times, intersections_dict)
-    asd = 0
     n_inters = length(intersections_dict)
     while length(intersections_dict) > 0
         all_keys = keys(intersections_dict)
@@ -380,11 +372,6 @@ function resolve_intersections!(intersection_times, intersections_dict)
                 max_time,
             )
         end
-        asd += 1
-        if asd >2
-            #break
-        end
-        #break #comment
     end
     return intersection_times
 end
