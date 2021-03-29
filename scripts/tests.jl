@@ -15,38 +15,15 @@ model = Model(config);
 iterations_dict = Dict();
 run!(model, iterations_dict)
 
+LogNorm = matplotlib.colors.LogNorm
+
 integrators = iterations_dict[1]["integrators"];
-r0 = [integ.p.r0 for integ in integrators];
-max_times = get_intersection_times(integrators);
+Profile.clear()
+@profile rt = update_radiative_transfer(model.rt, integrators);
+pprof()
 
-integrators2 = Qwind.filter_close_trajectories(integrators, 5e-2);
-max_times2 = [max_times[integrator.p.id] for integrator in integrators];
-length(integrators2)
+QwindPlotting.plot_wind_hull(rt.interpolator.wind_hull, zmax=25)
 
+dgrid = rt.interpolator.velocity_grid; #rt.interpolator.density_grid;
 fig, ax = plt.subplots()
-for integ in integrators2
-    ax.plot(integ.p.data[:r], integ.p.data[:z])
-end
-
-integrators_interpolated_linear = interpolate_integrators(
-    integrators2,
-    max_times = max_times2,
-    n_timesteps = 100,
-    log = true,
-);
-r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear);
-
-fig, ax = plt.subplots()
-for integ in integrators_interpolated_linear
-    ax.scatter(integ.r, integ.z)
-end
-
-points = Hull(r, z, r0, sigdigits=6);
-
-hull = ConcaveHull.concave_hull(points);
-
-fig, ax = plt.subplots()
-ps = reduce(hcat, points);
-ax.scatter(ps[1,:], ps[2,:])
-QwindPlotting.plot_wind_hull(hull, zmax=20, rmax=1500);
-
+ax.pcolormesh(dgrid.r_range, dgrid.z_range, dgrid.vz_grid', norm=LogNorm())

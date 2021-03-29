@@ -85,8 +85,6 @@ function VelocityGrid(
     @info "Done"
     @info "Filling velocity grids..."
     flush()
-    r_range_log = log10.(r_range)
-    z_range_log = log10.(z_range)
     vr_grid = zeros((length(r_range), length(z_range)))
     vz_grid = zeros((length(r_range), length(z_range)))
     for (i, r) in enumerate(r_range)

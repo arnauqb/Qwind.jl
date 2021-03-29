@@ -43,7 +43,6 @@ end
 
 function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
     integrators = filter_close_trajectories(integrators, 5e-2)
-    max_times = [max_times[integrator.p.id] for integrator in integrators]
     r0 = [integ.p.r0 for integ in integrators]
     integrators_interpolated_linear = interpolate_integrators(
         integrators,
