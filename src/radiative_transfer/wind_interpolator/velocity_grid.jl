@@ -85,16 +85,18 @@ function VelocityGrid(
     @info "Done"
     @info "Filling velocity grids..."
     flush()
-    vr_grid = zeros((length(r_range), length(z_range)))
-    vz_grid = zeros((length(r_range), length(z_range)))
+    r_grid = log10.(r_range)' .* ones(length(z_range))
+    z_grid = log10.(z_range) .* ones(length(r_range))'
+    vr_grid = vr_interp(r_grid, z_grid)
+    vr_grid = 10 .^ reshape(vr_grid, length(z_range), length(r_range))'
+    vz_grid = vz_interp(r_grid, z_grid)
+    vz_grid = 10 .^ reshape(vz_grid, length(z_range), length(r_range))'
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
             point = [r, z]
             if !is_point_in_wind(hull, point)
-                continue
-            else
-                vr_grid[i, j] = vr_interp(log10(r), log10(z))[1]
-                vz_grid[i, j] = vz_interp(log10(r), log10(z))[1]
+                vr_grid[i,j] = 0.0
+                vz_grid[i,j] = 0.0
             end
         end
     end

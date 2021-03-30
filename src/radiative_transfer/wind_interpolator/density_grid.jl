@@ -78,14 +78,15 @@ function DensityGrid(
     @info "Filling density grid..."
     flush()
     r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log = log)
-    density_grid = 1e2 .* ones((length(r_range), length(z_range)))
+    r_grid = log10.(r_range)' .* ones(length(z_range))
+    z_grid = log10.(z_range) .* ones(length(r_range))'
+    density_grid = interpolator(r_grid, z_grid)
+    density_grid = 10 .^ reshape(density_grid, length(z_range), length(r_range))'
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
             point = [r, z]
             if !is_point_in_wind(hull, point)
                 density_grid[i, j] = 1e2
-            else
-                density_grid[i, j] = 10 .^ interpolator(log10(r), log10(z))[1]
             end
         end
     end
@@ -188,6 +189,10 @@ function update_density_grid(
     density_grid = 1e2 .* ones((length(r_range), length(z_range)))
     @info "Averaging grids..."
     flush()
+    r_grid = log10.(r_range)' .* ones(length(z_range))
+    z_grid = log10.(z_range) .* ones(length(r_range))'
+    density_grid = interpolator(r_grid, z_grid)
+    density_grid = 10 .^ reshape(density_grid, length(z_range), length(r_range))'
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
             point = [r, z]
@@ -197,7 +202,7 @@ function update_density_grid(
                 density_grid[i, j] =
                     10 .^ (
                         (
-                            interpolator(log10(r), log10(z))[1] +
+                            log10(density_grid[i,j]) +
                             log10(get_density(old_grid, r, z))
                         ) / 2.0
                     )
