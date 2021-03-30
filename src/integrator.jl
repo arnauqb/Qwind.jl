@@ -427,7 +427,7 @@ function compute_delta_r(grid::DensityGrid, rc, xray_luminosity, Rg)
         catch
             return 0.0
         end
-        return min(delta_r, 0.1)
+        return min(delta_r, 0.5)
     else
         try
             delta_r = compute_delta_r_uv(grid, rc, Rg, tau_uv, delta_tau)
@@ -439,7 +439,7 @@ function compute_delta_r(grid::DensityGrid, rc, xray_luminosity, Rg)
 end
 
 
-function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
+function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]
     lines_widths = []
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
@@ -469,86 +469,10 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         if delta_r == 0.0
             break
         end
-        #tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-        #xi = compute_ionization_parameter(
-        #    rc,
-        #    0.0,
-        #    get_density(interp_grid, rc, 0.0),
-        #    tau_x,
-        #    xray_luminosity,
-        #    Rg,
-        #)
-        #delta_r = 0.0
-        #try
-        #    if xi > 1e5
-        #        delta_tau = 0.1
-        #        delta_r = find_zero(
-        #            delta_r -> fx(delta_r, rc, delta_tau, tau_x),
-        #            0.1,
-        #            atol = 1e-7,
-        #            rtol = 1e-3,
-        #        )
-        #    else
-        #        tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-        #        delta_tau = 0.1
-        #        delta_r = find_zero(
-        #            delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
-        #            1,
-        #            atol = 1e-7,
-        #            rtol = 1e-3,
-        #        )
-        #    end
-        #catch
-        #    break
-        #end
-        #if delta_r > 5
-        #    break
-        #end
-        ############################
-        #if tau_x < 50
-        #    tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-        #    if tau_x < 1
-        #        delta_tau = 0.1
-        #    elseif tau_x < 20
-        #        delta_tau = 0.5
-        #    else
-        #        delta_tau = 1
-        #    end
-        #    delta_r = find_zero(
-        #        delta_r -> fx(delta_r, rc, delta_tau, tau_x),
-        #        0.1,
-        #        atol = 1e-7,
-        #        rtol = 1e-3,
-        #    )
-        #elseif rc < 150 #tau_uv < 100
-        #    println("rc $rc")
-        #    tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-        #    if tau_uv < 1
-        #        delta_tau = 0.1
-        #    elseif tau_uv < 20
-        #        delta_tau = 0.5
-        #    else
-        #        delta_tau = 1
-        #    end
-        #    try
-        #        delta_r = find_zero(
-        #            delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
-        #            10,
-        #            atol = 1e-6,
-        #            rtol = 1e-3,
-        #        )
-        #    catch
-        #        break
-        #    end
-        #else
-        #    break
-        #end
-        #if delta_r > 5
-        #    break
-        #end
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)
         rc += delta_r
+        println(length(lines_range))
     end
     # add the same amount of trajectories for the rest
     additional_range = range(rc, rfi, step = 5) #length=length(lines_range))
@@ -560,6 +484,85 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
     lines_range = lines_range[1:(end - 1)]
     return lines_range, lines_widths
 end
+
+function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
+    lines_range = [rin]
+    lines_widths = []
+    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
+    z_range = [0.0, 1.0]
+    density_grid = zeros((length(r_range), length(z_range)))
+    density_grid[:, 1] .= getn0.(Ref(ic), r_range) 
+    interp_grid = DensityGrid(r_range, z_range, density_grid)
+    tau_x = 0.0
+    tau_uv = 0.0
+    fx(delta_r, rc, delta_tau, tau_x) =
+        delta_tau - (
+            compute_xray_tau(
+                interp_grid,
+                0.0,
+                0.0,
+                rc + delta_r,
+                0.0,
+                xray_luminosity,
+                Rg,
+            ) - tau_x
+        )
+    fuv(delta_r, rc, delta_tau, tau_uv) =
+        delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
+    rc = rin
+    while rc < rfi
+        if tau_x < 50
+            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
+            if tau_x < 1
+                delta_tau = 0.1
+            elseif tau_x < 20
+                delta_tau = 0.5
+            else
+                delta_tau = 1
+            end
+            delta_r = find_zero(
+                delta_r -> fx(delta_r, rc, delta_tau, tau_x),
+                0.1,
+                atol = 1e-7,
+                rtol = 1e-3,
+            )
+        elseif tau_uv < 50
+            tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
+            if tau_uv < 1
+                delta_tau = 0.1
+            elseif tau_uv < 20
+                delta_tau = 0.5
+            else
+                delta_tau = 1
+            end
+            try
+                delta_r = find_zero(
+                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
+                    10,
+                    atol = 1e-6,
+                    rtol = 1e-3,
+                )
+            catch
+                break
+            end
+        else
+            break
+        end
+        push!(lines_range, rc + delta_r / 2)
+        push!(lines_widths, delta_r)
+        rc += delta_r
+    end
+    # distribute remaining ones logarithmically
+    additional_range = range(rc, rfi, step=5)
+    additional_widths = diff(additional_range)
+    pushfirst!(additional_widths, additional_range[1] - lines_range[end])
+    lines_range = vcat(lines_range, additional_range)
+    lines_widths = vcat(lines_widths, additional_widths)
+    # discard last radius
+    lines_range = lines_range[1:(end - 1)]
+    return lines_range, lines_widths
+end
+
 
 compute_lines_range(model) = compute_lines_range(
     model.ic,
