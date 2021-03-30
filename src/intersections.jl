@@ -270,7 +270,7 @@ end
 
 function get_intersections(integrators::Vector{<:DenseIntegrator})
     intersections_dict = Dict{Int,SortedSet{Intersection}}()
-    @showprogress "Getting intersections: " for i = 1:length(integrators)
+    for i = 1:length(integrators)
         intersections = SortedSet{Intersection}()
         for j = (i+1):length(integrators)
             intersect!(intersections_dict, integrators[i], integrators[j])
