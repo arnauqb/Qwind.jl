@@ -175,24 +175,6 @@ function get_density_interpolator(
     return interp
 end
 
-function update_density_grid_row!(row, old_grid, hull, r, z_range, interpolator)
-    for (j, z) in enumerate(z_range)
-        point = [r, z]
-        if !is_point_in_wind(hull, point)
-            row[j] = 1e2
-        else
-            row[j] =
-                10 .^ (
-                    (
-                        interpolator(log10(r), log10(z))[1] +
-                        log10(get_density(old_grid, r, z))
-                    ) / 2.0
-                )
-        end
-    end
-    return row
-end
-
 function update_density_grid(
     old_grid::DensityGrid,
     hull::ConcaveHull.Hull,
@@ -206,32 +188,22 @@ function update_density_grid(
     density_grid = 1e2 .* ones((length(r_range), length(z_range)))
     @info "Averaging grids..."
     flush()
-    f!(i) = update_density_grid_row!(
-        density_grid[i, :],
-        old_grid,
-        hull,
-        r_range[i],
-        z_range,
-        interpolator,
-    )
-    rows = pmap(f!, 1:length(r_range))
-    density_grid = reduce(hcat, rows)'
-    #for (i, r) in enumerate(r_range)
-    #    for (j, z) in enumerate(z_range)
-    #        point = [r, z]
-    #        if !is_point_in_wind(hull, point)
-    #            density_grid[i, j] = 1e2
-    #        else
-    #            density_grid[i, j] =
-    #                10 .^ (
-    #                    (
-    #                        interpolator(log10(r), log10(z))[1] +
-    #                        log10(get_density(old_grid, r, z))
-    #                    ) / 2.0
-    #                )
-    #        end
-    #    end
-    #end
+    for (i, r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            point = [r, z]
+            if !is_point_in_wind(hull, point)
+                density_grid[i, j] = 1e2
+            else
+                density_grid[i, j] =
+                    10 .^ (
+                        (
+                            interpolator(log10(r), log10(z))[1] +
+                            log10(get_density(old_grid, r, z))
+                        ) / 2.0
+                    )
+            end
+        end
+    end
     # add z = 0 line
     density_grid = [density_grid[:, 1] density_grid]
     pushfirst!(z_range, 0.0)
