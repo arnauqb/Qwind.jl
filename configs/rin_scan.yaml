@@ -38,17 +38,17 @@ grid:
 initial_conditions:
   mode: CAKIC #UniformIC
   #r_in: "@vary grid 60,70,80,90,100,125,150,175,200"
-  r_in: "@vary grid 6.1,8,10,25,50,75,100"
+  r_in: 6.1
   r_fi: 1300.0
   n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
-  K: 0.03
+  K: 0.4
   alpha: 0.6
   mu: 0.5
 
 integrator:
-  n_iterations: 50
+  n_iterations: 20
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma7/data/dp004/dc-quer1/Qwind.jl/runs/rin_scan_relativistic"
+  save_path: "runs/rin_scan_6"

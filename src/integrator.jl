@@ -526,7 +526,8 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
                 atol = 1e-7,
                 rtol = 1e-3,
             )
-        elseif tau_uv < 50
+        else
+        #elseif tau_uv < 50
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
             if tau_uv < 1
                 delta_tau = 0.1
@@ -545,9 +546,10 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
             catch
                 break
             end
-        else
-            break
+        #else
+        #    break
         end
+        delta_r = min(delta_r, 5)
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)
         rc += delta_r

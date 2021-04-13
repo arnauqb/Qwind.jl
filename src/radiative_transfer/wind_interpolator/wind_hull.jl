@@ -14,7 +14,6 @@ function Hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdi
     points = unique(points, dims = 1)
     points = [[points[i, 1], points[i, 2]] for i = 1:size(points)[1]]
     hull = ConcaveHull.concave_hull(points)
-    #return points
     return hull
 end
 
@@ -53,7 +52,7 @@ function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
     r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
     @info "Constructing wind hull"
     hull = nothing
-    for sigd in [6, 5, 4]
+    for sigd in [4, 5, 6] #[6, 5, 4]
         hull = Hull(r, z, r0, sigdigits=sigd)
         if !hull.converged
             @warn "Hull did not converge, trying with less sigdigits..."

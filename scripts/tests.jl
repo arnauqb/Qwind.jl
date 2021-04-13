@@ -1,7 +1,7 @@
 using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
-using YAML, Profile, PProf, PyCall, ProgressMeter, PyPlot, JLD2
+using YAML, Profile, PProf, PyCall, ProgressMeter, JLD2, PyPlot
 using Qwind
 LogNorm = matplotlib.colors.LogNorm
 include("scripts/plotting.jl")
@@ -16,8 +16,24 @@ model = Model(config);
 iterations_dict = Dict();
 run!(model, iterations_dict)
 
+integrator = initialize_integrator(model.rt, model.wind_grid, model.ic, 25.0, 1);
+solve!(integrator)
+
+fig, ax = plt.subplots()
+#ax.loglog(integrator.p.data[:z], integrator.p.data[:n])
+ax.plot(integrator.p.data[:r], integrator.p.data[:z])
+
+
+
 #update_radiative_transfer(model.rt, iterations_dict[1]["integrators"])
-integrators = iterations_dict[1]["integrators"];
+integrators = iterations_dict[6]["integrators"];
+fig, ax = plt.subplots()
+for integ in integrators
+    #ax.loglog(integ.p.data[:z], integ.p.data[:n])
+    ax.plot(integ.p.data[:r], integ.p.data[:z])
+end
+
+
 r0 = [integ.p.r0 for integ in integrators];
 max_times = get_intersection_times(integrators);
 hull = Hull(integrators, max_times);

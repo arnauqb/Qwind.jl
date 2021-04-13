@@ -114,7 +114,8 @@ The output acceleration is in units of [c^2 / Rg]
 - r : radius coordinate [in Rg]
 - z : height coordinate [in Rg]
 """
-function compute_gravitational_acceleration(r, z)
+function compute_gravitational_acceleration(r, z; zh=0.0)
+    z = z + zh
     d = sqrt(r^2 + z^2)
     force = -1.0 / d^3 * [r, z]
     return force
