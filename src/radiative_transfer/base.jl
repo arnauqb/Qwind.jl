@@ -55,8 +55,8 @@ function radiation_force_integrand!(
     cosθ = (r_projection * vr + z * vz) / (delta * beta)
     flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
-    common_projection = 1.0 / (rd^2 * delta^4)
-    v[:] = exp(-tauuv) * flux_correction * fuv * mdot * nt * common_projection * [r_projection, z]
+    common_projection = 1.0 / (rd^2 * delta^4) 
+    v[:] = exp(-tauuv) * flux_correction * fuv * mdot * nt * common_projection * [r_projection, z] 
 end
 
 """
@@ -178,7 +178,7 @@ function compute_disc_radiation_field(
     rtol = 1e-3,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
-    max_z_vertical_flux = 5e-1,
+    max_z_vertical_flux = 5e-1,#1e4 #5e-1,
 )
     # sometimes the solver may try unphysical values of vr and vz, so we take the max
     # Similarly for the lower bound as beta = 0 leads to numerical singularity
@@ -205,6 +205,5 @@ function compute_disc_radiation_field(
         radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
         force = z * radiation_constant .* res
     end
-    #println("force $force")
     return force
 end

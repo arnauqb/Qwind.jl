@@ -87,7 +87,7 @@ function CAKIC(radiation, black_hole, config)
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
-getn0(ic::CAKIC, r0) = cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
+getn0(ic::CAKIC, r0) = @. 10 ^ (-1.8674976182264842 * log10(r0)^2 + 4.467193787684064 * log10(r0) + 10.153223831650203) #cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
 
 """
@@ -128,6 +128,9 @@ function cak_nozzle_function(radiation::QsosedRadiation, bh::BlackHole, z, r_0, 
     denom_1 = x / (1 + x^2)^(3 / 2)
     denom_2 = -SIGMA_E * SIGMA_SB * T^4 / (G * M * C) * R0^2
     denom_3 = -4 * b^2 * R0 * x / (G * M)
+    if denom_1 + denom_2 + denom_3 <= 0
+        return Inf
+    end
     denom = (denom_1 + denom_2 + denom_3)^((1 - alpha) / alpha)
     return numerator / denom
 end

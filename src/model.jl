@@ -31,6 +31,7 @@ update_model!(model::Model, rt::RadiativeTransfer) = model.rt = rt
 create_and_run_integrator(model::Model; r0, linewidth, trajectory_id, atol, rtol) =
     create_and_run_integrator(
         model.rt,
+        model.bh,
         model.wind_grid,
         model.ic,
         r0 = r0,

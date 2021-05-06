@@ -201,3 +201,15 @@ function xray_fraction(bh::BlackHole; low = UV_HIGH_KEV, high = 1e7)
     xray_lumin = disk_spectral_band_radiance(bh, low, high)
     xray_lumin / total_lumin
 end
+
+
+"""
+Disk height
+"""
+function disk_height(bh::BlackHole; r)
+    return SIGMA_E * SIGMA_SB * disk_temperature(bh, r)^4 * (r*bh.Rg)^3 / (G * bh.M * C) / bh.Rg
+end
+
+function characteristic_disk_height(bh::BlackHole, r)
+    return SIGMA_E * SIGMA_SB * disk_temperature_norel(bh, r)^4 * (r*bh.Rg)^3 / (G * bh.M * C) / bh.Rg
+end

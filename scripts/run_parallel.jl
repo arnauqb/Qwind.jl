@@ -13,67 +13,33 @@ catch
 end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
-#do_iteration!(model1, iterations_dict1, it_num=1);
-run!(model1, iterations_dict1)
+#run_iteration!(model1, iterations_dict1, it_num=1);
+run!(model1, iterations_dict1, parallel=true)
 
-integs = iterations_dict1[2]["integrators"];
-r0 = [integ.p.r0 for integ in integs];
-r, z, n = Qwind.reduce_integrators(integs, n_timesteps=100);
+fig, ax = QwindPlotting.plot_streamlines(iterations_dict1[25]["integrators"], linestyle="-")
 
-hull = Qwind.construct_wind_hull(r,z,r0);
+integs = iterations_dict[1]["integrators"];
 
-vs = 10 .^ reduce(hcat, hull.vertices)
-ps = 10 .^ reduce(hcat, points)
-
-#fig, ax = plt.subplots()
-
-fig, ax = QwindPlotting.plot_wind_hull(hull, nr=500, nz=500,rmin=49.999, rmax=50.01, zmax=10)
-QwindPlotting.plot_streamlines(integs, fig, ax)
-ax.set_xlim(49.999, 50.01)
-ax.set_ylim(0, 10)
-ax.scatter(vs[1,:], vs[2,:], color="blue", alpha=0.5)
-#ax.scatter(ps[1,:], ps[2,:], color="red", alpha=0.5)
-#ax.set_xlim(49.999, 50.003)
-#ax.set_ylim(0, 1)
-#ax.set_xlim(50.0, 50.03)
-#ax.set_ylim(1e-6, 1)
-
-r, z, n = Qwind.reduce_integrators(integs, n_timesteps=10000);
-
-grid = Qwind.construct_interpolation_grid(r, z, n, r0, hull, nr="auto", nz=50);
-
-fig, ax = plt.subplots()
-cm = ax.pcolormesh(grid.r_range, grid.z_range, grid.grid', norm=LogNorm())
-plt.colorbar(cm, ax=ax)
-
-fig, ax = plt.subplots()
-cm = ax.pcolormesh(r_range, z_range, ret', norm=LogNorm(vmin=1e5, vmax=1e10))
-#QwindPlotting.plot_streamlines(integs, fig, ax, color="white", alpha=0.1)
-ax.scatter(r[1:100:end], z[1:100:end], c=n[1:100:end], s=10, cmap="viridis", norm=LogNorm(vmin=1e5, vmax=1e10), edgecolor="black", linewidth=0.1)
-plt.colorbar(cm, ax=ax)
-ax.set_xlim(50, 50.05)
-ax.set_ylim(0, 2)
-#ax.set_xscale("log")
-
-
-#yym = reshape(yy, (length(z_range), length(r_range)))
-
-
-#wi = WindInterpolator(integs);
-
-#run!(model1, iterations_dict1)
-
-#Profile.clear()
-#@profile do_iteration!(model1, iterations_dict1, it_num=2);
 
 xray_luminosity = model1.rad.xray_luminosity
 Rg = model1.bh.Rg
 
+QwindPlotting.plot_density_grid(iterations_dict1[3]["radiative_transfer"].interpolator.density_grid, zmax=1, vmin=1e6, vmax=1e10)
+
+
+integrators = iterations_dict1[1]["integrators"];
+n0s = [integ.p.n0 for integ in integrators];
+
+integ = integrators[10];
+fig, ax = plt.subplots()
+ax.semilogy(integ.p.data[:z], integ.p.data[:n])
+
+
 # XRAY
-it_num = 4
-di = iterations_dict1[it_num]["radiative_transfer"].density_interpolator;
+it_num = 2
+di = iterations_dict1[it_num]["radiative_transfer"].interpolator;
 #di2 = iterations_dict2[it_num]["radiative_transfer"].density_interpolator;
-fig, ax = QwindPlotting.plot_xray_grid(di.grid, xray_luminosity, Rg, rmin=0, rmax=1000, nr=250, nz=250, vmin=1e-1, vmax=1e4)
+fig, ax = QwindPlotting.plot_xray_grid(di.density_grid, xray_luminosity, Rg, rmin=0, rmax=1000, zmax=50, nr=250, nz=250, vmin=1e-1, vmax=1e4)
 #ax.set_yscale("log")
 #ax.set_xscale("log")
 ax.set_title("New")
@@ -100,7 +66,7 @@ ax.set_title("Old")
 ax.set_yscale("log")
 #ax.set_xscale("log")
 
-QwindPlotting.plot_streamlines(iterations_dict1[4]["integrators"])
+
 QwindPlotting.plot_streamlines(iterations_dict2[4]["integrators"])
 
 
@@ -110,10 +76,10 @@ old_di = old_rt.density_interpolator;
 new_rt = update_radiative_transfer(model1.rt, integ2);
 new_di = new_rt.density_interpolator;
 
-fig, ax = QwindPlotting.plot_xray_grid(new_di.grid, xray_luminosity, Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+fig, ax = QwindPlotting.plot_xray_grid(model1.rt.interpolator.density_grid, model1.rad.xray_luminosity, model1.bh.Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
 ax.set_yscale("log")
 ax.set_xscale("log")
-ax.set_title("New")
+
 fig, ax = QwindPlotting.plot_xray_grid(old_di.grid, xray_luminosity, Rg, rmin=45, nr=500, nz=500, vmin=1e-2, vmax=1e2)
 ax.set_title("Old")
 ax.set_yscale("log")

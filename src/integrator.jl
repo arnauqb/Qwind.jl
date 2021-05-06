@@ -63,6 +63,7 @@ end
 
 function initialize_integrator(
     radiative_transfer::RadiativeTransfer,
+    bh::BlackHole,
     grid::Grid,
     initial_conditions::InitialConditions,
     r0,
@@ -95,11 +96,11 @@ function initialize_integrator(
     else
         callback_set = CallbackSet(termination_callback)
     end
-    a₀ = compute_initial_acceleration(radiative_transfer, r0, z0, 0, v0, params)
+    a₀ = compute_initial_acceleration(radiative_transfer, bh, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
-    dae_problem = create_dae_problem(radiative_transfer, residual!, du₀, u₀, tspan, params)
+    dae_problem = create_dae_problem(radiative_transfer, bh, residual!, du₀, u₀, tspan, params)
     integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
     integrator.opts.abstol = atol
     integrator.opts.reltol = rtol
@@ -146,6 +147,7 @@ end
 
 function create_and_run_integrator(
     radiative_transfer::RadiativeTransfer,
+    bh::BlackHole,
     grid::Grid,
     initial_conditions::InitialConditions;
     r0,
@@ -156,6 +158,7 @@ function create_and_run_integrator(
 )
     integrator = initialize_integrator(
         radiative_transfer,
+        bh,
         grid,
         initial_conditions,
         r0,
@@ -281,18 +284,18 @@ function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, traject
     return 0.0
 end
 
-function residual!(radiative_transfer::RadiativeTransfer, out, du, u, p, t)
+function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du, u, p, t)
     r, z, vr, vz = u
     r_dot, z_dot, vr_dot, vz_dot = du
     if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
-        gravitational_acceleration = compute_gravitational_acceleration(abs(r), abs(z))
+        gravitational_acceleration = compute_gravitational_acceleration(bh, abs(r), abs(z))
     else
         radiation_acceleration =
             compute_radiation_acceleration(radiative_transfer, du, u, p)
         centrifugal_term = p.l0^2 / r^3
-        gravitational_acceleration = compute_gravitational_acceleration(r, z)
+        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
     end
     ar = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
     az = gravitational_acceleration[2] + radiation_acceleration[2]
@@ -304,13 +307,14 @@ end
 
 function create_dae_problem(
     radiative_transfer::RadiativeTransfer,
+    bh::BlackHole,
     residual!,
     du₀,
     u₀,
     tspan,
     params,
 )
-    func!(out, du, u, p, t) = residual!(radiative_transfer, out, du, u, p, t)
+    func!(out, du, u, p, t) = residual!(radiative_transfer, bh, out, du, u, p, t)
     return DAEProblem(
         func!,
         du₀,
@@ -367,6 +371,7 @@ end
 
 function compute_initial_acceleration(
     radiative_transfer::RadiativeTransfer,
+    bh::BlackHole,
     r,
     z,
     vr,
@@ -375,7 +380,7 @@ function compute_initial_acceleration(
 )
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
-    gravitational_acceleration = compute_gravitational_acceleration(r, z)
+    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
     radiation_acceleration =
         compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3
