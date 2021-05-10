@@ -56,7 +56,11 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, z_xray::Float64, r
 end
 function QsosedRadiation(bh::BlackHole, config::Dict)
     radiation_config = config[:radiation]
-    if radiation_config[:relativistic]
+    relativistic = radiation_config[:relativistic]
+    if typeof(relativistic) == String
+        relativistic = parse(Bool, relativistic)
+    end
+    if relativistic
         mode = Relativistic()
     else
         mode = NoRelativistic()
