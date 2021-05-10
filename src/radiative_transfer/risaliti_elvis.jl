@@ -24,7 +24,6 @@ struct RERadiativeTransfer{T} <: RadiativeTransfer{T}
 end
 
 function RERadiativeTransfer(radiation::Radiation, config)
-    println(config)
     rc = config[:radiative_transfer]
     return RERadiativeTransfer(radiation, rc[:shielding_density], rc[:r_in])
 end
@@ -226,11 +225,24 @@ function radiation_force_integrand!(
     r,
     z,
 )
-    nt = 1 #disk_nt_rel_factors(radiative_transfer.radiation, rd)
+    nt = disk_nt_rel_factors(radiative_transfer.radiation, rd)
     r_projection = (r - rd * cos(phid))
     delta_sq = (r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta_sq^2)
     v[:] = nt * common_projection * [r_projection, z]
+end
+
+function compute_disc_radiation_field_vertical(
+    radiative_transfer::RERadiativeTransfer,
+    r,
+    z,
+)
+    radiation=radiative_transfer.radiation
+    Rg = radiation.Rg
+    constant = 3 / (2 * radiation.efficiency)
+    fuv, mdot = get_fuv_mdot(radiation, r)
+    nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco) 
+    return [0.0, nt * constant * mdot * fuv / r^3]
 end
 
 """
@@ -278,25 +290,30 @@ an integral over the disc.
 function compute_disc_radiation_field(
     radiative_transfer::RERadiativeTransfer,
     r,
-    z,
+    z;
     rmax = 1600,
     atol = 0.0,
     rtol = 1e-2,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
+    max_z_vertical_flux = 1,
 )
-    res, err = integrate_radiation_force_integrand(
-        radiative_transfer,
-        r,
-        z,
-        radiative_transfer.radiation.isco,
-        rmax,
-        atol = atol,
-        rtol = rtol,
-        norm = norm,
-        maxevals = maxevals,
-    )
-    radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
-    force = z * radiation_constant .* res
+    if z < max_z_vertical_flux
+        force = compute_disc_radiation_field_vertical(radiative_transfer, r, z)
+    else
+        res, err = integrate_radiation_force_integrand(
+            radiative_transfer,
+            r,
+            z,
+            radiative_transfer.radiation.isco,
+            rmax,
+            atol = atol,
+            rtol = rtol,
+            norm = norm,
+            maxevals = maxevals,
+        )
+        radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
+        force = z * radiation_constant .* res
+    end
     return force
 end

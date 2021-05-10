@@ -1,84 +1,80 @@
-using DrWatson
-@quickactivate "Qwind"
-using RegionTrees, DataFrames, CSV, YAML, Printf
+using Distributed
+@everywhere using DrWatson
+@everywhere @quickactivate "Qwind"
+using YAML, Profile, PProf, PyCall, ProgressMeter, PyPlot, JLD2
 using Qwind
-using Profile
-using PProf
-using PyPlot
 LogNorm = matplotlib.colors.LogNorm
+include("scripts/plotting.jl")
 
-function plot_smoothed_grid(smoothed_grid; vmin = 1e2, vmax = 1e9)
-    fig, ax = plt.subplots()
-    cm = ax.pcolormesh(
-        smoothed_grid.r_range,
-        smoothed_grid.z_range,
-        smoothed_grid.grid',
-        norm = LogNorm(vmin, vmax),
-    )
-    plt.colorbar(cm, ax = ax)
+config_path = "configs/rin_scan.yaml"
+config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
+try
+    mv(config[:integrator][:save_path], "backup", force = true)
+catch
+end
+model = Model(config);
+#iterations_dict = Dict();
+#run!(model, iterations_dict)
+#lr, lw = Qwind.compute_lines_range(model)
+#fig, ax = plt.subplots()
+#for l in lr
+#    ax.axvline(l)
+#end
+
+
+
+integrators = iterations_dict[1]["integrators"];
+max_times = get_intersection_times(integrators);
+
+fig, ax =plt.subplots()
+for integrator in integrators 
+    ax.plot(integrator.p.data[:r], integrator.p.data[:z])
 end
 
-function plot_tau_x_grid(radiative_transfer; vmin = 1e2, vmax = 1e9)
-    fig, ax = plt.subplots()
-    r_range = range(0, 1000, length = 250)
-    z_range = range(0, 1000, length = 250)
-    tau_x_grid = 1e2 * ones((length(r_range), length(z_range)))
-    for (i, r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            tau_x_grid[i, j] = compute_xray_tau(radiative_transfer, r, z)
-        end
-    end
-    cm = ax.pcolormesh(r_range, z_range, tau_x_grid', norm = LogNorm(vmin, vmax))
-    plt.colorbar(cm, ax = ax)
+
+dense_integrators = DenseIntegrator.(integrators);
+
+max_indices = Dict()
+for integrator in dense_integrators
+    max_indices[integrator.id] = searchsorted_nearest(integrator.t, max_times[integrator.id])
 end
 
 
-config = YAML.load_file("scripts/config.yaml", dicttype = Dict{Symbol,Any})
+sliced_integs = []
+for integ in dense_integrators
+    push!(sliced_integs, Qwind.slice_integrator(integ, fi = max_indices[integ.id]))
+end
 
-black_hole = BlackHole(config)
+fig, ax =plt.subplots()
+for integ in sliced_integs
+    ax.plot(integ.r, integ.z)
+end
 
-radiation = getfield(Qwind, Symbol(config[:radiation][:mode]))(black_hole, config)
-
-
-wind_grid = Rectangular(config)
-
-initial_conditions = getfield(Qwind, Symbol(config[:initial_conditions][:mode]))(
-    radiation,
-    black_hole,
-    config,
+integrators_interpolated_linear = interpolate_integrators(
+    integrators,
+    max_times = max_times,
+    n_timesteps = 100,
+    log = true,
 )
 
 
-for kernel_size in [0, 1, 2, 5, 10, 50]
-    config = YAML.load_file("scripts/config.yaml", dicttype = Dict{Symbol,Any})
-    config[:radiative_transfer][:kernel_size] = kernel_size
-    radiative_transfer =
-        getfield(Qwind, Symbol(config[:radiative_transfer][:mode]))(radiation, config)
-    iterations_dict = Dict()
-    save_path = "results_kernel_size_$kernel_size" #config[:integrator][:save_path]
-    mkpath(save_path)
-    # iterations
-    n_iterations = config[:integrator][:n_iterations]
-    for it = 1:n_iterations
-        @info "Starting iteration $it of $n_iterations"
-        iterations_dict[it] = Dict()
-        output_path = save_path * "/iteration_$(@sprintf "%03d" it).csv"
-        integrators = initialize_integrators(
-            radiative_transfer,
-            wind_grid,
-            initial_conditions,
-            atol = config[:integrator][:atol],
-            rtol = config[:integrator][:rtol],
-            save_path = output_path,
-        )
-        iterations_dict[it]["integrators"] = integrators
-        iterations_dict[it]["radiative_transfer"] = radiative_transfer
-        run_integrators!(integrators)
-        @info "Integration of iteration $it ended!"
-        radiative_transfer = update_radiative_transfer(radiative_transfer, integrators)
-    end
+fig, ax = plt.subplots()
+#for integ in integrators
+#    ax.plot(integ.p.data[:r], integ.p.data[:z])
+#end
+for integ in integrators_interpolated_linear
+    ax.plot(integ.r, integ.z)
 end
 
+max_times = get_intersection_times(integrators);
 
+integs2 = Qwind.filter_close_trajectories(integrators, 0.5);
+length(integs2)
 
+points = Hull(integrators, max_times);
 
+QwindPlotting.plot_wind_hull(hull, zmax=25);
+
+fig, ax = plt.subplots()
+ps = reduce(hcat, points)
+ax.scatter(ps[1,:], ps[2,:])

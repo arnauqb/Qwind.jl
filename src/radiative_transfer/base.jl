@@ -14,7 +14,7 @@ function radiation_force_integrand!(
     vr,
     vz,
     beta,
-    gamma
+    gamma,
 )
     delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
     nt = disk_nt_rel_factors(radiation, rd)
@@ -42,21 +42,28 @@ function radiation_force_integrand!(
     vr,
     vz,
     beta,
-    gamma
+    gamma,
 )
     delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
-    nt = disk_nt_rel_factors(radiation, rd)
     tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, 0.0, r, z, Rg)
     # deproject tauuv
     tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
+    nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
     cosθ = (r_projection * vr + z * vz) / (delta * beta)
     flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
     common_projection = 1.0 / (rd^2 * delta^4)
-    v[:] = exp(-tauuv) * flux_correction * fuv * mdot * nt * common_projection * [r_projection, z]
+    v[:] =
+        exp(-tauuv) *
+        flux_correction *
+        fuv *
+        mdot *
+        nt *
+        common_projection *
+        [r_projection, z]
 end
 
 """
@@ -98,7 +105,7 @@ function integrate_radiation_force_integrand(
         vr,
         vz,
         beta,
-        gamma
+        gamma,
     )
     return hcubature(
         2,
@@ -175,16 +182,19 @@ function compute_disc_radiation_field(
     vz;
     rmax = 1600,
     atol = 0,
-    rtol = 1e-3,
+    rtol = 1e-4,
     norm = Cubature.INDIVIDUAL,
-    maxevals = 10000,
-    max_z_vertical_flux = 5e-1,
+    maxevals = 50000,
+    max_z_vertical_flux = 5e-1,#1e4 #5e-1,
 )
     # sometimes the solver may try unphysical values of vr and vz, so we take the max
     # Similarly for the lower bound as beta = 0 leads to numerical singularity
     beta = max(min(1.0, sqrt(vr^2 + vz^2)), 1e-4)
     gamma = 1.0 / sqrt(1 - beta^2)
     if z < max_z_vertical_flux
+        if r < radiative_transfer.radiation.disk_r_in
+            return [0.0, 0.0]
+        end
         force = compute_disc_radiation_field_vertical(radiative_transfer, r, z, beta)
     else
         res, err = integrate_radiation_force_integrand(
@@ -195,7 +205,7 @@ function compute_disc_radiation_field(
             vz,
             beta,
             gamma,
-            radiative_transfer.radiation.isco,
+            radiative_transfer.radiation.disk_r_in,
             rmax,
             atol = atol,
             rtol = rtol,
@@ -205,6 +215,5 @@ function compute_disc_radiation_field(
         radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
         force = z * radiation_constant .* res
     end
-    #println("force $force")
     return force
 end

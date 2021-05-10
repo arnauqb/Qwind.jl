@@ -39,17 +39,17 @@ grid:
 initial_conditions:
   mode: CAKIC #UniformIC
   #r_in: "@vary grid 60,70,80,90,100,125,150,175,200"
-  r_in: "@vary grid 6.1,8,10,25,50,75,100"
+  r_in: 6.1
   r_fi: 1300.0
   n_lines: auto 
   log_spaced: true
   z_0: 0.0 # Rg
-  K: 0.01
+  K: 0.03
   alpha: 0.6
   mu: 0.5
 
 integrator:
-  n_iterations: 30
+  n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
   save_path: "/cosma7/data/dp004/dc-quer1/qwind_runs/K001"
