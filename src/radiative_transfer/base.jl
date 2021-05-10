@@ -182,9 +182,9 @@ function compute_disc_radiation_field(
     vz;
     rmax = 1600,
     atol = 0,
-    rtol = 1e-4,
+    rtol = 1e-3,
     norm = Cubature.INDIVIDUAL,
-    maxevals = 50000,
+    maxevals = 10000,
     max_z_vertical_flux = 5e-1,#1e4 #5e-1,
 )
     # sometimes the solver may try unphysical values of vr and vz, so we take the max
