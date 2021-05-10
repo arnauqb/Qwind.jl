@@ -7,7 +7,7 @@ function filter_array(a, b, value)
     return a[mask], b[mask]
 end
 
-function Hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdigits=6)
+function Hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdigits = 6)
     # remove points that are too close to each other
     points = hcat(r, z)
     points = round.(points, sigdigits = sigdigits)
@@ -22,16 +22,19 @@ function get_max_positions(integrator)
     return [minimum(data[:r]), minimum(data[:z]), maximum(data[:r]), maximum(data[:z])]
 end
 
-function are_close(integ1, integ2, epsilon=1e-2)
+function are_close(integ1, integ2, epsilon = 1e-2)
     max_pos1 = get_max_positions(integ1)
     max_pos2 = get_max_positions(integ2)
     dist = sum(abs.(max_pos1 .- max_pos2))
     return dist < epsilon
 end
 
-function filter_close_trajectories(integrators::Vector{<:Sundials.IDAIntegrator}, epsilon=1e-2)
+function filter_close_trajectories(
+    integrators::Vector{<:Sundials.IDAIntegrator},
+    epsilon = 1e-2,
+)
     ret = [integrators[1]]
-    for i in 2:length(integrators)
+    for i = 2:length(integrators)
         if !are_close(ret[end], integrators[i], epsilon)
             push!(ret, integrators[i])
         end
@@ -52,8 +55,8 @@ function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
     r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
     @info "Constructing wind hull"
     hull = nothing
-    for sigd in [4, 5, 6] #[6, 5, 4]
-        hull = Hull(r, z, r0, sigdigits=sigd)
+    for sigd in [6, 5, 4] #[6, 5, 4]
+        hull = Hull(r, z, r0, sigdigits = sigd)
         if !hull.converged
             @warn "Hull did not converge, trying with less sigdigits..."
         end
@@ -68,7 +71,7 @@ end
 function Hull(hull_data::Dict)
     vs_r = hull_data["vertices_r"]
     vs_z = hull_data["vertices_z"]
-    vertices = [[r, z] for (r,z) in zip(vs_r, vs_z)]
+    vertices = [[r, z] for (r, z) in zip(vs_r, vs_z)]
     Hull(vertices, hull_data["k"], hull_data["converged"])
 end
 

@@ -118,7 +118,6 @@ function compute_gravitational_acceleration(bh::BlackHole, r, z; zh="height")
     if zh == "height"
         zh = disk_height(bh, r) #characteristic_disk_height(bh, r) #disk_height(bh, r)
     end
-    #zh = 0
     z = z + zh
     d = sqrt(r^2 + z^2)
     force = -1.0 / d^3 * [r, z]

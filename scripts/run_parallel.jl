@@ -16,7 +16,9 @@ iterations_dict1 = Dict();
 #run_iteration!(model1, iterations_dict1, it_num=1);
 run!(model1, iterations_dict1, parallel=true)
 
-fig, ax = QwindPlotting.plot_streamlines(iterations_dict1[25]["integrators"], linestyle="-")
+fig, ax = QwindPlotting.plot_streamlines(iterations_dict1[1]["integrators"], linestyle="-")
+
+#QwindPlotting.plot_wind_hull(model1.rt.interpolator.wind_hull, zmax=1)
 
 integs = iterations_dict[1]["integrators"];
 

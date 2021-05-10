@@ -8,14 +8,22 @@ struct QsosedRadiation{T} <: Radiation{T}
     efficiency::T
     spin::T
     isco::T
+    disk_r_in::T
     z_xray::T
     Rg::T
     flux_correction::FluxCorrection
 end
 
-QsosedRadiation() = QsosedRadiation([0.0], [0.0], [0.0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Relativistic())
+QsosedRadiation() =
+    QsosedRadiation([0.0], [0.0], [0.0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Relativistic())
 
-function compute_ionization_parameter(radiation::QsosedRadiation, r, z, number_density, tau_x)
+function compute_ionization_parameter(
+    radiation::QsosedRadiation,
+    r,
+    z,
+    number_density,
+    tau_x,
+)
     d2 = (r^2 + (z - radiation.z_xray)^2) * radiation.Rg^2
     return max(radiation.xray_luminosity * exp(-tau_x) / (number_density * d2), 1e-20)
 end
@@ -31,7 +39,14 @@ function compute_mass_accretion_rate(radiation::Radiation, r)
 end
 
 
-function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, z_xray::Float64, relativistic::FluxCorrection)
+function QsosedRadiation(
+    bh::BlackHole,
+    nr::Int,
+    fx::Float64,
+    disk_r_in::Float64,
+    z_xray::Float64,
+    relativistic::FluxCorrection,
+)
     rmin = bh.isco
     rmax = 1400.0
     disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
@@ -49,6 +64,7 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, z_xray::Float64, r
         bh.efficiency,
         bh.spin,
         bh.isco,
+        disk_r_in,
         z_xray,
         bh.Rg,
         relativistic,
@@ -56,12 +72,23 @@ function QsosedRadiation(bh::BlackHole, nr::Int, fx::Float64, z_xray::Float64, r
 end
 function QsosedRadiation(bh::BlackHole, config::Dict)
     radiation_config = config[:radiation]
+    disk_r_in = radiation_config[:disk_r_in]
+    if disk_r_in == "isco"
+        disk_r_in = bh.isco
+    end
     if radiation_config[:relativistic]
         mode = Relativistic()
     else
         mode = NoRelativistic()
     end
-    return QsosedRadiation(bh, radiation_config[:n_r], radiation_config[:f_x], radiation_config[:z_xray], mode)
+    return QsosedRadiation(
+        bh,
+        radiation_config[:n_r],
+        radiation_config[:f_x],
+        disk_r_in,
+        radiation_config[:z_xray],
+        mode,
+    )
 end
 
 function get_fuv_mdot(radiation::QsosedRadiation, r)

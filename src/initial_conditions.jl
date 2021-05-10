@@ -52,9 +52,9 @@ struct CAKIC{T} <: InitialConditions{T}
     bh::BlackHole
     rin::T
     rfi::T
-    nlines::Union{Int, String}
+    nlines::Union{Int,String}
     z0::T
-    K::Union{T, String}
+    K::Union{T,String}
     alpha::Union{T,String}
     mu::T
     logspaced::Bool
@@ -87,7 +87,9 @@ function CAKIC(radiation, black_hole, config)
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
-getn0(ic::CAKIC, r0) = @. 10 ^ (-1.8674976182264842 * log10(r0)^2 + 4.467193787684064 * log10(r0) + 10.153223831650203) #cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
+getn0(ic::CAKIC, r0) = @. 10^(
+    -1.8110675134268326 * log10(r0)^2 + 3.788166202329894 * log10(r0) + 11.537466980651164
+) #cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
 
 """
@@ -102,7 +104,7 @@ function compute_cak_K(T)
         return 0.0021
     end
 end
-compute_cak_K(bh::BlackHole, r0) = compute_cak_K(disk_temperature(bh,r0))
+compute_cak_K(bh::BlackHole, r0) = compute_cak_K(disk_temperature(bh, r0))
 function compute_cak_alpha(T)
     if T < 30000
         return 0.742
@@ -112,7 +114,7 @@ function compute_cak_alpha(T)
         return 0.811
     end
 end
-compute_cak_alpha(bh::BlackHole, r0) = compute_cak_alpha(disk_temperature(bh,r0))
+compute_cak_alpha(bh::BlackHole, r0) = compute_cak_alpha(disk_temperature(bh, r0))
 
 export cak_surface_mloss,
     cak_density, cak_normalized_mdot, cak_characteristic_mloss, cak_nozzle_function
@@ -159,9 +161,15 @@ function cak_surface_mloss(radiation::QsosedRadiation, bh::BlackHole, r_0, K, al
     return Sigma
 end
 
-function cak_density(radiation::QsosedRadiation, bh::BlackHole, r_0, K="auto", alpha="auto")
-    (K=="auto") && (K=compute_cak_K(bh, r_0))
-    (alpha=="auto") && (alpha=compute_cak_alpha(bh, r_0))
+function cak_density(
+    radiation::QsosedRadiation,
+    bh::BlackHole,
+    r_0,
+    K = "auto",
+    alpha = "auto",
+)
+    (K == "auto") && (K = compute_cak_K(bh, r_0))
+    (alpha == "auto") && (alpha = compute_cak_alpha(bh, r_0))
     Sigma = cak_surface_mloss(radiation, bh, r_0, K, alpha)
     T = disk_temperature(bh, r_0)
     b = compute_thermal_velocity(T) * C
