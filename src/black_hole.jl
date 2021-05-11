@@ -116,7 +116,7 @@ The output acceleration is in units of [c^2 / Rg]
 """
 function compute_gravitational_acceleration(bh::BlackHole, r, z; zh="height")
     if zh == "height"
-        zh = disk_height(bh, r) #characteristic_disk_height(bh, r) #disk_height(bh, r)
+        zh = characteristic_disk_height(bh, r) #disk_height(bh, r)
     end
     z = z + zh
     d = sqrt(r^2 + z^2)
