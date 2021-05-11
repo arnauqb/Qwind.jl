@@ -84,6 +84,8 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
     disk_r_in = radiation_config[:disk_r_in]
     if disk_r_in == "isco"
         disk_r_in = bh.isco
+    elseif disk_r_in == "r_in"
+        disk_r_in = config[:initial_conditions][:r_in]
     end
     return QsosedRadiation(
         bh,

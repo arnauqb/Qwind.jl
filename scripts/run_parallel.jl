@@ -14,7 +14,7 @@ end
 model1 = Model(config_path);
 iterations_dict1 = Dict();
 #run_iteration!(model1, iterations_dict1, it_num=1);
-run!(model1, iterations_dict1, parallel=true)
+#run!(model1, iterations_dict1, parallel=true)
 
 fig, ax = QwindPlotting.plot_streamlines(iterations_dict1[2]["integrators"], linestyle="-")
 
