@@ -16,7 +16,32 @@ iterations_dict1 = Dict();
 #run_iteration!(model1, iterations_dict1, it_num=1);
 run!(model1, iterations_dict1, parallel=true)
 
-fig, ax = QwindPlotting.plot_streamlines(iterations_dict1[1]["integrators"], linestyle="-")
+fig, ax = QwindPlotting.plot_streamlines(iterations_dict1[2]["integrators"], linestyle="-")
+
+
+integrators_raw = iterations_dict1[2]["integrators"]
+max_times = get_intersection_times(integrators_raw)
+
+integrators = Qwind.filter_close_trajectories(integrators_raw, 5e-2);
+r0 = [integ.p.r0 for integ in integrators];
+integrators_interpolated_linear = interpolate_integrators(
+    integrators,
+    max_times = max_times,
+    n_timesteps = 50,
+    log = true,
+);
+r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear);
+
+hull = Hull(r, z, r0, sigdigits = 6)
+
+QwindPlotting.plot_wind_hull(hull, nr=500, nz=500)
+
+
+fig, ax = plt.subplots()
+for integ in integrators_interpolated_linear
+    ax.plot(integ.r, integ.z)
+end
+
 
 #QwindPlotting.plot_wind_hull(model1.rt.interpolator.wind_hull, zmax=1)
 

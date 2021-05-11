@@ -563,14 +563,6 @@ function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosit
         push!(lines_widths, delta_r)
         rc += delta_r
     end
-    println(length(lines_range))
-    # distribute remaining ones logarithmically
-    #if rc < 100
-    #    additional_range = range(rc, 50, step=0.25)
-    #else
-    #    additional_range = []
-    #end
-    #additional_range = vcat(additional_range, range(max(rc, 50), rfi, step = 1))
     additional_range = range(rc, rfi, step = 5)
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])

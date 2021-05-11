@@ -49,7 +49,7 @@ function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
     integrators_interpolated_linear = interpolate_integrators(
         integrators,
         max_times = max_times,
-        n_timesteps = 100,
+        n_timesteps = 50,
         log = true,
     )
     r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
