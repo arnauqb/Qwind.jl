@@ -1,7 +1,7 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
   #qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
-  n_cpus: 5
+  n_cpus: 16
   partition: cosma
   account: durham
   max_time: 48:00:00

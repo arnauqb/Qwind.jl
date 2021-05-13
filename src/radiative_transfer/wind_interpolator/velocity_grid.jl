@@ -58,8 +58,8 @@ function VelocityGrid(h5_path::String)
 end
 
 function VelocityGrid(nr::Union{String, Int}, nz::Int, fill::Float64)
-    r_range = zeros(2)
-    z_range = zeros(2)
+    r_range = [-1.0, 0.0]
+    z_range = [-1.0, 0.0]
     vr_grid = zeros((2, 2))
     vz_grid = zeros((2, 2))
     return VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr, nz)

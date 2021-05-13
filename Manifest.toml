@@ -141,9 +141,9 @@ version = "3.12.1"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "32a2b8af383f11cbb65803883837a149d10dfe8a"
+git-tree-sha1 = "024fe24d83e4a5bf5fc80501a314ce0d1aa35597"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.10.12"
+version = "0.11.0"
 
 [[Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -179,9 +179,11 @@ uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 
 [[ConcaveHull]]
 deps = ["LinearAlgebra", "NearestNeighbors", "RecipesBase"]
-git-tree-sha1 = "db63b497451d94348290688a1e5dede43371b740"
+git-tree-sha1 = "5947abb30cca7c26d8fb14e50e7dbb0b36d25660"
+repo-rev = "master"
+repo-url = "https://github.com/lstagner/ConcaveHull.jl"
 uuid = "7d11a335-8259-52c9-8750-e30c45c66484"
-version = "1.1.0"
+version = "1.2.0"
 
 [[Conda]]
 deps = ["JSON", "VersionParsing"]
@@ -444,6 +446,9 @@ deps = ["Pkg", "Requires", "UUIDs"]
 git-tree-sha1 = "d74fd0dae131104471c849f25ba1179fe0fadf47"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 version = "1.8.2"
+
+[[FileWatching]]
+uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays"]
@@ -1043,6 +1048,12 @@ git-tree-sha1 = "ef559986786c8a7b5dcb50a5fd6872e2135906e8"
 uuid = "18e31ff7-3703-566c-8e60-38913d67486b"
 version = "0.3.0"
 
+[[Pidfile]]
+deps = ["FileWatching", "Test"]
+git-tree-sha1 = "1be8660b2064893cd2dae4bd004b589278e4440d"
+uuid = "fa939f87-e72e-5be4-a000-7fc836dbe307"
+version = "1.2.0"
+
 [[Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "6a20a83c1ae86416f0a5de605eaea08a552844a3"
@@ -1052,6 +1063,14 @@ version = "0.40.0+0"
 [[Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[[PkgLock]]
+deps = ["Pidfile", "Pkg"]
+git-tree-sha1 = "645ac1c44ad317204140c8751986911e82e26546"
+repo-rev = "master"
+repo-url = "https://github.com/simonbyrne/PkgLock.jl"
+uuid = "07caef7a-92b9-11e9-22c2-110dd43644df"
+version = "0.1.0"
 
 [[PlotThemes]]
 deps = ["PlotUtils", "Requires", "Statistics"]

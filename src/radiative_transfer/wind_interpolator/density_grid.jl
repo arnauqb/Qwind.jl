@@ -18,7 +18,6 @@ struct DensityGrid{T} <: InterpolationGrid{T}
             nz = length(z_range)
         end
         iterator = GridIterator(r_range, z_range)
-        println(grid)
         interpolator =
             Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
         interpolator = Interpolations.extrapolate(interpolator, 1e2)
@@ -55,8 +54,8 @@ end
 
 
 function DensityGrid(nr::Union{String,Int}, nz::Int, vacuum_density::Float64)
-    r_range = zeros(2)
-    z_range = zeros(2)
+    r_range = [-1.0, 0.0]
+    z_range = [-1.0, 0.0]
     density_grid = vacuum_density .* [[1.0, 1.0] [1.0, 1.0]]
     return DensityGrid(r_range, z_range, density_grid, nr, nz)
 end
