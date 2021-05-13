@@ -18,6 +18,7 @@ struct DensityGrid{T} <: InterpolationGrid{T}
             nz = length(z_range)
         end
         iterator = GridIterator(r_range, z_range)
+        println(grid)
         interpolator =
             Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
         interpolator = Interpolations.extrapolate(interpolator, 1e2)
