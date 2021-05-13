@@ -62,10 +62,11 @@ function compute_density(r, z, vr, vz, parameters::Parameters)
 end
 
 function initialize_integrator(
-    radiative_transfer::RadiativeTransfer,
-    bh::BlackHole,
-    grid::Grid,
-    initial_conditions::InitialConditions,
+    #radiative_transfer::RadiativeTransfer,
+    #bh::BlackHole,
+    #grid::Grid,
+    #initial_conditions::InitialConditions,
+    model,
     r0,
     linewidth;
     atol = 1e-8,
@@ -74,10 +75,14 @@ function initialize_integrator(
     trajectory_id = -1,
     save_results = true,
 )
-    l0 = getl0(initial_conditions, r0)
-    z0 = getz0(initial_conditions, r0)
-    n0 = getn0(initial_conditions, r0)
-    v0 = getv0(initial_conditions, r0)
+    rt = model.rt
+    bh = model.bh
+    grid = model.wind_grid
+    ic = model.ic
+    l0 = getl0(ic, r0)
+    z0 = getz0(ic, r0)
+    n0 = getn0(model, r0)
+    v0 = getv0(ic, r0)
     lwnorm = linewidth / r0
     termination_callback = DiscreteCallback(
         termination_condition,
@@ -90,19 +95,19 @@ function initialize_integrator(
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
             (u, t, integrator) ->
-                save(u, t, integrator, radiative_transfer, trajectory_id),
+                save(u, t, integrator, rt, trajectory_id),
             saved_data,
         )
         callback_set = CallbackSet(termination_callback, saving_callback)
     else
         callback_set = CallbackSet(termination_callback)
     end
-    a₀ = compute_initial_acceleration(radiative_transfer, bh, r0, z0, 0, v0, params)
+    a₀ = compute_initial_acceleration(rt, bh, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
     dae_problem =
-        create_dae_problem(radiative_transfer, bh, residual!, du₀, u₀, tspan, params)
+        create_dae_problem(rt, bh, residual!, du₀, u₀, tspan, params)
     integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
     integrator.opts.abstol = atol
     integrator.opts.reltol = rtol
@@ -148,10 +153,11 @@ function get_initial_radii_and_linewidths(model)
 end
 
 function create_and_run_integrator(
-    radiative_transfer::RadiativeTransfer,
-    bh::BlackHole,
-    grid::Grid,
-    initial_conditions::InitialConditions;
+    #radiative_transfer::RadiativeTransfer,
+    #bh::BlackHole,
+    #grid::Grid,
+    #initial_conditions::InitialConditions;
+    model;
     r0,
     linewidth,
     trajectory_id,
@@ -159,10 +165,11 @@ function create_and_run_integrator(
     rtol,
 )
     integrator = initialize_integrator(
-        radiative_transfer,
-        bh,
-        grid,
-        initial_conditions,
+        model,
+        #radiative_transfer,
+        #bh,
+        #grid,
+        #initial_conditions,
         r0,
         linewidth,
         atol = atol,
@@ -491,13 +498,13 @@ function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_lumin
     return lines_range, lines_widths
 end
 
-function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
+function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]
     lines_widths = []
     r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
     z_range = [0.0, 1.0]
     density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range)
+    density_grid[:, 1] .= getn0.(Ref(model), r_range)
     interp_grid = DensityGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
@@ -575,7 +582,7 @@ end
 
 
 compute_lines_range(model) = compute_lines_range(
-    model.ic,
+    model,
     model.ic.rin,
     model.ic.rfi,
     model.bh.Rg,

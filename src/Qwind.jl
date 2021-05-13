@@ -33,13 +33,13 @@ include("radiative_transfer/wind_interpolator/velocity_grid.jl")
 include("radiative_transfer/wind_interpolator/ray_tracing.jl")
 
 # initial conditions
-include("initial_conditions.jl")
+include("initial_conditions/initial_conditions.jl")
 
 # integrator
 include("integrator.jl")
 include("intersections.jl")
 #include("plotting.jl")
-include("ic.jl")
+include("initial_conditions/ic.jl")
 
 # saver
 include("saver.jl")
