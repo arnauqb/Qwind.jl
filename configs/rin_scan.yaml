@@ -52,4 +52,5 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_autok"
+  #  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_autok"
+  save_path: "/home/arnau/code/Qwind.jl/rin_autok"

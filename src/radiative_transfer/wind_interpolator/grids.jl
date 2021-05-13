@@ -38,8 +38,7 @@ function get_spatial_grid(
     else
         z_range = range(z_min, z_max, length = nz - 1)
     end
-    r_range = round.(r_range, digits = 7)
-    z_range = round.(z_range, digits = 7)
-    points = hcat([[r, z] for r in r_range for z in z_range]...)
+    r_range = unique(round.(r_range, digits = 7))
+    z_range = unique(round.(z_range, digits = 7))
     return r_range, z_range
 end
