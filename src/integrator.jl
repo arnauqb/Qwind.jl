@@ -299,12 +299,12 @@ function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du
     if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
-        gravitational_acceleration = compute_gravitational_acceleration(bh, abs(r), abs(z))
+        gravitational_acceleration = compute_gravitational_acceleration(bh, abs(r), abs(z), zh=0.0)
     else
         radiation_acceleration =
             compute_radiation_acceleration(radiative_transfer, du, u, p)
         centrifugal_term = p.l0^2 / r^3
-        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
+        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh=0.0)
     end
     ar = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
     az = gravitational_acceleration[2] + radiation_acceleration[2]
@@ -389,7 +389,7 @@ function compute_initial_acceleration(
 )
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
-    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
+    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh=0.0)
     radiation_acceleration =
         compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3
@@ -565,7 +565,7 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
             #else
             #    break
         end
-        delta_r = min(delta_r, 5)
+        delta_r = min(delta_r, 1)
         push!(lines_range, rc + delta_r / 2)
         push!(lines_widths, delta_r)
         rc += delta_r
