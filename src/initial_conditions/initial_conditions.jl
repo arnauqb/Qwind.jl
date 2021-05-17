@@ -91,18 +91,20 @@ function CAKIC(radiation, black_hole, config)
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
-function getn0(ic::CAKIC, rt::RadiativeTransfer, bh::BlackHole, r0)
+function getn0(ic::CAKIC, rt::RadiativeTransfer, bh::BlackHole, r0; K="auto")
     rv, ridx = findmin(abs.(ic.critical_points_df.zc .- r0))
     zc = ic.critical_points_df.zc[ridx]
     mdot = ic.critical_points_df.mdot[ridx]
-    taux = compute_xray_tau(rt, rt.radiation.z_xray, r0, zc)
-    density = get_density(rt.interpolator.density_grid, r0, zc)
-    ξ = compute_ionization_parameter(rt.radiation, r0, zc, density, taux)
-    K = compute_force_multiplier_k(ξ)
+    if K == "auto"
+        taux = compute_xray_tau(rt, rt.radiation.z_xray, r0, zc)
+        density = get_density(rt.interpolator.density_grid, r0, zc)
+        ξ = compute_ionization_parameter(rt.radiation, r0, zc, density, taux)
+        K = compute_force_multiplier_k(ξ)
+    end
     n = get_initial_density(rt, bh, r0, mdot; K = K, alpha = 0.6, mu = 0.5)
     return n
 end
-getn0(model, r0) = getn0(model.ic, model.rt, model.bh, r0)
+getn0(model, r0; K="auto") = getn0(model.ic, model.rt, model.bh, r0; K=K)
 #getn0(ic::CAKIC, r0) = @. 10^(
 #    -1.8110675134268326 * log10(r0)^2 + 3.788166202329894 * log10(r0) + 11.537466980651164
 #) #cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
