@@ -5,12 +5,12 @@ using Qwind
 using YAML, Profile, PProf, PyCall
 include("scripts/plotting.jl")
 
-config_path = "rin_autok/model_004/config.yaml"
+config_path = "configs/debug.yaml"
 config = YAML.load_file(config_path, dicttype = Dict{Symbol,Any})
-#try
-#    mv(config[:integrator][:save_path], "backup", force = true)
-#catch
-#end
+try
+    mv(config[:integrator][:save_path], "backup", force = true)
+catch
+end
 model = Model(config_path);
 iterations_dict = Dict();
 #run_iteration!(model1, iterations_dict1, it_num=1, parallel=false);

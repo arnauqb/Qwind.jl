@@ -94,8 +94,7 @@ function initialize_integrator(
     if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
-            (u, t, integrator) ->
-                save(u, t, integrator, rt, trajectory_id),
+            (u, t, integrator) -> save(u, t, integrator, rt, trajectory_id),
             saved_data,
         )
         callback_set = CallbackSet(termination_callback, saving_callback)
@@ -106,8 +105,7 @@ function initialize_integrator(
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
-    dae_problem =
-        create_dae_problem(rt, bh, residual!, du₀, u₀, tspan, params)
+    dae_problem = create_dae_problem(rt, bh, residual!, du₀, u₀, tspan, params)
     integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
     integrator.opts.abstol = atol
     integrator.opts.reltol = rtol
@@ -299,12 +297,13 @@ function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du
     if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
-        gravitational_acceleration = compute_gravitational_acceleration(bh, abs(r), abs(z), zh=0.0)
+        gravitational_acceleration =
+            compute_gravitational_acceleration(bh, abs(r), abs(z), zh = "height")
     else
         radiation_acceleration =
             compute_radiation_acceleration(radiative_transfer, du, u, p)
         centrifugal_term = p.l0^2 / r^3
-        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh=0.0)
+        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh = "height")
     end
     ar = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
     az = gravitational_acceleration[2] + radiation_acceleration[2]
@@ -389,7 +388,7 @@ function compute_initial_acceleration(
 )
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
-    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh=0.0)
+    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh = "height")
     radiation_acceleration =
         compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3
