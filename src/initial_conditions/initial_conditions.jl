@@ -93,8 +93,7 @@ end
 getz0(ic::CAKIC, r0) = ic.z0
 function getn0(ic::CAKIC, rt::RadiativeTransfer, bh::BlackHole, r0; K="auto")
     rv, ridx = findmin(abs.(ic.critical_points_df.zc .- r0))
-    zh = disk_height(bh, r0)
-    zc = max(0.0, ic.critical_points_df.zc[ridx] - zh)
+    zc = ic.critical_points_df.zc[ridx]
     mdot = ic.critical_points_df.mdot[ridx]
     if K == "auto"
         taux = compute_xray_tau(rt, rt.radiation.z_xray, r0, zc)
