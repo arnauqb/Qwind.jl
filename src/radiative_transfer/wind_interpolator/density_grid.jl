@@ -199,7 +199,7 @@ function update_density_grid(
             if !is_point_in_wind(hull, point)
                 density_grid[i, j] = 1e2
             else
-                density_grid[i, j] =
+                density_grid[i, j] = 
                     10 .^ (
                         (
                             log10(density_grid[i,j]) +
