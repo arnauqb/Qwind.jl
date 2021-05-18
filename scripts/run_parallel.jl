@@ -14,9 +14,9 @@ end
 model = Model(config_path);
 iterations_dict = Dict();
 #run_iteration!(model1, iterations_dict1, it_num=1, parallel=false);
-#run!(model, iterations_dict, parallel=true)
+run!(model, iterations_dict, parallel=true)
 
-fig, ax = QwindPlotting.plot_streamlines(iterations_dict[2]["integrators"], linestyle="-")
+fig, ax = QwindPlotting.plot_streamlines(iterations_dict[20]["integrators"], linestyle="-")
 
 
 using PyPlot

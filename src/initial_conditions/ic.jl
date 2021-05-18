@@ -57,7 +57,7 @@ function find_nozzle_function_minimum(
     alpha = 0.6,
     zmax = 5e-1,
 )
-    z_range = 10 .^ range(-1, 2, length = 500)
+    z_range = 10 .^ range(-4, 2, length = 500)
     n_range = nozzle_function.(Ref(rt), Ref(bh), z_range, r = r, alpha = alpha, zmax = zmax)
     mask = n_range .!= Inf
     n_range = n_range[mask]
