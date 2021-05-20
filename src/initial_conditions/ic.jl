@@ -1,6 +1,6 @@
 using Peaks, Roots
 
-get_B0(bh, r) = -compute_gravitational_acceleration(bh, r, r, zh = 0.0)[2]
+get_B0(bh, r) = -compute_gravitational_acceleration(bh, r, r)[2]
 
 function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
@@ -19,7 +19,7 @@ function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
 end
 
 function g(rt::RadiativeTransfer, bh::BlackHole, z; r, zmax = 5e-1)
-    grav = compute_gravitational_acceleration(bh, r, z, zh = "height")[2]
+    grav = compute_gravitational_acceleration(bh, r, z)[2]
     fr = compute_disc_radiation_field(
         rt,
         r,

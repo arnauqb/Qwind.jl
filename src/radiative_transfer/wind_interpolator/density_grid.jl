@@ -91,8 +91,8 @@ function DensityGrid(
         end
     end
     # add z = 0 line
-    density_grid = [density_grid[:, 1] density_grid]
-    pushfirst!(z_range, 0.0)
+    #density_grid = [density_grid[:, 1] density_grid]
+    #pushfirst!(z_range, 0.0)
     grid = DensityGrid(r_range, z_range, density_grid, nr, nz)
     @info "Done"
     flush()

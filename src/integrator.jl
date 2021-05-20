@@ -58,7 +58,16 @@ struct Parameters
 end
 
 function compute_density(r, z, vr, vz, parameters::Parameters)
-    return compute_density(r, z, vr, vz, parameters.r0, parameters.v0, parameters.n0)
+    return compute_density(
+        r,
+        z,
+        vr,
+        vz,
+        parameters.r0,
+        parameters.z0,
+        parameters.v0,
+        parameters.n0,
+    )
 end
 
 function initialize_integrator(
@@ -200,7 +209,9 @@ end
 
 function failed(integrator::Sundials.IDAIntegrator, r, z)
     intersects = self_intersects(integrator, r, z)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || intersects
+    integrator.u[1] < 0.0 ||
+        integrator.u[2] < max(integrator.p.grid.z_min, integrator.p.z0) ||
+        intersects
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -297,13 +308,12 @@ function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du
     if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
-        gravitational_acceleration =
-            compute_gravitational_acceleration(bh, abs(r), abs(z), zh = "height")
+        gravitational_acceleration = compute_gravitational_acceleration(bh, abs(r), abs(z))
     else
         radiation_acceleration =
             compute_radiation_acceleration(radiative_transfer, du, u, p)
         centrifugal_term = p.l0^2 / r^3
-        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh = "height")
+        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
     end
     ar = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
     az = gravitational_acceleration[2] + radiation_acceleration[2]
@@ -388,7 +398,7 @@ function compute_initial_acceleration(
 )
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
-    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z, zh = "height")
+    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
     radiation_acceleration =
         compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3

@@ -10,6 +10,7 @@ struct QsosedRadiation{T} <: Radiation{T}
     isco::T
     disk_r_in::T
     z_xray::T
+    zh::T
     Rg::T
     flux_correction::FluxCorrection
 end
@@ -45,7 +46,8 @@ function QsosedRadiation(
     fx::Float64,
     disk_r_in::Float64,
     z_xray::Float64,
-    relativistic::FluxCorrection,
+    disk_height::Float64,
+    relativistic::FluxCorrection
 )
     rmin = bh.isco
     rmax = 1400.0
@@ -66,6 +68,7 @@ function QsosedRadiation(
         bh.isco,
         disk_r_in,
         z_xray,
+        disk_height,
         bh.Rg,
         relativistic,
     )
@@ -93,6 +96,7 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
         radiation_config[:f_x],
         disk_r_in,
         radiation_config[:z_xray],
+        radiation_config[:disk_height],
         mode,
     )
 end

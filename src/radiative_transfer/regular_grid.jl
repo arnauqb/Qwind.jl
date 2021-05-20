@@ -45,7 +45,7 @@ compute_xray_tau(regular_grid::RegularGrid, ri, zi, rf, zf, xray_luminosity, Rg)
 
 compute_xray_tau(regular_grid::RegularGrid, z_xray, r, z) = compute_xray_tau(
     regular_grid::RegularGrid,
-    6.1,
+    0.0,
     z_xray,
     r,
     z,
@@ -59,7 +59,7 @@ compute_uv_tau(regular_grid::RegularGrid, ri, zi, rf, zf, Rg) =
 compute_uv_tau(regular_grid::RegularGrid, rd, r, z) = compute_uv_tau(
     regular_grid::RegularGrid,
     rd, 
-    0.0,
+    regular_grid.radiation.zh,
     r,
     z,
     regular_grid.radiation.Rg,

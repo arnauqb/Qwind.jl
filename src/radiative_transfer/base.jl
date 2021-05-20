@@ -16,15 +16,15 @@ function radiation_force_integrand!(
     beta,
     gamma,
 )
-    delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
+    delta = sqrt(r^2 + rd^2 + (z-radiation.zh)^2 - 2 * r * rd * cos(phid))
     nt = disk_nt_rel_factors(radiation, rd)
-    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, 0.0, r, z, Rg)
+    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
     # deproject tauuv
-    tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
+    tauuv = tauuv * delta / d_euclidean(rd, r, zh, z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
     r_projection = (r - rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta^4)
-    v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z]
+    v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z-radiation.zh]
 end
 
 # Relativistic version
@@ -44,15 +44,15 @@ function radiation_force_integrand!(
     beta,
     gamma,
 )
-    delta = sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
-    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, 0.0, r, z, Rg)
+    delta = sqrt(r^2 + rd^2 + (z-radiation.zh)^2 - 2 * r * rd * cos(phid))
+    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
     # deproject tauuv
-    tauuv = tauuv * delta / d_euclidean(rd, r, 0.0, z)
+    tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
-    cosθ = (r_projection * vr + z * vz) / (delta * beta)
+    cosθ = (r_projection * vr + (z-radiation.zh) * vz) / (delta * beta)
     flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
     common_projection = 1.0 / (rd^2 * delta^4)
@@ -63,7 +63,7 @@ function radiation_force_integrand!(
         mdot *
         nt *
         common_projection *
-        [r_projection, z]
+        [r_projection, z-radiation.zh]
 end
 
 """
@@ -129,7 +129,7 @@ function compute_disc_radiation_field_vertical(
     Rg = radiation.Rg
     constant = 3 / (2 * radiation.efficiency)
     fuv, mdot = get_fuv_mdot(radiation, r)
-    tauuv = compute_uv_tau(grid, r, r, z, Rg)
+    tauuv = compute_uv_tau(grid, r, r, z-radiation.zh, Rg)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     return [0.0, nt * constant * mdot * exp(-tauuv) * fuv / r^3]
 end
@@ -191,7 +191,7 @@ function compute_disc_radiation_field(
     # Similarly for the lower bound as beta = 0 leads to numerical singularity
     beta = max(min(1.0, sqrt(vr^2 + vz^2)), 1e-4)
     gamma = 1.0 / sqrt(1 - beta^2)
-    if z < max_z_vertical_flux
+    if (z - radiative_transfer.radiation.zh) < max_z_vertical_flux
         if r < radiative_transfer.radiation.disk_r_in
             return [0.0, 0.0]
         end
@@ -213,7 +213,7 @@ function compute_disc_radiation_field(
             maxevals = maxevals,
         )
         radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
-        force = z * radiation_constant .* res
+        force = (z-radiative_transfer.radiation.zh) * radiation_constant .* res
     end
     return force
 end
