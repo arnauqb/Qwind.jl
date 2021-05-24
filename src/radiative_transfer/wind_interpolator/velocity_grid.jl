@@ -88,9 +88,9 @@ function VelocityGrid(
     r_grid = log10.(r_range)' .* ones(length(z_range))
     z_grid = log10.(z_range) .* ones(length(r_range))'
     vr_grid = vr_interp(r_grid, z_grid)
-    vr_grid = 10 .^ reshape(vr_grid, length(z_range), length(r_range))'
+    vr_grid = reshape(vr_grid, length(z_range), length(r_range))'
     vz_grid = vz_interp(r_grid, z_grid)
-    vz_grid = 10 .^ reshape(vz_grid, length(z_range), length(r_range))'
+    vz_grid = reshape(vz_grid, length(z_range), length(r_range))'
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
             point = [r, z]
