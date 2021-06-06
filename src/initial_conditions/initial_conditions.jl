@@ -63,8 +63,11 @@ end
 
 function CAKIC(radiation, black_hole, config)
     icc = config[:initial_conditions]
+    M = config[:black_hole][:M]
+    mdot = config[:black_hole][:mdot]
+    filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
     critical_points_df =
-        CSV.read(joinpath(@__DIR__, "critical_points.csv"), DataFrame)
+        CSV.read(joinpath(@__DIR__, filename), DataFrame)
     if :launch_range in keys(icc)
         rin, rfi = icc[:launch_range]
     else
