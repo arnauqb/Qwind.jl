@@ -1,6 +1,6 @@
 using Peaks, Roots
 
-get_B0(bh, r) = -compute_gravitational_acceleration(bh, r, r)[2]
+get_B0(bh, r) = 1.0 / r^3
 
 function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))

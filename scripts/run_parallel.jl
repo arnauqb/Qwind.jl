@@ -13,7 +13,7 @@ catch
 end
 model = Model(config_path);
 iterations_dict = Dict();
-run_iteration!(model, iterations_dict, it_num=1, parallel=true);
+#run_iteration!(model, iterations_dict, it_num=1, parallel=true);
 #run!(model, iterations_dict, parallel=true)
 
 
