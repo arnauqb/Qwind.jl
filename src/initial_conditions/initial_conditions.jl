@@ -74,6 +74,8 @@ function CAKIC(radiation, black_hole, config)
         rin = icc[:r_in]
         rfi = icc[:r_fi]
     end
+    rin = max(rin, minimum(critical_points_df[!, :r]))
+    rfi = min(rfi, maximum(critical_points_df[!, :r]))
     nlines = icc[:n_lines]
     if nlines != "auto"
         nlines = Int(nlines)
