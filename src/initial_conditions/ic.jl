@@ -14,7 +14,15 @@ function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
         rtol = 1e-4,
         maxevals = 100000,
     )[2]
-    frad0 = compute_disc_radiation_field(rt, r, z, 0.0, 0.0, max_z_vertical_flux = Inf)[2]
+    frad0 = compute_disc_radiation_field(
+        rt,
+        r,
+        z,
+        0.0,
+        0.0,
+        max_z_vertical_flux = Inf,
+        no_uv_fraction = true,
+    )[2]
     return cc * frad / frad0
 end
 
@@ -29,6 +37,7 @@ function g(rt::RadiativeTransfer, bh::BlackHole, z; r, zmax = 5e-1)
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,
+        no_uv_fraction = true,
     )[2]
     B0 = get_B0(bh, r)
     return -(grav + fr) / B0
@@ -81,7 +90,15 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(bh, r) * C^2 / bh.Rg
     gamma0 =
-        compute_disc_radiation_field(rt, r, r, 0.0, 0.0, max_z_vertical_flux = Inf)[2] *
+        compute_disc_radiation_field(
+            rt,
+            r,
+            r,
+            0.0,
+            0.0,
+            max_z_vertical_flux = Inf,
+            no_uv_fraction = true,
+        )[2] *
         K *
         (1 / (SIGMA_E * vth))^alpha *
         C^2 / bh.Rg

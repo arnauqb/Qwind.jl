@@ -1,6 +1,6 @@
 # general pieces of a model
 
-export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp, Relativistic, NoRelativistic
+export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp, Relativistic, NoRelativistic, NoUVFraction
 
 abstract type Radiation{T<:AbstractFloat} end
 abstract type RadiativeTransfer{T<:AbstractFloat} end
@@ -19,6 +19,10 @@ struct FMInterp <: FMInterpolationType end
 abstract type FluxCorrection <: Flag end
 struct Relativistic <: FluxCorrection end
 struct NoRelativistic <: FluxCorrection end
+
+# Options for disc integral
+abstract type UVFraction <: Flag end
+struct NoUVFraction <: UVFraction end
 
 # Radiative transfer
 abstract type CellIterator{T<:AbstractFloat} end

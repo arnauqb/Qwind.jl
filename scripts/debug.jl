@@ -5,7 +5,8 @@ using Distributed
 using YAML, HDF5, CSV, DataFrames, PyPlot
 include("scripts/plotting.jl")
 
-#mv(model.config[:integrator][:save_path], "backup",  force=true)
+model = Model("configs/debug.yaml");
+mv(model.config[:integrator][:save_path], "backup",  force=true)
 model = Model("configs/debug.yaml");
 iterations_dict = Dict();
-#run!(model, iterations_dict)
+run!(model, iterations_dict)
