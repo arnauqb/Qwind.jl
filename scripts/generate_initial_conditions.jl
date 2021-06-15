@@ -13,7 +13,7 @@ using Distributed
 end
 
 @everywhere function calculate_wind_mdots(model)
-    rr = 10 .^ range(log10(20), log10(800), length = 25)
+    rr = 10 .^ range(log10(20), log10(1000), length = 100)
     mdots = []
     zcs = []
     for r in rr
@@ -44,6 +44,7 @@ end
 end
 
 M_range = [1e7, 1e8, 1e9]
+#M_range = [1e8]
 mdot_range = [0.01, 0.05, 0.1, 0.5]
 
 for M in M_range
