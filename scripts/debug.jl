@@ -13,29 +13,13 @@ run!(model, iterations_dict)
 
 
 integrators = iterations_dict[3]["integrators"];
+QwindPlotting.plot_streamlines(integrators)
 
-max_times = get_intersection_times(integrators);
+n0s = [integ.p.n0 for integ in integrators];
+r0s = [integ.p.r0 for integ in integrators];
+loglog(r0s, n0s)
 
-hull = Hull(integrators, max_times)
-
-
-#hull = Hull(integrators, max_times);
-integrators_filtered = Qwind.filter_close_trajectories(integrators, 5e-2);
-r0 = [integ.p.r0 for integ in integrators_filtered];
-integrators_interpolated_linear = interpolate_integrators(
-    integrators_filtered,
-    max_times = max_times,
-    n_timesteps = 100,
-    log = true,
-);
-r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear);
-
-
-
-hull = Hull(r, z, r0, sigdigits=5)
-
-fig, ax = plt.subplots()
-for integ in integrators_interpolated_linear
-    ax.plot(integ.r, integ.z)
-end
-QwindPlotting.plot_wind_hull(hull, zmax=2,ax=ax)
+rt = iterations_dict[2]["radiative_transfer"];
+xl = rt.radiation.xray_luminosity;
+Rg = rt.radiation.Rg;
+QwindPlotting.plot_xray_grid(rt.interpolator.density_grid, xl, Rg, zmax=10)
