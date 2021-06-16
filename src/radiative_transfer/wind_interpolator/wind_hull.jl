@@ -49,13 +49,13 @@ function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
     integrators_interpolated_linear = interpolate_integrators(
         integrators,
         max_times = max_times,
-        n_timesteps = 50,
+        n_timesteps = 100,
         log = true,
     )
     r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
     @info "Constructing wind hull"
     hull = nothing
-    for sigd in [6, 5, 4] #[6, 5, 4]
+    for sigd in [5, 4, 6] #[6, 5, 4]
         hull = Hull(r, z, r0, sigdigits = sigd)
         if !hull.converged
             @warn "Hull did not converge, trying with less sigdigits..."
