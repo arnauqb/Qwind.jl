@@ -25,10 +25,11 @@ r0 = [integ.p.r0 for integ in integrators_filtered];
 integrators_interpolated_linear = interpolate_integrators(
     integrators_filtered,
     max_times = max_times,
-    n_timesteps = 50,
+    n_timesteps = 100,
     log = true,
 );
 r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear);
+
 
 
 hull = Hull(r, z, r0, sigdigits=5)

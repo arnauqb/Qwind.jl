@@ -59,7 +59,9 @@ function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
         hull = Hull(r, z, r0, sigdigits = sigd)
         if !hull.converged
             @warn "Hull did not converge, trying with less sigdigits..."
+            continue
         end
+        break
     end
     if !hull.converged
         error("Hull did not converge!")
