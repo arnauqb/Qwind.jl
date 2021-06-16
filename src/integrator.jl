@@ -571,6 +571,9 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
             catch
                 break
             end
+            if delta_r < 0
+                break
+            end
             #else
             #    break
         end
