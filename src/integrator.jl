@@ -561,7 +561,7 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
                 delta_tau = 0.5
             elseif tau_uv < 50
                 delta_tau = 1
-            elseif tau_uv < 100
+            elseif tau_uv < 1000
                 delta_tau = 10
             else
                 break
@@ -587,7 +587,12 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
         push!(lines_widths, delta_r)
         rc += delta_r
     end
-    additional_range = range(rc, rfi, step = 5)
+    if rc < 200
+        additional_range = range(rc, 200.0, step = 1)
+        additional_range = vcat(additional_range, range(201.0, rfi, step = 5))
+    else
+        additional_range = range(rc, rfi, step = 5)
+    end
     additional_widths = diff(additional_range)
     pushfirst!(additional_widths, additional_range[1] - lines_range[end])
     lines_range = vcat(lines_range, additional_range)
