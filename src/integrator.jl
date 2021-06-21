@@ -461,52 +461,6 @@ function compute_delta_r(grid::DensityGrid, rc, xray_luminosity, Rg)
     end
 end
 
-
-function compute_lines_range_old(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
-    lines_range = [rin]
-    lines_widths = []
-    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
-    z_range = [0.0, 1.0]
-    density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range)
-    interp_grid = DensityGrid(r_range, z_range, density_grid)
-    tau_x = 0.0
-    tau_uv = 0.0
-    fx(delta_r, rc, delta_tau, tau_x) =
-        delta_tau - (
-            compute_xray_tau(
-                interp_grid,
-                0.0,
-                0.0,
-                rc + delta_r,
-                0.0,
-                xray_luminosity,
-                Rg,
-            ) - tau_x
-        )
-    fuv(delta_r, rc, delta_tau, tau_uv) =
-        delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
-    rc = rin
-    while rc < rfi
-        delta_r = compute_delta_r(interp_grid, rc, xray_luminosity, Rg)
-        if delta_r == 0.0
-            break
-        end
-        push!(lines_range, rc + delta_r / 2)
-        push!(lines_widths, delta_r)
-        rc += delta_r
-    end
-    # add the same amount of trajectories for the rest
-    additional_range = range(rc, rfi, step = 5) #length=length(lines_range))
-    additional_widths = diff(additional_range)
-    pushfirst!(additional_widths, additional_range[1] - lines_range[end])
-    lines_range = vcat(lines_range, additional_range)
-    lines_widths = vcat(lines_widths, additional_widths)
-    # discard last radius
-    lines_range = lines_range[1:(end - 1)]
-    return lines_range, lines_widths
-end
-
 function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
     lines_range = [rin]
     lines_widths = []

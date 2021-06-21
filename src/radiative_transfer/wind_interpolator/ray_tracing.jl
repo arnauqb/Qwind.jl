@@ -345,7 +345,7 @@ function compute_xray_tau_cell(
     atol = 0,
     rtol = 1e-2,
 ) where {T<:AbstractFloat}
-    return taux0 + intersection_size * cell_density * Rg * SIGMA_T
+    return taux0 + intersection_size * cell_density * SIGMA_T
 end
 
 function get_density(grid::InterpolationGrid, iterator::GridIterator)

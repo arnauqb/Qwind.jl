@@ -223,7 +223,7 @@ function plot_xray_grid(
     z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
     r_range_grid = r_range .* ones(nz)'
     z_range_grid = z_range' .* ones(nr)
-    ret = compute_xray_tau.(Ref(grid), 0.0, zx, r_range_grid, z_range_grid, xray_luminosity, Rg)
+    ret = compute_xray_tau.(Ref(grid), Ref(Qwind.Boost()), 0.0, zx, r_range_grid, z_range_grid, xray_luminosity, Rg)
     if ax === nothing
         fig, ax = plt.subplots()
     end

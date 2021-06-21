@@ -9,7 +9,9 @@ model = Model("configs/to_debug.yaml");
 mv(model.config[:integrator][:save_path], "backup",  force=true)
 model = Model("configs/to_debug.yaml");
 iterations_dict = Dict();
-run!(model, iterations_dict)
+#run!(model, iterations_dict)
+
+lr, lw = Qwind.compute_lines_range(model);
 
 fig, ax = plt.subplots()
 for r in lr
