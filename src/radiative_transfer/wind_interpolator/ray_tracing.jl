@@ -297,6 +297,7 @@ function ionization_cell_xi_kernel(
 end
 
 function compute_xray_tau_cell(
+    xray_opacity::Boost,
     intersection_size::T,
     distance_from_source::T,
     cell_density::T,
@@ -333,6 +334,20 @@ function compute_xray_tau_cell(
     end
 end
 
+function compute_xray_tau_cell(
+    xray_opacity::Thomson,
+    intersection_size::T,
+    distance_from_source::T,
+    cell_density::T,
+    taux0::T,
+    xray_luminosity::T,
+    Rg::T;
+    atol = 0,
+    rtol = 1e-2,
+) where {T<:AbstractFloat}
+    return taux0 + intersection_size * cell_density * Rg * SIGMA_T
+end
+
 function get_density(grid::InterpolationGrid, iterator::GridIterator)
     return grid.grid[iterator.current_r_idx, iterator.current_z_idx]
 end
@@ -344,6 +359,7 @@ end
 function compute_xray_tau(
     grid::InterpolationGrid{T},
     iterator::GridIterator{T},
+    xray_opacity::XRayOpacity,
     ri::T,
     zi::T,
     rf::T,
@@ -368,6 +384,7 @@ function compute_xray_tau(
         next_intersection!(iterator)
         intersection_size = dist(previous_point, iterator.intersection) * Rg
         ret = compute_xray_tau_cell(
+            xray_opacity,
             intersection_size,
             distance_from_source,
             cell_density,
@@ -382,10 +399,20 @@ function compute_xray_tau(
     return ret
 end
 
-function compute_xray_tau(grid::InterpolationGrid, ri, zi, rf, zf, xray_luminosity, Rg)
+function compute_xray_tau(
+    grid::InterpolationGrid,
+    xray_opacity::XRayOpacity,
+    ri,
+    zi,
+    rf,
+    zf,
+    xray_luminosity,
+    Rg,
+)
     compute_xray_tau(
         grid::InterpolationGrid,
         grid.iterator,
+        xray_opacity,
         ri,
         zi,
         rf,

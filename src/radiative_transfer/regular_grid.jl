@@ -10,13 +10,10 @@ function RegularGrid(
     radiation::Radiation,
     integrators,
     interpolator_type::DataType;
-    kwargs...
+    kwargs...,
 )
     interpolator = interpolator_type(integrators; kwargs...)
-    return new(
-        radiation,
-        interpolator,
-    )
+    return new(radiation, interpolator)
 end
 
 function RegularGrid(radiation::Radiation, config::Dict)
@@ -24,14 +21,10 @@ function RegularGrid(radiation::Radiation, config::Dict)
     intc = rtc[:interpolator]
     intc_type = pop!(intc, :type)
     interpolator = getfield(Qwind, Symbol(intc_type))(nothing; intc...)
-    return RegularGrid(
-        radiation,
-        interpolator,
-    )
+    return RegularGrid(radiation, interpolator)
 end
 
-get_density(regular_grid::RegularGrid, r, z) =
-    get_density(regular_grid.interpolator, r, z)
+get_density(regular_grid::RegularGrid, r, z) = get_density(regular_grid.interpolator, r, z)
 
 function update_radiative_transfer(rt::RegularGrid, integrators)
     @info "Updating radiative transfer... "
@@ -41,7 +34,16 @@ function update_radiative_transfer(rt::RegularGrid, integrators)
 end
 
 compute_xray_tau(regular_grid::RegularGrid, ri, zi, rf, zf, xray_luminosity, Rg) =
-    compute_xray_tau(regular_grid.interpolator.density_grid, ri, zi, rf, zf, xray_luminosity, Rg)
+    compute_xray_tau(
+        regular_grid.interpolator.density_grid,
+        regular_grid.radiation.xray_opacity,
+        ri,
+        zi,
+        rf,
+        zf,
+        xray_luminosity,
+        Rg,
+    )
 
 compute_xray_tau(regular_grid::RegularGrid, z_xray, r, z) = compute_xray_tau(
     regular_grid::RegularGrid,
@@ -58,7 +60,7 @@ compute_uv_tau(regular_grid::RegularGrid, ri, zi, rf, zf, Rg) =
 
 compute_uv_tau(regular_grid::RegularGrid, rd, r, z) = compute_uv_tau(
     regular_grid::RegularGrid,
-    rd, 
+    rd,
     regular_grid.radiation.zh,
     r,
     z,

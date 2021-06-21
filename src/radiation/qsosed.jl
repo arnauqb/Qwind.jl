@@ -13,6 +13,7 @@ struct QsosedRadiation{T} <: Radiation{T}
     zh::T
     Rg::T
     flux_correction::FluxCorrection
+    xray_opacity::XRayOpacity
 end
 
 QsosedRadiation() =
@@ -47,7 +48,8 @@ function QsosedRadiation(
     disk_r_in::Float64,
     z_xray::Float64,
     disk_height::Float64,
-    relativistic::FluxCorrection
+    relativistic::FluxCorrection,
+    xray_opacity::XRayOpacity
 )
     rmin = bh.isco
     rmax = 1400.0
@@ -71,6 +73,7 @@ function QsosedRadiation(
         disk_height,
         bh.Rg,
         relativistic,
+        xray_opacity
     )
 end
 function QsosedRadiation(bh::BlackHole, config::Dict)
@@ -90,6 +93,11 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
     elseif disk_r_in == "r_in"
         disk_r_in = config[:initial_conditions][:r_in]
     end
+    if radiation_config[:xray_opacity] == "thomson"
+        xray_opacity = Thomson()
+    else
+        xray_opacity = Boost()
+    end
     return QsosedRadiation(
         bh,
         radiation_config[:n_r],
@@ -98,6 +106,7 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
         radiation_config[:z_xray],
         radiation_config[:disk_height],
         mode,
+        xray_opacity
     )
 end
 

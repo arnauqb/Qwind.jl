@@ -517,10 +517,12 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
     interp_grid = DensityGrid(r_range, z_range, density_grid)
     tau_x = 0.0
     tau_uv = 0.0
+    xr_opacity = model.rad.xray_opacity
     fx(delta_r, rc, delta_tau, tau_x) =
         delta_tau - (
             compute_xray_tau(
                 interp_grid,
+                xr_opacity,
                 0.0,
                 0.0,
                 rc + delta_r,
@@ -534,7 +536,16 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
     rc = rin
     while rc < rfi
         if tau_x < 50
-            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
+            tau_x = compute_xray_tau(
+                interp_grid,
+                xr_opacity,
+                0.0,
+                0.0,
+                rc,
+                0.0,
+                xray_luminosity,
+                Rg,
+            )
             if tau_x < 1
                 delta_tau = 0.1
             elseif tau_x < 20
@@ -588,7 +599,7 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
         rc += delta_r
     end
     if rc < 200
-        additional_range = range(rc, 200.0, step = 1)
+        additional_range = range(rc, 200.0, step = 2)
         additional_range = vcat(additional_range, range(201.0, rfi, step = 5))
     else
         additional_range = range(rc, rfi, step = 5)

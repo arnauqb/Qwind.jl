@@ -15,6 +15,10 @@ abstract type Flag end
 abstract type FMInterpolationType <: Flag end
 struct FMNoInterp <: FMInterpolationType end
 struct FMInterp <: FMInterpolationType end
+abstract type XRayOpacity end
+struct Thomson <: XRayOpacity end
+struct Boost <: XRayOpacity end
+
 # Relativistic correction to luminosity
 abstract type FluxCorrection <: Flag end
 struct Relativistic <: FluxCorrection end
