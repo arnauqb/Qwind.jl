@@ -16,15 +16,16 @@ function radiation_force_integrand!(
     beta,
     gamma,
 )
-    delta = sqrt(r^2 + rd^2 + (z-radiation.zh)^2 - 2 * r * rd * cos(phid))
+    delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
     nt = disk_nt_rel_factors(radiation, rd)
     tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
     # deproject tauuv
-    tauuv = tauuv * delta / d_euclidean(rd, r, zh, z)
+    tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
     r_projection = (r - rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta^4)
-    v[:] = exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z-radiation.zh]
+    v[:] =
+        exp(-tauuv) * fuv * mdot * nt * common_projection * [r_projection, z - radiation.zh]
 end
 
 # Relativistic version
@@ -44,7 +45,7 @@ function radiation_force_integrand!(
     beta,
     gamma,
 )
-    delta = sqrt(r^2 + rd^2 + (z-radiation.zh)^2 - 2 * r * rd * cos(phid))
+    delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
     tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
     # deproject tauuv
     tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
@@ -52,7 +53,7 @@ function radiation_force_integrand!(
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
-    cosθ = (r_projection * vr + (z-radiation.zh) * vz) / (delta * beta)
+    cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
     flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
     common_projection = 1.0 / (rd^2 * delta^4)
@@ -63,7 +64,7 @@ function radiation_force_integrand!(
         mdot *
         nt *
         common_projection *
-        [r_projection, z-radiation.zh]
+        [r_projection, z - radiation.zh]
 end
 
 # No UV fraction version
@@ -83,7 +84,7 @@ function radiation_force_integrand_no_uv_fraction!(
     beta,
     gamma,
 )
-    delta = sqrt(r^2 + rd^2 + (z-radiation.zh)^2 - 2 * r * rd * cos(phid))
+    delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
     tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
     # deproject tauuv
     tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
@@ -91,7 +92,7 @@ function radiation_force_integrand_no_uv_fraction!(
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
-    cosθ = (r_projection * vr + (z-radiation.zh) * vz) / (delta * beta)
+    cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
     flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
     common_projection = 1.0 / (rd^2 * delta^4)
@@ -101,7 +102,7 @@ function radiation_force_integrand_no_uv_fraction!(
         mdot *
         nt *
         common_projection *
-        [r_projection, z-radiation.zh]
+        [r_projection, z - radiation.zh]
 end
 
 """
@@ -128,24 +129,24 @@ function integrate_radiation_force_integrand(
     rtol = 1e-4,
     norm = Cubature.INDIVIDUAL,
     maxevals = 50000,
-    no_uv_fraction = false
+    no_uv_fraction = false,
 )
-   f(x, v) = radiation_force_integrand!(
-       radiative_transfer.radiation.flux_correction,
-       radiative_transfer,
-       radiative_transfer.radiation,
-       radiative_transfer.interpolator.density_grid,
-       radiative_transfer.radiation.Rg,
-       v,
-       x[1],
-       x[2],
-       r,
-       z,
-       vr,
-       vz,
-       beta,
-       gamma,
-   )
+    f(x, v) = radiation_force_integrand!(
+        radiative_transfer.radiation.flux_correction,
+        radiative_transfer,
+        radiative_transfer.radiation,
+        radiative_transfer.interpolator.density_grid,
+        radiative_transfer.radiation.Rg,
+        v,
+        x[1],
+        x[2],
+        r,
+        z,
+        vr,
+        vz,
+        beta,
+        gamma,
+    )
     return hcubature(
         2,
         f,
@@ -176,22 +177,22 @@ function integrate_radiation_force_integrand(
     norm = Cubature.INDIVIDUAL,
     maxevals = 50000,
 )
-   f(x, v) = radiation_force_integrand_no_uv_fraction!(
-       radiative_transfer.radiation.flux_correction,
-       radiative_transfer,
-       radiative_transfer.radiation,
-       radiative_transfer.interpolator.density_grid,
-       radiative_transfer.radiation.Rg,
-       v,
-       x[1],
-       x[2],
-       r,
-       z,
-       vr,
-       vz,
-       beta,
-       gamma,
-   )
+    f(x, v) = radiation_force_integrand_no_uv_fraction!(
+        radiative_transfer.radiation.flux_correction,
+        radiative_transfer,
+        radiative_transfer.radiation,
+        radiative_transfer.interpolator.density_grid,
+        radiative_transfer.radiation.Rg,
+        v,
+        x[1],
+        x[2],
+        r,
+        z,
+        vr,
+        vz,
+        beta,
+        gamma,
+    )
     return hcubature(
         2,
         f,
@@ -214,7 +215,7 @@ function compute_disc_radiation_field_vertical(
     Rg = radiation.Rg
     constant = 3 / (2 * radiation.efficiency)
     fuv, mdot = get_fuv_mdot(radiation, r)
-    tauuv = compute_uv_tau(grid, r, r, z-radiation.zh, Rg)
+    tauuv = compute_uv_tau(grid, r, r, z - radiation.zh, Rg)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     return [0.0, nt * constant * mdot * exp(-tauuv) * fuv / r^3]
 end
@@ -322,7 +323,7 @@ function compute_disc_radiation_field(
             )
         end
         radiation_constant = compute_radiation_constant(radiative_transfer.radiation)
-        force = (z-radiative_transfer.radiation.zh) * radiation_constant .* res
+        force = (z - radiative_transfer.radiation.zh) * radiation_constant .* res
     end
     return force
 end
