@@ -112,9 +112,11 @@ end
 @testset "Test Free fall + constant radiation" begin
     ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
     grid = Rectangular(-5.0, 1e10, -5.0, 1e10)
+    bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     radiation = TestRadiation2(earth)
     integrator = initialize_integrator(
         radiation,
+        bh,
         grid,
         ic,
         0.0,
