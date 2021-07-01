@@ -27,7 +27,7 @@ function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
 end
 
 function g(rt::RadiativeTransfer, bh::BlackHole, z; r, zmax = 5e-1)
-    grav = compute_gravitational_acceleration(bh, r, z + disk_height(bh, r))[2]
+    grav = compute_gravitational_acceleration(r, z + disk_height(bh, r))[2]
     fr = compute_disc_radiation_field(
         rt,
         r,
@@ -106,15 +106,18 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6)
 end
 
 function get_wp0(rt::RadiativeTransfer, bh::BlackHole, z, w; r, mdot, alpha = 0.6)
-    wp0 = (g(rt, bh, z, r = r) / f(rt, bh, z, r = r, alpha = alpha))^(1 / alpha) * mdot
+#    wp0 = (g(rt, bh, z, r = r) / f(rt, bh, z, r = r, alpha = alpha))^(1 / alpha) * mdot
+    wp0 = mdot * (1 / f(rt, bh, z, r=r, alpha=alpha))^(1/(alpha-1))
     return wp0
 end
 
 function Feq(rt::RadiativeTransfer, bh::BlackHole, z, w, wp, mdot; r, alpha = 0.6)
     gv = g(rt, bh, z, r = r)
     fv = f(rt, bh, z, r = r, alpha = alpha)
+    vz = sqrt(2 * r * get_B0(bh, r) * w)
     cs = compute_thermal_velocity(disk_temperature(bh, r))
-    ret = wp * (1 - cs^2 / (2w)) - gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
+    #ret = wp * (1 - cs^2 / (2w)) - gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
+    ret = wp * (1 - cs^2 / (vz^2)) + gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
     return ret
 end
 
@@ -144,8 +147,8 @@ function initialize_ic_integrator(
     alpha = 0.6,
 )
     cs = compute_thermal_velocity(disk_temperature(bh, r))
-    z0 = 0.5 #disk_height(bh, r)
-    u0 = [cs^2 / 2]
+    z0 = disk_height(bh, r) / 2
+    u0 = [cs^2 / (2 * get_B0(bh, r) * r)]
     du0 = [get_wp0(rt, bh, z0, u0[1], r = r, mdot = mdot, alpha = alpha)]
     z_range = (z0, 30)
     dae_residual!(out, du, u, p, t) =

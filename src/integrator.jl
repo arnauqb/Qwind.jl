@@ -71,11 +71,10 @@ function compute_density(r, z, vr, vz, parameters::Parameters)
 end
 
 function initialize_integrator(
-    #radiative_transfer::RadiativeTransfer,
-    #bh::BlackHole,
-    #grid::Grid,
-    #initial_conditions::InitialConditions,
-    model,
+    rt,
+    bh,
+    grid,
+    ic,
     r0,
     linewidth;
     atol = 1e-8,
@@ -84,13 +83,9 @@ function initialize_integrator(
     trajectory_id = -1,
     save_results = true,
 )
-    rt = model.rt
-    bh = model.bh
-    grid = model.wind_grid
-    ic = model.ic
     l0 = getl0(ic, r0)
     z0 = getz0(ic, r0)
-    n0 = getn0(model, r0)
+    n0 = getn0(ic, rt, bh, r0)
     v0 = getv0(ic, r0)
     lwnorm = linewidth / r0
     termination_callback = DiscreteCallback(
@@ -120,6 +115,27 @@ function initialize_integrator(
     integrator.opts.reltol = rtol
     return integrator
 end
+
+initialize_integrator(
+    model,
+    r0,
+    linewidth;
+    atol = 1e-8,
+    rtol = 1e-3,
+    tmax = 1e8,
+    trajectory_id = -1,
+    save_results = true,
+) = initialize_integrator(
+    model.rt,
+    model.bh,
+    model.wind_grid,
+    model.ic,
+    atol = atol,
+    rtol = rtol,
+    tmax = tmax,
+    trajectory_id = trajectory_id,
+    save_results = save_results,
+)
 
 function get_initial_radii_and_linewidths(
     initial_conditions::InitialConditions,
@@ -308,12 +324,12 @@ function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du
     if r <= 0 || z < 0 # we force it to fail
         radiation_acceleration = [0.0, 0.0]
         centrifugal_term = 0.0
-        gravitational_acceleration = compute_gravitational_acceleration(bh, abs(r), abs(z))
+        gravitational_acceleration = compute_gravitational_acceleration(abs(r), abs(z))
     else
         radiation_acceleration =
             compute_radiation_acceleration(radiative_transfer, du, u, p)
         centrifugal_term = p.l0^2 / r^3
-        gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
+        gravitational_acceleration = compute_gravitational_acceleration(r, z)
     end
     ar = gravitational_acceleration[1] + radiation_acceleration[1] + centrifugal_term
     az = gravitational_acceleration[2] + radiation_acceleration[2]
@@ -398,7 +414,7 @@ function compute_initial_acceleration(
 )
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
-    gravitational_acceleration = compute_gravitational_acceleration(bh, r, z)
+    gravitational_acceleration = compute_gravitational_acceleration(r, z)
     radiation_acceleration =
         compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3

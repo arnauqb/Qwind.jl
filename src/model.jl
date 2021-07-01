@@ -28,21 +28,6 @@ end
 Model(config_path::String) = Model(YAML.load_file(config_path, dicttype = Dict{Symbol,Any}))
 update_model!(model::Model, rt::RadiativeTransfer) = model.rt = rt
 
-#create_and_run_integrator(model::Model; r0, linewidth, trajectory_id, atol, rtol) =
-#    create_and_run_integrator(
-#        model,
-#        #model.rt,
-#        #model.bh,
-#        #model.wind_grid,
-#        #model.ic,
-#        r0 = r0,
-#        linewidth = linewidth,
-#        trajectory_id= trajectory_id,
-#        atol = atol,
-#        rtol = rtol,
-#        #save_path = save_path,
-#    )
-
 run_parallel!(config::String, iterations_dict) =
     run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}), iterations_dict)
 run!(config::String, iterations_dict = nothing) = run!(
