@@ -418,6 +418,9 @@ function compute_initial_acceleration(
     radiation_acceleration =
         compute_radiation_acceleration(radiative_transfer, du, u, params)
     centrifugal_term = params.l0^2 / r^3
+    if r == 0
+        centrifugal_term = 0.0
+    end
     ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     # second estimation

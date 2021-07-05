@@ -83,13 +83,13 @@ function compute_initial_acceleration(
 end
 
 @testset "Test Free fall" begin
-    ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
+    z0 = earth_radius + 1e4 / earth.Rg
+    ic = UniformIC(0.0, 1000.0, 1, z0, 1e8, 0.0, false)
     grid = Rectangular(-5.0, 1e10, -5.0, 1e10)
-    bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     radiation = TestRadiation1(earth)
     integrator = initialize_integrator(
         radiation,
-        bh,
+        earth,
         grid,
         ic,
         0.0,
@@ -100,23 +100,24 @@ end
         save_results = false
     )
     run_integrator!(integrator)
-    analytical_solution(t) = 0.5 * earth_gravity * t^2
+    analytical_solution(t) = z0 + 0.5 * earth_gravity * t^2
+    @test integrator.t > 0
     t_range = range(0, integrator.t, length = 50)
     for t in t_range
-        z_solv = integrator.sol(t)[2] - getz0(ic, 0.0)
+        z_solv = integrator.sol(t)[2]
         z_analy = analytical_solution(t)
         @test z_solv ≈ z_analy rtol = 5e-2
     end
 end
 
 @testset "Test Free fall + constant radiation" begin
-    ic = UniformIC(0.0, 1000.0, 1, earth_radius + 1e4 / earth.Rg, 1e8, 0.0, false)
+    z0 = earth_radius + 1e4 / earth.Rg
+    ic = UniformIC(0.0, 1000.0, 1, z0, 1e8, 0.0, false)
     grid = Rectangular(-5.0, 1e10, -5.0, 1e10)
-    bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     radiation = TestRadiation2(earth)
     integrator = initialize_integrator(
         radiation,
-        bh,
+        earth,
         grid,
         ic,
         0.0,
@@ -127,10 +128,11 @@ end
         save_results = false
     )
     run_integrator!(integrator)
-    analytical_solution(t) = 0.5 * ((400 / C^2 * earth.Rg) + earth_gravity) * t^2
+    analytical_solution(t) = z0 + 0.5 * ((400 / C^2 * earth.Rg) + earth_gravity) * t^2
+    @test integrator.t > 0
     t_range = range(0, integrator.t, length = 50)
     for t in t_range
-        z_solv = integrator.sol(t)[2] - getz0(ic, 0.0)
+        z_solv = integrator.sol(t)[2] 
         z_analy = analytical_solution(t)
         @test z_solv ≈ z_analy rtol = 5e-2
     end
