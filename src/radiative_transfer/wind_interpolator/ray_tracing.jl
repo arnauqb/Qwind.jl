@@ -290,7 +290,8 @@ function next_r(iterator::GridIterator)
 end
 
 function next_z(iterator::GridIterator)
-    return iterator.z_range[iterator.current_z_idx + iterator.direction_z]
+    index = max(iterator.current_z_idx + iterator.direction_z, 1)
+    return iterator.z_range[index]
 end
 #next_z(iterator::GridIterator) =
 #    iterator.z_range[max(1, abs(iterator.current_z_idx + iterator.direction_z))]
@@ -377,12 +378,12 @@ function is_in_final_cell(iterator, r0, r1, z0, z1, lambda_r, lambda_z)
     if isnan(lambda_r) || lambda_r > 1
         r_cond = true
     else
-        if r1 > r0
-            if r0 < rf < r1
+        if r1 >= r0
+            if r0 <= rf <= r1
                 r_cond = true
             end
         else
-            if r0 > rf > r1
+            if r0 >= rf >= r1
                 r_cond = true
             end
         end
@@ -390,16 +391,17 @@ function is_in_final_cell(iterator, r0, r1, z0, z1, lambda_r, lambda_z)
     if isnan(lambda_z) || lambda_z > 1
         z_cond = true
     else
-        if z1 > z0
-            if z0 < zf < z1
+        if z1 >= z0
+            if z0 <= zf <= z1
                 z_cond = true
             end
         else
-            if z0 > zf > z1
+            if z0 >= zf >= z1
                 z_cond = true
             end
         end
     end
+    #println("\n")
     #println("$r0, $r1, $rf")
     #println("$z0, $z1, $zf")
     #println(r_cond)

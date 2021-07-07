@@ -33,6 +33,7 @@ using Test
             check_equal(point, gi.intersection)
             next_intersection!(gi)
         end
+        next_intersection!(gi)
         @test gi.finished
     end
 
