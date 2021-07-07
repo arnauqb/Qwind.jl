@@ -26,12 +26,12 @@ end
     end
 
     @testset "Constant density" begin
-        r_range = range(0, 1000.0, length = 10)
-        z_range = range(0, 1000.0, length = 10)
-        rp_range_test = range(0.1, 750, length = 20)[end]
-        r_range_test = range(0.1, 750, length = 20)[end]
-        z_range_test = range(0.1, 750, length = 20)[end]
-        phid_range_test = range(0, π, length = 20)[end]
+        r_range = range(0, 1000.0, length = 11)
+        z_range = range(0, 1000.0, length = 11)
+        rp_range_test = range(0.1, 750, length = 20)
+        r_range_test = range(0.1, 750, length = 20)
+        z_range_test = range(0.1, 750, length = 20)
+        phid_range_test = range(0, π-0.1, length = 20)
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
         f_anl(rd, phid, r, z) = compute_delta(rd, phid, r, z) * 2e8 * SIGMA_T * Rg
@@ -40,12 +40,12 @@ end
                 for zp in z_range_test
                     for pd in phid_range_test
                         truesol = f_anl(rdp, pd, rp, zp)
-                        println("rdp $rdp")
-                        println("rp $rp")
-                        println("zp $zp")
-                        println("pd $pd")
-                        println("Delta is ")
-                        println(compute_delta(rdp, pd, rp, zp))
+                        #println("rdp $rdp")
+                        #println("rp $rp")
+                        #println("zp $zp")
+                        #println("pd $pd")
+                        #println("Delta is ")
+                        #println(compute_delta(rdp, pd, rp, zp))
                         qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
                         @test qwsol ≈ truesol rtol = 1e-6
                     end

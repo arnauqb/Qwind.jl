@@ -11,12 +11,33 @@ function point_outside_grid(r_range, z_range, r, z)
 end
 
 function get_time_to_intersection_r(r, ri, rf, phii, phif)
-    #sqrt(abs((r^2-ri^2) / (ri^2 + rf^2 - 2 * ri * rf * cos(phii - phif))))
-    if phii == phif
-        return abs((r - ri) / (rf - ri))
-    else
-        return sqrt(abs((r^2 - ri^2) / (ri^2 + rf^2 - 2 * ri * rf * cos(phii - phif))))
+    #println("r $r ri $ri rf $rf phii $phii phif $phif")
+    a = ri^2 + rf^2 - 2 * ri * rf * cos(phif-phii)
+    b = 2 * ri * rf * cos(phif - phii) - 2 * ri^2
+    c = ri^2 - r^2
+    rad = b^2 - 4*a*c
+    if rad < 0
+        return NaN
     end
+    rad = sqrt(rad)
+    sol1 = (-b + rad) / (2a)
+    sol2 = (-b - rad) / (2a)
+    if sol1 > 0
+        if sol2 > 0
+            return min(sol1, sol2)
+        else
+            return sol1
+        end
+    else
+        return sol2
+    end
+    #sqrt(abs((r^2-ri^2) / (ri^2 + rf^2 - 2 * ri * rf * cos(phii - phif))))
+    #println("r $r ri $ri rf $rf phii $phii phif $phif")
+    #if (phii == phif) || abs(phii - phif) ≈ π
+    #    return abs((r - ri) / (rf - ri))
+    #else
+    #    return sqrt(abs((r^2 - ri^2) / (ri^2 + rf^2 - 2 * ri * rf * cos(phii - phif))))
+    #end
 end
 
 
@@ -216,13 +237,14 @@ function set_iterator!(iterator::GridIterator, ri, phii, zi, rf, phif, zf)
         else
             direction_r = -1
         end
+    else
+        direction_r = sign(rf - ri)
     end
-    #direction_r = sign(rf - ri)
     #(rf == ri) && (direction_r = 1)
     direction_z = sign(zf - zi)
     current_r_idx = searchsorted_first(iterator.r_range, ri, direction_r)
     current_z_idx = searchsorted_first(iterator.z_range, zi, direction_z)
-    println("first $current_r_idx")
+    #println("first $current_r_idx")
     iterator.ri = ri
     iterator.phii = phii
     iterator.zi = zi
@@ -245,10 +267,10 @@ current_r(iterator::GridIterator) = iterator.r_range[iterator.current_r_idx]
 current_z(iterator::GridIterator) = iterator.z_range[iterator.current_z_idx]
 
 function next_r(iterator::GridIterator)
-    println("current intersection")
-    println(iterator.intersection)
-    println(iterator.current_r_idx)
-    println(iterator.r_range)
+    #println("current intersection")
+    #println(iterator.intersection)
+    #println(iterator.current_r_idx)
+    #println(iterator.r_range)
     index = abs(iterator.current_r_idx + iterator.direction_r)
     if index == 0
         index = 2
@@ -278,13 +300,13 @@ function GridIterator(interpolator::WindInterpolator, ri, zi, rf, zf)
 end
 
 function step_ray!(iterator::GridIterator, lambda_r, lambda_z)
-    if lambda_r < lambda_z || lambda_z === NaN
+    if lambda_r < lambda_z || isnan(lambda_z)
         iterator.current_r_idx += iterator.direction_r
         if iterator.current_r_idx == 0
             iterator.current_r_idx += iterator.direction_r
         end
         lambda = lambda_r
-    elseif lambda_z < lambda_r || lambda_r === NaN
+    elseif lambda_z < lambda_r || isnan(lambda_r)
         iterator.current_z_idx += iterator.direction_z
         lambda = lambda_z
     else
@@ -308,7 +330,8 @@ function next_intersection!(iterator::GridIterator)
     z0 = iterator.intersection[3]
     r1 = next_r(iterator)
     z1 = next_z(iterator)
-    println("finding intersection to $r1")
+    #println("finding r intersection to $r1")
+    #println("finding z intersection to $z1")
     lambda_r = get_time_to_intersection_r(
         r1,
         iterator.ri,
@@ -317,20 +340,20 @@ function next_intersection!(iterator::GridIterator)
         iterator.phif,
     )
     lambda_z = get_time_to_intersection_z(z1, iterator.zi, iterator.zf)
-    println("\n")
-    println("lambda_r $lambda_r")
-    println("lambda_z $lambda_z")
-    println("---")
-    println("r0 $(r0-epsilon) rf $(iterator.rf) r1 $(r1+epsilon)")
-    println("z0 $(z0-epsilon) zf $(iterator.zf) z1 $(z1+epsilon)")
+    #println("\n")
+    #println("lambda_r $lambda_r")
+    #println("lambda_z $lambda_z")
+    #println("**")
+    #println("r0 $(r0-epsilon) rf $(iterator.rf) r1 $(r1+epsilon)")
+    #println("z0 $(z0-epsilon) zf $(iterator.zf) z1 $(z1+epsilon)")
     if (
         (r0 - epsilon <= iterator.rf <= r1 + epsilon) ||
         (r1 - epsilon <= iterator.rf <= r0 + epsilon) ||
-        lambda_r > 1
+        lambda_r > 1 || isnan(lambda_r)
     ) && (
         (z0 - epsilon <= iterator.zf <= z1 + epsilon) ||
         (z1 - epsilon <= iterator.zf <= z0 + epsilon) ||
-        lambda_z > 1
+        lambda_z > 1 || isnan(lambda_z)
     )
         iterator.finished = true
         iterator.intersection[1] = iterator.rf
@@ -349,14 +372,16 @@ function next_intersection!(iterator::GridIterator)
     y =
         iterator.ri * sin(iterator.phii) * (1 - lambda) +
         lambda * iterator.rf * sin(iterator.phif)
+    z = iterator.zi + lambda * (iterator.zf - iterator.zi)
     phi = atan(y, x)
     r = sqrt(x^2 + y^2)
     #println("x $x y $y")
-    #println("r $r phi $phi")
+    #println("new poss")
+    #println("r $r phi $phi z $z")
     #println("---------")
     iterator.intersection[1] = r
     iterator.intersection[2] = phi
-    iterator.intersection[3] = iterator.zi + lambda * (iterator.zf - iterator.zi)
+    iterator.intersection[3] = z
     return
 end
 
@@ -542,10 +567,9 @@ function compute_uv_tau(
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, previous_point)
-        println("previous $(previous_point)")
-        println("next point $(iterator.intersection)")
-        println("int size $(intersection_size)")
-        println("---")
+        #println("previous $(previous_point)")
+        #println("next point $(iterator.intersection)")
+        #println("---")
         dist += intersection_size
         ret += compute_uv_tau_cell(intersection_size, cell_density)
     end
