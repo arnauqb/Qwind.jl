@@ -549,7 +549,7 @@ function compute_xray_tau(
     end
     #iterator = grid.iterator
     set_iterator!(iterator, ri, 0.0, zi, rf, 0.0, zf)
-    initial_point = [ri, zi]
+    initial_point = [ri, 0.0, zi]
     previous_point = copy(iterator.intersection)
     ret = 0.0
     while !iterator.finished
@@ -570,6 +570,9 @@ function compute_xray_tau(
             xray_luminosity,
             Rg,
         )
+        #println("previous $(previous_point)")
+        #println("next point $(iterator.intersection)")
+        #println("---")
         #if ret > 40
         #    return ret
         #end

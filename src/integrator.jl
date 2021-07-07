@@ -130,6 +130,8 @@ initialize_integrator(
     model.bh,
     model.wind_grid,
     model.ic,
+    r0,
+    linewidth,
     atol = atol,
     rtol = rtol,
     tmax = tmax,
@@ -176,10 +178,6 @@ function get_initial_radii_and_linewidths(model)
 end
 
 function create_and_run_integrator(
-    #radiative_transfer::RadiativeTransfer,
-    #bh::BlackHole,
-    #grid::Grid,
-    #initial_conditions::InitialConditions;
     model;
     r0,
     linewidth,
@@ -189,10 +187,6 @@ function create_and_run_integrator(
 )
     integrator = initialize_integrator(
         model,
-        #radiative_transfer,
-        #bh,
-        #grid,
-        #initial_conditions,
         r0,
         linewidth,
         atol = atol,

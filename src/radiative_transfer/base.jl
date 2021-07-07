@@ -18,9 +18,17 @@ function radiation_force_integrand!(
 )
     delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
     nt = disk_nt_rel_factors(radiation, rd)
-    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
-    # deproject tauuv
-    tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
+    tauuv = compute_uv_tau(
+        density_grid,
+        density_grid.iterator,
+        rd,
+        phid,
+        radiation.zh,
+        r,
+        0.0,
+        z,
+        Rg,
+    )
     fuv, mdot = get_fuv_mdot(radiation, rd)
     r_projection = (r - rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta^4)
@@ -46,9 +54,17 @@ function radiation_force_integrand!(
     gamma,
 )
     delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
-    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
-    # deproject tauuv
-    tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
+    tauuv = compute_uv_tau(
+        density_grid,
+        density_grid.iterator,
+        rd,
+        phid,
+        radiation.zh,
+        r,
+        0.0,
+        z,
+        Rg,
+    )
     fuv, mdot = get_fuv_mdot(radiation, rd)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     r_projection = (r - rd * cos(phid))
@@ -85,9 +101,17 @@ function radiation_force_integrand_no_uv_fraction!(
     gamma,
 )
     delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
-    tauuv = compute_uv_tau(density_grid, density_grid.iterator, rd, radiation.zh, r, z, Rg)
-    # deproject tauuv
-    tauuv = tauuv * delta / d_euclidean(rd, r, radiation.zh, z)
+    tauuv = compute_uv_tau(
+        density_grid,
+        density_grid.iterator,
+        rd,
+        phid,
+        radiation.zh,
+        r,
+        0.0,
+        z,
+        Rg,
+    )
     _, mdot = get_fuv_mdot(radiation, rd)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     r_projection = (r - rd * cos(phid))
@@ -215,7 +239,7 @@ function compute_disc_radiation_field_vertical(
     Rg = radiation.Rg
     constant = 3 / (2 * radiation.efficiency)
     fuv, mdot = get_fuv_mdot(radiation, r)
-    tauuv = compute_uv_tau(grid, r, r, z - radiation.zh, Rg)
+    tauuv = compute_uv_tau(grid, r, 0.0, r, z - radiation.zh, Rg)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     return [0.0, nt * constant * mdot * exp(-tauuv) * fuv / r^3]
 end

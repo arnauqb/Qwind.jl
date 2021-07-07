@@ -1,6 +1,14 @@
 # general pieces of a model
 
-export DensityInterpolator, GridInterpolator, FMNoInterp, FMInterp, Relativistic, NoRelativistic, NoUVFraction
+export DensityInterpolator,
+    GridInterpolator,
+    FMNoInterp,
+    FMInterp,
+    Relativistic,
+    NoRelativistic,
+    NoUVFraction,
+    Boost,
+    Thomson
 
 abstract type Radiation{T<:AbstractFloat} end
 abstract type RadiativeTransfer{T<:AbstractFloat} end
