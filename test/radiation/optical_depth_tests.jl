@@ -154,7 +154,7 @@ end
             for zp in z_range_test
                 truesol = f_anl(rp, zp)
                 qwsol = compute_xray_tau(grid, Thomson(), 0.0, 0.0, rp, zp, xl, Rg)
-                @test truesol ≈ qwsol
+                @test truesol ≈ qwsol rtol = 1e-3
             end
         end
     end

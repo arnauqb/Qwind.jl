@@ -139,6 +139,7 @@ function get_intersection_with_grid(
         x = xi * (1 - lambda) + lambda * xf
         y = yi * (1 - lambda) + lambda * yf
         z = zi * (1 - lambda) + lambda * zf
+        r = sqrt(x^2+y^2)
         if direction == "r"
             r = r_range[searchsorted_nearest(r_range, r)]
         else

@@ -111,8 +111,8 @@ using Test
 
     @testset "Paths starts outside grid bottom right" begin
         gi = GridIterator(r_range, z_range, 10.69, -1.19, 8, 1)
-        y(x) = (20.19 - 2.19x) / 2.69
-        x(y) = (20.19 - 2.69y) / 2.19
+        y(x) = (20.21 - 2.19x) / 2.69
+        x(y) = (20.21 - 2.69y) / 2.19
         expected_points = [[x(0), 0.0], [9, y(9)], [x(0.5), 0.5], [8.5, y(8.5)], [8, 1]]
         for (i, point) in enumerate(expected_points)
             check_equal(point, gi.intersection, rtol=5e-2)
