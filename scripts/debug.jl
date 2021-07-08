@@ -14,6 +14,13 @@ run_iteration!(model, iterations_dict, it_num=1, parallel=true)
 
 run_iteration!(model, iterations_dict, it_num=2, parallel=true)
 
+integs = iterations_dict[1]["integrators"];
+
+times = Qwind.get_intersection_times(integs);
+
+
+QwindPlotting.plot_streamlines(integs)
+
 density_grid = iterations_dict[2]["radiative_transfer"].interpolator.density_grid;
 rt = iterations_dict[2]["radiative_transfer"];
 
