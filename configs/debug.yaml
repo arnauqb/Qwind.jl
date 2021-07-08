@@ -40,8 +40,8 @@ grid:
 initial_conditions:
   mode: CAKIC
   r_in: 20.0
-  r_fi: 1000.0
-  n_lines: 10 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  r_fi: 1500.0
+  n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   #n_0: 1e10

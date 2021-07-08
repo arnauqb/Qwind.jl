@@ -76,6 +76,9 @@ function Base.intersect!(s1::Segment, s2::Segment, A::Matrix{Float64}, b::Vector
     if trivial_miss(s1, s2)
         return false
     end
+    if s1 == s2
+        return true
+    end
     A[1, 1] = s1.p2x - s1.p1x
     A[1, 2] = s2.p1x - s2.p2x
     A[2, 1] = s1.p2y - s1.p1y
