@@ -10,33 +10,20 @@ function point_outside_grid(r_range, z_range, r, z)
     end
 end
 
-function get_time_to_intersection_r(iterator)
-    r = next_r(iterator)
-    current_lambda = iterator.lambda
-    #if isnan(current_lambda) || current_lambda > 1.0
-    #    return NaN
-    #end
-    #println("r $r ri $ri rf $rf phii $phii phif $phif")
-    #a = ri^2 + rf^2 - 2 * ri * rf * cos(phif - phii)
-    #b = 2 * ri * rf * cos(phif - phii) - 2 * ri^2
-    b = iterator.b
-    a = iterator.a
-    c = iterator.ri^2 - r^2
+function get_time_to_intersection_r(r, a, b, ri, current_lambda)
+    if a == 0.0
+        return Inf
+    end
+    c = ri^2 - r^2
     rad = b^2 - 4 * a * c
-    #println("rad $rad")
     if rad < 0
         return NaN
     end
     rad = sqrt(rad)
     sol1 = (-b + rad) / (2a)
     sol2 = (-b - rad) / (2a)
-    #println(current_lambda)
-    #println("sol 1 $sol1")
-    #println("sol 1 $sol2")
-    #println("sol1 $sol1 sol2 $sol2")
-    #println("cl $current_lambda")
     if current_lambda > max(sol1, sol2)
-        return NaN
+        return Inf
     end
     if sol1 > 0
         if sol2 > 0
@@ -59,6 +46,28 @@ function get_time_to_intersection_r(iterator)
     else
         return sol2
     end
+end
+
+function get_time_to_intersection_r(iterator)
+    lambda = Inf
+    index = 0
+    n_steps = 0
+    while true
+        index = max(abs(iterator.current_r_idx + (n_steps+1) * iterator.direction_r), 1)
+        r = iterator.r_range[index]
+        lambda = get_time_to_intersection_r(
+            r,
+            iterator.a,
+            iterator.b,
+            iterator.ri,
+            iterator.lambda,
+        )
+        n_steps += 1
+        if !isnan(lambda)
+            break
+        end
+    end
+    return lambda, index
 end
 
 
@@ -124,9 +133,9 @@ function get_intersection_with_grid(
         yi = ri * sin(phii)
         xf = rf * cos(phif)
         yf = rf * sin(phif)
-        x = xi * (1-lambda) + lambda * xf
-        y = yi * (1-lambda) + lambda * yf
-        z = zi * (1-lambda) + lambda * zf
+        x = xi * (1 - lambda) + lambda * xf
+        y = yi * (1 - lambda) + lambda * yf
+        z = zi * (1 - lambda) + lambda * zf
         if direction == "r"
             r = r_range[searchsorted_nearest(r_range, r)]
         else
@@ -284,7 +293,8 @@ function set_iterator!(iterator::GridIterator, ri, phii, zi, rf, phif, zf)
     #    direction_r = -1
     #end
     #(rf == ri) && (direction_r = 1)
-    iterator.change_direction_r = (ri^2 - ri*rf * cos(phif-phii)) / (ri^2 + rf^2 - 2 * ri * rf * cos(phif-phii))
+    iterator.change_direction_r =
+        (ri^2 - ri * rf * cos(phif - phii)) / (ri^2 + rf^2 - 2 * ri * rf * cos(phif - phii))
     update_direction_r!(iterator, 0.0)
     iterator.direction_z = sign(zf - zi)
     current_r_idx = searchsorted_first(iterator.r_range, ri, iterator.direction_r)
@@ -370,14 +380,14 @@ function pick_lambda(lambda_r, lambda_z)
     return lambda
 end
 
-function step_ray!(iterator::GridIterator, lambda_r, lambda_z)
+function step_ray!(iterator::GridIterator, lambda_r, lambda_z, r_index)
     #println("lr $lambda_r")
     #println("lz $lambda_z")
     lambda = pick_lambda(lambda_r, lambda_z)
     iterator.lambda = lambda
-    x = iterator.xi * (1-lambda) + lambda * iterator.xf
-    y = iterator.yi * (1-lambda) + lambda * iterator.yf
-    z = iterator.zi * (1-lambda) + lambda * iterator.zf
+    x = iterator.xi * (1 - lambda) + lambda * iterator.xf
+    y = iterator.yi * (1 - lambda) + lambda * iterator.yf
+    z = iterator.zi * (1 - lambda) + lambda * iterator.zf
     #phi = atan(y, x)
     phi = atan(y, x)
     r = sqrt(x^2 + y^2)
@@ -402,11 +412,11 @@ function step_ray!(iterator::GridIterator, lambda_r, lambda_z)
     #adjust_r!(iterator, r)
     update_direction_r!(iterator, lambda)
     if lambda_r < lambda_z || isnan(lambda_z)
-        iterator.current_r_idx += iterator.direction_r
+        iterator.current_r_idx = r_index
     elseif lambda_z < lambda_r || isnan(lambda_r)
         iterator.current_z_idx += iterator.direction_z
     else
-        iterator.current_r_idx += iterator.direction_r
+        iterator.current_r_idx = r_index
         iterator.current_z_idx += iterator.direction_z
     end
     #println("lr $lambda_r lz $lambda_z ridx $(iterator.current_r_idx)")
@@ -484,9 +494,9 @@ function next_intersection!(iterator::GridIterator)
     #println("current z $z0")
     #println("finding r intersection to $r1")
     #println("finding z intersection to $z1")
-    lambda_r, r_steps = get_time_to_intersection_r(iterator)
+    lambda_r, r_index = get_time_to_intersection_r(iterator)
     lambda_z = get_time_to_intersection_z(z1, iterator.zi, iterator.zf)
-    println("lr $lambda_r lz $lambda_z")
+    #println("lr $lambda_r lz $lambda_z")
     if is_in_final_cell(iterator, r0, r1, z0, z1, phi0, lambda_r, lambda_z)
         iterator.finished = true
         iterator.intersection[1] = iterator.rf
@@ -494,7 +504,7 @@ function next_intersection!(iterator::GridIterator)
         iterator.intersection[3] = iterator.zf
         return
     end
-    step_ray!(iterator, lambda_r, lambda_z)
+    step_ray!(iterator, lambda_r, lambda_z, r_index)
 end
 
 function ionization_cell_xi_kernel(
@@ -684,13 +694,14 @@ function compute_uv_tau(
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, previous_point)
-        println("previous $(previous_point)")
-        println("next point $(iterator.intersection)")
-        println("---")
+        #println("previous $(previous_point)")
+        #println("next point $(iterator.intersection)")
+        #println("index $(iterator.current_r_idx)")
+        #println("---")
         dist += intersection_size
         ret += compute_uv_tau_cell(intersection_size, cell_density)
     end
-    println("total distance $dist")
+    #println("total distance $dist")
     return ret * Rg * SIGMA_T
 end
 

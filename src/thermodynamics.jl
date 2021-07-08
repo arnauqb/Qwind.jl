@@ -5,12 +5,12 @@ Computes gas thermal velocity.
 
 # Parameters
 - temperature: gas temperature in K
-- mu : gas mean molecular weight. Default = 0.5 (ionized hydrogen gas)
+- mu : gas mean molecular weight. Default = 0.68 (ionized solar abundance gas)
 """
 function compute_thermal_velocity(temperature, mu)
     return sqrt(K_B * temperature / (mu * M_P)) / C
 end
-compute_thermal_velocity(temperature) = compute_thermal_velocity(temperature, 0.5)
+compute_thermal_velocity(temperature) = compute_thermal_velocity(temperature, 0.68)
 
 """
 Updates the density of the streamline giving its current position and velocity,

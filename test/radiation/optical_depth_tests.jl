@@ -29,9 +29,9 @@ end
         r_range = range(0, 1000.0, length = 11)
         z_range = range(0, 1000.0, length = 11)
         rp_range_test = range(0.1, 750, length = 10)#[end]
-        r_range_test = range(0.1, 750, length = 10)#[end]
+        r_range_test = range(0.1, 750, length = 10)#[9]
         z_range_test = range(0.1, 750, length = 10)#[end]
-        phid_range_test = range(0, π-0.1, length = 10)#[end]
+        phid_range_test = range(0, π-0.1, length = 10)#[end-2]
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
         f_anl(rd, phid, r, z) = compute_delta(rd, phid, r, z) * 2e8 * SIGMA_T * Rg
@@ -39,6 +39,7 @@ end
             for rp in r_range_test
                 for zp in z_range_test
                     for pd in phid_range_test
+                        #println("rdp $rdp rp $rp zp $zp pd $pd")
                         truesol = f_anl(rdp, pd, rp, zp)
                         qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
                         @test qwsol ≈ truesol rtol = 1e-6
@@ -49,12 +50,12 @@ end
     end
 
     @testset "Linear density" begin
-        r_range = range(5, 100.0, length = 10)
-        z_range = range(5, 100.0, length = 10)
-        rp_range_test = range(10, 90, length = 10)[1]
-        r_range_test = range(10, 90, length = 10)[end]
-        z_range_test = range(10, 90, length = 10)[1]
-        phid_range_test = range(0, π-0.1, length = 10)[end-2]
+        r_range = range(0, 100.0, length = 500)
+        z_range = range(0, 100.0, length = 500)
+        rp_range_test = range(10, 90, length = 10)
+        r_range_test = range(10, 90, length = 10)
+        z_range_test = range(10, 90, length = 10)
+        phid_range_test = range(0, π-0.1, length = 10)
         density_grid = zeros((length(r_range), length(z_range)))
         dens_func(r, z) = 1e8 * (2 * r + z)
         for (i, rp) in enumerate(r_range)
@@ -80,12 +81,12 @@ end
             for rp in r_range_test
                 for zp in z_range_test
                     for pd in phid_range_test
-                        println("rdp $rdp rp $rp zp $zp pd $pd")
+                        #println("rdp $rdp rp $rp zp $zp pd $pd")
                         delta = compute_delta(rdp, pd, rp, zp)
-                        println("delta $delta")
+                        #println("delta $delta")
                         truesol = f_anl(rdp, pd, rp, zp)
                         qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
-                        @test qwsol ≈ truesol rtol = 5e-1 atol = 1e-3
+                        @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
                 end
             end
@@ -126,12 +127,13 @@ end
                     for pd in phid_range_test
                         truesol = f_anl(rdp, pd, rp, zp)
                         qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
-                        @test qwsol ≈ truesol rtol = 5e-1 atol = 1e-3
+                        @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
                 end
             end
         end
     end
+
 end
 
 @testset "Test X-ray optical depth" begin
