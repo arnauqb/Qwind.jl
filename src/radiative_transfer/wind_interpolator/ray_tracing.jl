@@ -53,7 +53,10 @@ function get_time_to_intersection_r(iterator)
     index = 0
     n_steps = 0
     while true
-        index = max(abs(iterator.current_r_idx + (n_steps+1) * iterator.direction_r), 1)
+        index = min(
+            max(abs(iterator.current_r_idx + (n_steps + 1) * iterator.direction_r), 1),
+            length(iterator.r_range),
+        )
         r = iterator.r_range[index]
         lambda = get_time_to_intersection_r(
             r,
@@ -340,8 +343,8 @@ function next_r(iterator::GridIterator)
     #println(iterator.current_r_idx)
     #println(iterator.r_range)
     #println(iterator.direction_r)
-    index = max(iterator.current_r_idx + iterator.direction_r, 1)
-    #println("index $index")
+    index =
+        min(max(iterator.current_r_idx + iterator.direction_r, 1), length(iterator.r_range))
     return iterator.r_range[index]
 end
 
@@ -652,12 +655,13 @@ function compute_xray_tau(
     xray_luminosity,
     Rg,
 )
+    #println("ri $ri zi $zi rf $rf zf $zf ")
     compute_xray_tau(
         grid::InterpolationGrid,
         grid.iterator,
         xray_opacity,
         ri,
-        zi,
+        zi+1e-6,
         rf,
         zf,
         xray_luminosity,

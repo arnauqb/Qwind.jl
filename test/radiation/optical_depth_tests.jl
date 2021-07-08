@@ -28,10 +28,10 @@ end
     @testset "Constant density" begin
         r_range = range(0, 1000.0, length = 11)
         z_range = range(0, 1000.0, length = 11)
-        rp_range_test = range(0.1, 750, length = 10)#[end]
-        r_range_test = range(0.1, 750, length = 10)#[9]
-        z_range_test = range(0.1, 750, length = 10)#[end]
-        phid_range_test = range(0, π-0.1, length = 10)#[end-2]
+        rp_range_test = range(0.0, 1000, length = 10)
+        r_range_test = range(0.0, 1000, length = 10)
+        z_range_test = range(0.0, 1000, length = 10)
+        phid_range_test = range(0, π, length = 10)
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
         f_anl(rd, phid, r, z) = compute_delta(rd, phid, r, z) * 2e8 * SIGMA_T * Rg
