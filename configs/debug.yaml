@@ -17,7 +17,7 @@ radiation:
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
-  z_xray: 0.0
+  z_xray: 1e-8
   disk_height: 0.0
   xray_opacity: boost
 
