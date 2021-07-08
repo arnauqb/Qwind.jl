@@ -319,7 +319,6 @@ function set_iterator!(iterator::GridIterator, ri, phii, zi, rf, phif, zf)
     iterator.lambda = 0.0
     iterator.current_r_idx = current_r_idx
     iterator.current_z_idx = current_z_idx
-    ra = iterator.r_range[iterator.current_r_idx]
     iterator.intersection[1] = ri
     iterator.intersection[2] = phii
     iterator.intersection[3] = zi
@@ -662,7 +661,7 @@ function compute_xray_tau(
         grid.iterator,
         xray_opacity,
         ri,
-        zi+1e-6,
+        zi,
         rf,
         zf,
         xray_luminosity,

@@ -490,7 +490,7 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
             compute_xray_tau(
                 interp_grid,
                 xr_opacity,
-                0.0,
+                1e-6,
                 0.0,
                 rc + delta_r,
                 0.0,
