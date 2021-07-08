@@ -41,7 +41,7 @@ initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1000.0
-  n_lines: 10 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: 50 #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   #n_0: 1e10
@@ -54,4 +54,5 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/home/arnau/code/Qwind.jl/runs/tests"
+  #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
+  save_path: "./tests"
