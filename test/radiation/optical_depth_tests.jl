@@ -42,7 +42,7 @@ end
                     for pd in phid_range_test
                         #println("rdp $rdp rp $rp zp $zp pd $pd")
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
+                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg, max_tau=Inf)
                         @test qwsol ≈ truesol rtol = 1e-6
                     end
                 end
@@ -86,7 +86,7 @@ end
                         delta = compute_delta(rdp, pd, rp, zp)
                         #println("delta $delta")
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
+                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg, max_tau=Inf)
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
                 end
@@ -127,7 +127,7 @@ end
                 for zp in z_range_test
                     for pd in phid_range_test
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg)
+                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg, max_tau=Inf)
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
                 end

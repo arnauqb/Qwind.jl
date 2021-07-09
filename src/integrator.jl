@@ -177,14 +177,7 @@ function get_initial_radii_and_linewidths(model)
     return lines_range, lines_widths
 end
 
-function create_and_run_integrator(
-    model;
-    r0,
-    linewidth,
-    trajectory_id,
-    atol,
-    rtol,
-)
+function create_and_run_integrator(model; r0, linewidth, trajectory_id, atol, rtol)
     integrator = initialize_integrator(
         model,
         r0,
@@ -392,7 +385,14 @@ function compute_radiation_acceleration(
     ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z, vr, vz)
+    disc_radiation_field = compute_disc_radiation_field(
+        radiative_transfer,
+        r,
+        z,
+        vr,
+        vz,
+        rtol = radiative_transfer.radiation.disk_integral_rtol,
+    )
     force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end
