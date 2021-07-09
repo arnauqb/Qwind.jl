@@ -15,10 +15,10 @@ function get_time_to_intersection_r(r, a, b, ri, current_lambda)
         return Inf
     end
     c = ri^2 - r^2
-    rad = b^2 - 4 * a * c
+    rad = b^2 - 4.0 * a * c
     #println("a $a b $b ri $ri")
     #println("rad $rad")
-    if rad < 0
+    if rad < 0.0
         return NaN
     end
     rad = sqrt(rad)
@@ -148,7 +148,7 @@ function get_intersection_with_grid(
         x = xi * (1 - lambda) + lambda * xf
         y = yi * (1 - lambda) + lambda * yf
         z = zi * (1 - lambda) + lambda * zf
-        r = sqrt(x^2+y^2)
+        r = sqrt(x^2 + y^2)
         if direction == "r"
             r = r_range[searchsorted_nearest(r_range, r)]
         else
@@ -689,7 +689,8 @@ function compute_uv_tau(
     rf,
     phif,
     zf,
-    Rg,
+    Rg;
+    max_tau = 20.0,
 )
     if grid.grid === nothing
         return 0.0
@@ -699,6 +700,7 @@ function compute_uv_tau(
     previous_point = copy(iterator.intersection)
     ret = 0.0
     dist = 0.0
+    sigmarg = Rg * SIGMA_T
     while !iterator.finished
         previous_point[1] = iterator.intersection[1]
         previous_point[2] = iterator.intersection[2]
@@ -712,13 +714,38 @@ function compute_uv_tau(
         #println("---")
         dist += intersection_size
         ret += compute_uv_tau_cell(intersection_size, cell_density)
+        if ret * sigmarg > max_tau
+            return max_tau
+        end
     end
     #println("total distance $dist")
-    return ret * Rg * SIGMA_T
+    return ret * sigmarg
 end
 
-compute_uv_tau(grid::InterpolationGrid, ri, phii, zi, rf, phif, zf, Rg) =
-    compute_uv_tau(grid::InterpolationGrid, grid.iterator, ri, phii, zi, rf, phif, zf, Rg)
+compute_uv_tau(grid::InterpolationGrid, ri, phii, zi, rf, phif, zf, Rg; max_tau = 20.0) =
+    compute_uv_tau(
+        grid::InterpolationGrid,
+        grid.iterator,
+        ri,
+        phii,
+        zi,
+        rf,
+        phif,
+        zf,
+        Rg,
+        max_tau = max_tau,
+    )
 
-compute_uv_tau(grid::InterpolationGrid, ri, phii, rf, zf, Rg) =
-    compute_uv_tau(grid::InterpolationGrid, grid.iterator, ri, phii, 0.0, rf, 0.0, zf, Rg)
+compute_uv_tau(grid::InterpolationGrid, ri, phii, rf, zf, Rg; max_tau = 20.0) =
+    compute_uv_tau(
+        grid::InterpolationGrid,
+        grid.iterator,
+        ri,
+        phii,
+        0.0,
+        rf,
+        0.0,
+        zf,
+        Rg,
+        max_tau = max_tau,
+    )
