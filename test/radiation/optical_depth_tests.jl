@@ -1,6 +1,7 @@
 using Qwind
 using Test
 using QuadGK
+using Roots
 
 @testset "distance to intersection" begin
     r_range = range(0, 1000, length = 150)
@@ -140,21 +141,47 @@ end
 
     bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     Rg = bh.Rg
-    xl = 1e20
+    xl = 1e45
 
     @testset "Constant density" begin
         r_range = range(0, 1000.0, length = 50)
         z_range = range(0, 1000.0, length = 50)
-        r_range_test = range(0.1, 750, length = 10)
-        z_range_test = range(0.1, 750, length = 10)
+        r_range_test = range(0.0, 1000, length = 50)
+        z_range_test = range(0.0, 1000, length = 50)
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
-        f_anl(r, z) = sqrt(r^2 + z^2) * 2e8 * SIGMA_T * Rg
-        for rp in r_range_test
-            for zp in z_range_test
-                truesol = f_anl(rp, zp)
-                qwsol = compute_xray_tau(grid, Thomson(), 0.0, 0.0, rp, zp, xl, Rg)
-                @test truesol ≈ qwsol rtol = 1e-3
+        @testset "Thomson only" begin
+            f_anl(r, z) = sqrt(r^2 + z^2) * 2e8 * SIGMA_T * Rg
+            for rp in r_range_test
+                for zp in z_range_test
+                    truesol = f_anl(rp, zp)
+                    qwsol = compute_xray_tau(grid, Thomson(), 0.0, 0.0, rp, zp, xl, Rg)
+                    @test truesol ≈ qwsol rtol = 1e-3
+                end
+            end
+        end
+        @testset "Boost" begin
+            function get_ion_radius(density)
+                f(r) = 10^5 - xl / (density * (r*Rg)^2) * exp(-r * density * SIGMA_T * Rg)
+                zero = find_zero(f, (10, 1000))
+                return zero
+            end
+            function f_anl(r, z, rx)
+                d = sqrt(r^2 + z^2)
+                srg = SIGMA_T * Rg * 2e8
+                if d <= rx
+                    return d * srg
+                else
+                    return rx * srg + 100 * (d-rx) * srg
+                end
+            end
+            rx = get_ion_radius(2e8)
+            for rp in r_range_test
+                for zp in z_range_test
+                    truesol = f_anl(rp, zp, rx)
+                    qwsol = compute_xray_tau(grid, Boost(), 0.0, 0.0, rp, zp, xl, Rg)
+                    @test truesol ≈ qwsol rtol = 1e-3
+                end
             end
         end
     end

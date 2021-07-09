@@ -102,6 +102,9 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6)
         K *
         (1 / (SIGMA_E * vth))^alpha *
         C^2 / bh.Rg
+    # remove attentuation
+    tauuv = compute_uv_tau(rt.interpolator.density_grid, r, 0.0, r, r - rt.radiation.zh, bh.Rg)
+    gamma0 = gamma0 / exp(-tauuv)
     return cc * gamma0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 

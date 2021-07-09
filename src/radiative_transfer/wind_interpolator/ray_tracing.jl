@@ -16,12 +16,15 @@ function get_time_to_intersection_r(r, a, b, ri, current_lambda)
     end
     c = ri^2 - r^2
     rad = b^2 - 4 * a * c
+    #println("a $a b $b ri $ri")
+    #println("rad $rad")
     if rad < 0
         return NaN
     end
     rad = sqrt(rad)
     sol1 = (-b + rad) / (2a)
     sol2 = (-b - rad) / (2a)
+    #println("sol1 $sol1 sol2 $sol2")
     if current_lambda > max(sol1, sol2)
         return Inf
     end
@@ -53,10 +56,13 @@ function get_time_to_intersection_r(iterator)
     index = 0
     n_steps = 0
     while true
-        index = min(
-            max(abs(iterator.current_r_idx + (n_steps + 1) * iterator.direction_r), 1),
-            length(iterator.r_range),
-        )
+        index = max(abs(iterator.current_r_idx + (n_steps + 1) * iterator.direction_r), 1)
+        #println("index $index")
+        #println(length(iterator.r_range))
+        if index > length(iterator.r_range)
+            #println("BREAKING")
+            return Inf, 0.0
+        end
         r = iterator.r_range[index]
         lambda = get_time_to_intersection_r(
             r,
@@ -65,6 +71,9 @@ function get_time_to_intersection_r(iterator)
             iterator.ri,
             iterator.lambda,
         )
+        #println("n_steps $n_steps")
+        #println("l $lambda")
+        #println("r $r")
         n_steps += 1
         if !isnan(lambda)
             break
@@ -655,7 +664,6 @@ function compute_xray_tau(
     xray_luminosity,
     Rg,
 )
-    #println("ri $ri zi $zi rf $rf zf $zf ")
     compute_xray_tau(
         grid::InterpolationGrid,
         grid.iterator,
