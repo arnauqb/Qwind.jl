@@ -10,7 +10,10 @@ model = Model("configs/debug.yaml");
 mv(model.config[:integrator][:save_path], "backup",  force=true)
 model = Model("configs/debug.yaml");
 iterations_dict = Dict();
+
 run_iteration!(model, iterations_dict, it_num=1, parallel=true)
+
+Qwind.compute_lines_range(model)
 
 run_iteration!(model, iterations_dict, it_num=2, parallel=true)
 

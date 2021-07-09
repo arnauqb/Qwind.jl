@@ -46,6 +46,7 @@ initialize_integrators(model::Model) = initialize_integrators(
 )
 
 function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=true)
+    @info "Computing initial conditions for $it_num..."
     lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
         model,
