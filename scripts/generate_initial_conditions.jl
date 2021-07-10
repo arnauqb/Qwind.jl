@@ -43,9 +43,7 @@ end
     CSV.write(output_file, df)
 end
 
-M_range = [1e7, 1e8, 1e9]
-#M_range = [1e8]
-#mdot_range = [0.01, 0.05, 0.1, 0.5]
+M_range = [1e6, 1e10]
 mdot_range = [0.025, 0.05, 0.075, 0.1, 0.25, 0.5]
 
 for M in M_range
