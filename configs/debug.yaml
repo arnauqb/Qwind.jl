@@ -20,7 +20,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  disk_integral_rtol: 1e-3
+  disk_integral_rtol: 1e-2
 
 radiative_transfer:
   mode: RegularGrid
