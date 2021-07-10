@@ -20,7 +20,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  disk_integral_rtol: 1e-2
+  disk_integral_rtol: 1e-3
 
 radiative_transfer:
   mode: RegularGrid
@@ -29,7 +29,7 @@ radiative_transfer:
     vacuum_density: 1e2
     n_timesteps: 10000
     nz: 500 #500 #"@vary grid 50,100,500,1000"
-    nr: 500 #auto 
+    nr: auto 
 
 grid:
   # units of Rg
@@ -49,7 +49,7 @@ initial_conditions:
   #v_0: 2e6
   K: 0.03
   alpha: 0.6
-  mu: 0.5
+  mu: 0.68
 
 integrator:
   n_iterations: 50
