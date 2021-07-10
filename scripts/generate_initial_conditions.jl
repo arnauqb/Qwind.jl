@@ -9,11 +9,12 @@ using Distributed
     config[:black_hole][:M] = M
     config[:black_hole][:mdot] = mdot
     config[:black_hole][:spin] = spin
-    return Model(config)
+    model = Model(config)
+    return model
 end
 
 @everywhere function calculate_wind_mdots(model)
-    rr = 10 .^ range(log10(20), log10(1000), length = 50)
+    rr = 10 .^ range(log10(6.0), log10(1500), length = 50)
     mdots = []
     zcs = []
     for r in rr
@@ -22,7 +23,7 @@ end
             model.bh,
             r,
             alpha = 0.6,
-            zmax = 1e-4,
+            zmax = 1e-2,
         )
         println(r)
         println(mdc)
@@ -43,7 +44,7 @@ end
     CSV.write(output_file, df)
 end
 
-M_range = [1e6, 1e10]
+M_range = [1e6, 1e7, 1e8, 1e9, 1e10]
 mdot_range = [0.025, 0.05, 0.075, 0.1, 0.25, 0.5]
 
 for M in M_range

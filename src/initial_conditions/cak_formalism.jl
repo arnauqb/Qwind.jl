@@ -27,7 +27,8 @@ function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
 end
 
 function g(rt::RadiativeTransfer, bh::BlackHole, z; r, zmax = 5e-1)
-    grav = compute_gravitational_acceleration(r, z + disk_height(bh, r))[2]
+    #grav = compute_gravitational_acceleration(r, z + disk_height(bh, r))[2]
+    grav = compute_gravitational_acceleration(r, z)[2]
     fr = compute_disc_radiation_field(
         rt,
         r,
@@ -66,7 +67,7 @@ function find_nozzle_function_minimum(
     alpha = 0.6,
     zmax = 5e-1,
 )
-    z_range = 10 .^ range(-6, 6, length = 500)
+    z_range = 10 .^ range(-4, 3, length = 150)
     n_range = nozzle_function.(Ref(rt), Ref(bh), z_range, r = r, alpha = alpha, zmax = zmax)
     mask = n_range .!= Inf
     n_range = n_range[mask]
