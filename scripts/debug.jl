@@ -18,6 +18,30 @@ function get_model(config)
 end
 model, iterations_dict = get_model("./configs/debug.yaml");
 
+
+xl = model.rad.xray_luminosity;
+Rg = model.bh.Rg;
+r_range = range(0, 1000.0, length = 500);
+z_range = range(0, 1000.0, length = 500);
+r_range_test = range(0.0, 1000, length = 100);
+z_range_test = range(0.0, 1000, length = 100);
+density_grid = 2e8 .* ones((length(r_range), length(z_range)));
+grid = DensityGrid(r_range, z_range, density_grid);
+res = zeros((length(r_range_test), length(z_range_test)));
+for (i, r) in enumerate(r_range_test)
+    for (j, z) in enumerate(z_range_test)
+        res[i,j] = compute_xray_tau(grid, Boost(), 0.0, 0.0, r, z, xl, Rg)
+    end
+end
+
+LogNorm = matplotlib.colors.LogNorm;
+
+f, ax = plt.subplots()
+#cm = ax.pcolormesh(r_range_test, z_range_test, res', norm=LogNorm())
+cm = ax.contourf(r_range_test, z_range_test, res', norm=LogNorm())
+plt.colorbar(cm, ax=ax)
+
+
 run_iteration!(model, iterations_dict, it_num=1, parallel=true)
 
 run_iteration!(model, iterations_dict, it_num=2, parallel=true)

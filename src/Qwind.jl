@@ -39,7 +39,7 @@ include("initial_conditions/initial_conditions.jl")
 include("integrator.jl")
 include("intersections.jl")
 #include("plotting.jl")
-include("initial_conditions/ic.jl")
+include("initial_conditions/cak_formalism.jl")
 
 # saver
 include("saver.jl")

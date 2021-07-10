@@ -1,6 +1,6 @@
 using Peaks, Roots
 
-get_B0(bh, r) = 1.0 / r^2
+get_B0(r) = 1.0 / r^2
 
 function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
@@ -39,7 +39,7 @@ function g(rt::RadiativeTransfer, bh::BlackHole, z; r, zmax = 5e-1)
         maxevals = 100000,
         no_uv_fraction = true,
     )[2]
-    B0 = get_B0(bh, r)
+    B0 = get_B0(r)
     return -(grav + fr) / B0
 end
 
@@ -88,7 +88,7 @@ end
 function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
-    B0 = get_B0(bh, r) * C^2 / bh.Rg
+    B0 = get_B0(r) * C^2 / bh.Rg
     gamma0 =
         compute_disc_radiation_field(
             rt,
@@ -117,7 +117,7 @@ end
 function Feq(rt::RadiativeTransfer, bh::BlackHole, z, w, wp, mdot; r, alpha = 0.6)
     gv = g(rt, bh, z, r = r)
     fv = f(rt, bh, z, r = r, alpha = alpha)
-    vz = sqrt(2 * r * get_B0(bh, r) * w)
+    vz = sqrt(2 * r * get_B0(r) * w)
     cs = compute_thermal_velocity(disk_temperature(bh, r))
     #ret = wp * (1 - cs^2 / (2w)) - gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
     ret = wp * (1 - cs^2 / (vz^2)) + gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
@@ -151,7 +151,7 @@ function initialize_ic_integrator(
 )
     cs = compute_thermal_velocity(disk_temperature(bh, r))
     z0 = disk_height(bh, r) / 2
-    u0 = [cs^2 / (2 * get_B0(bh, r) * r)]
+    u0 = [cs^2 / (2 * get_B0(r) * r)]
     du0 = [get_wp0(rt, bh, z0, u0[1], r = r, mdot = mdot, alpha = alpha)]
     z_range = (z0, 30)
     dae_residual!(out, du, u, p, t) =
@@ -206,9 +206,6 @@ function find_critical_point_mdot(rt::RadiativeTransfer, bh::BlackHole, r; alpha
     zero = find_zero(f_kernel, (1e-5, 1e3), Bisection(), rtol = 1e-3, atol = 0)
     zc = find_critical_point_mdot_kernel(rt, bh, r, zero, alpha = alpha)[2]
     return zero, zc
-    #zeros = find_zeros(f_kernel, 1e-8, 1e-2, rtol = 1e-3, atol = 0)
-    #println(zeros)
-    #return zeros[0]
 end
 
 function get_initial_density(rt, bh::BlackHole, r, mdot; K = 0.3, alpha = 0.6, mu = 0.5)
