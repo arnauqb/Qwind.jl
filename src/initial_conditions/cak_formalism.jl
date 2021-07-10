@@ -27,8 +27,8 @@ function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
 end
 
 function g(rt::RadiativeTransfer, bh::BlackHole, z; r, zmax = 5e-1)
-    #grav = compute_gravitational_acceleration(r, z + disk_height(bh, r))[2]
-    grav = compute_gravitational_acceleration(r, z)[2]
+    grav = compute_gravitational_acceleration(r, z + disk_height(bh, r))[2]
+    #grav = compute_gravitational_acceleration(r, z)[2]
     fr = compute_disc_radiation_field(
         rt,
         r,
