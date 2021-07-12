@@ -107,13 +107,10 @@ function getn0(ic::CAKIC, rt::RadiativeTransfer, bh::BlackHole, r0)
         ξ = compute_ionization_parameter(rt.radiation, r0, zc, density, taux)
         K = compute_force_multiplier_k(ξ)
     end
-    n = get_initial_density(rt, bh, r0, mdot; K = ic.K, alpha = 0.6, mu = 0.5)
+    n = get_initial_density(rt, bh, r0, mdot; K = ic.K, alpha = ic.alpha, mu = ic.mu)
     return n
 end
 getn0(model, r0) = getn0(model.ic, model.rt, model.bh, r0)
-#getn0(ic::CAKIC, r0) = @. 10^(
-#    -1.8110675134268326 * log10(r0)^2 + 3.788166202329894 * log10(r0) + 11.537466980651164
-#) #cak_density(ic.radiation, ic.bh, r0, ic.K, ic.alpha)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
 
 """

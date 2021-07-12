@@ -208,7 +208,7 @@ function find_critical_point_mdot(rt::RadiativeTransfer, bh::BlackHole, r; alpha
     return zero, zc
 end
 
-function get_initial_density(rt, bh::BlackHole, r, mdot; K = 0.3, alpha = 0.6, mu = 0.5)
+function get_initial_density(rt, bh::BlackHole, r, mdot; K = 0.3, alpha = 0.6, mu = 0.68)
     sigmadot = mdot * CAK_Σ(rt, bh, r, K = K, alpha = alpha)
     return sigmadot / (compute_thermal_velocity(disk_temperature(bh, r)) * C) / (mu * M_P)
 end
