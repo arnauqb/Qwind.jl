@@ -43,7 +43,7 @@ grid:
 
 initial_conditions:
   mode: CAKIC 
-  r_in: 20.0
+  r_in: 50.0
   r_fi: 1500.0
   n_lines: auto 
   log_spaced: true
@@ -56,5 +56,6 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/bh_scan"
+  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/bh_scan2"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/bh_scan_rin50"
   #save_path: "/home/arnau/code/Qwind.jl/bh_scan"

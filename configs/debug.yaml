@@ -29,7 +29,7 @@ radiative_transfer:
     vacuum_density: 1e2
     n_timesteps: 10000
     nz: 500 #500 #"@vary grid 50,100,500,1000"
-    nr: auto 
+    nr: 500
 
 grid:
   # units of Rg
