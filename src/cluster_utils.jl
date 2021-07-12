@@ -75,7 +75,7 @@ function make_cosma_scripts(
         )
         push!(submit_paths, submit_script_path)
     end
-    submit_all_script = join(["sbatch $submit_path" for submit_path in submit_paths], "\n")
+    submit_all_script = join(["sbatch $submit_path\nsleep 10m" for submit_path in submit_paths], "\n")
     open(path * "/submit_all.sh", "w") do io
         write(io, submit_all_script)
     end
