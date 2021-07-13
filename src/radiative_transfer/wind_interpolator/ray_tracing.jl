@@ -708,6 +708,7 @@ function compute_uv_tau(
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, previous_point)
+        #println("$(previous_point[1])/$(previous_point[3])\n")
         #println("previous $(previous_point)")
         #println("next point $(iterator.intersection)")
         #println("index $(iterator.current_r_idx)")
