@@ -212,9 +212,10 @@ end
 
 function failed(integrator::Sundials.IDAIntegrator, r, z)
     intersects = self_intersects(integrator, r, z)
+    too_long = length(integrator.p.data[:r]) > 500
     integrator.u[1] < 0.0 ||
         integrator.u[2] < max(integrator.p.grid.z_min, integrator.p.z0) ||
-        intersects
+        intersects || too_long
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
