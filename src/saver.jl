@@ -146,6 +146,7 @@ function save_velocity_grid!(velocity_grid::VelocityGrid, group)
     dg["r"] = velocity_grid.r_range
     dg["z"] = velocity_grid.z_range
     dg["vr_grid"] = velocity_grid.vr_grid
+    dg["vphi_grid"] = velocity_grid.vphi_grid
     dg["vz_grid"] = velocity_grid.vz_grid
     return
 end
