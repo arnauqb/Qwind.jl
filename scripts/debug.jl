@@ -16,8 +16,9 @@ function get_model(config)
     iterations_dict = Dict();
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/debug.yaml");
 
+model, iterations_dict = get_model("./configs/debug.yaml");
+run_iteration!(model, iterations_dict, it_num=1);
 
 xl = model.rad.xray_luminosity;
 Rg = model.bh.Rg;

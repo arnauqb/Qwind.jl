@@ -114,7 +114,7 @@ function DensityGrid(
         n_timesteps = 1000,
         log = true,
     )
-    r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
+    r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
     return DensityGrid(
         r,
         z,
@@ -229,7 +229,7 @@ function update_density_grid(
         n_timesteps = 1000,
         log = true,
     )
-    r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
+    r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
     return update_density_grid(old_grid, hull, r, z, n, r0)
 end
 
