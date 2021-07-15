@@ -24,6 +24,7 @@ function make_save_data(trajectory_id = -1)
         :r,
         :z,
         :vr,
+        :vphi,
         :vz,
         :n,
         #    :ar,
@@ -250,6 +251,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajector
     _, _, ar, az = integrator.du
     vt = sqrt(vr^2 + vz^2)
     at = sqrt(ar^2 + az^2)
+    vphi = integrator.p.l0 / r
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
     taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
@@ -259,6 +261,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajector
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
+    push!(data[:vphi], vphi)
     push!(data[:vz], vz)
     push!(data[:n], density)
     push!(data[:dvdr], dvdr)

@@ -10,7 +10,6 @@ system:
 black_hole:
   M: "@vary grid 1e6,1e7,1e8,1e9,1e10" # solar masses
   mdot: "@vary grid 0.025,0.05,0.075,0.1,0.25,0.5" # Eddington units
-  #mdot: 0.5
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
@@ -58,4 +57,5 @@ integrator:
   rtol: 1e-3
   #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/bh_scan2"
   save_path: "/cosma5/data/durham/covid19/arnau/qwind/bh_scan_rin50"
+  #save_path: "/cosma7/data/dp004/dc-quer1/qwind_runs/bh_1e8"
   #save_path: "/home/arnau/code/Qwind.jl/bh_scan"

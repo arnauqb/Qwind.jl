@@ -4,13 +4,23 @@ struct VelocityGrid{T} <: InterpolationGrid{T}
     r_range::Vector{T}
     z_range::Vector{T}
     vr_grid::Array{T,2}
+    vphi_grid::Array{T,2}
     vz_grid::Array{T,2}
     nr::Union{Int,String}
     nz::Int
     iterator::CellIterator{T}
     vr_interpolator::Any
+    vphi_interpolator::Any
     vz_interpolator::Any
-    function VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr = nothing, nz = nothing)
+    function VelocityGrid(
+        r_range,
+        z_range,
+        vr_grid,
+        vphi_grid,
+        vz_grid,
+        nr = nothing,
+        nz = nothing,
+    )
         if nr === nothing
             nr = length(r_range)
         end
@@ -20,26 +30,36 @@ struct VelocityGrid{T} <: InterpolationGrid{T}
         iterator = GridIterator(r_range, z_range)
         vr_interpolator =
             Interpolations.interpolate((r_range, z_range), vr_grid, Gridded(Linear()))
+        vphi_interpolator =
+            Interpolations.interpolate((r_range, z_range), vphi_grid, Gridded(Linear()))
         vz_interpolator =
             Interpolations.interpolate((r_range, z_range), vz_grid, Gridded(Linear()))
         vr_interpolator = Interpolations.extrapolate(vr_interpolator, 0.0)
+        vphi_interpolator = Interpolations.extrapolate(vphi_interpolator, 0.0)
         vz_interpolator = Interpolations.extrapolate(vz_interpolator, 0.0)
         return new{typeof(r_range[1])}(
             r_range,
             z_range,
             vr_grid,
+            vphi_grid,
             vz_grid,
             nr,
             nz,
             iterator,
             vr_interpolator,
+            vphi_interpolator,
             vz_interpolator,
         )
     end
 end
 
-VelocityGrid(grid_data::Dict) =
-    VelocityGrid(grid_data["r"], grid_data["z"], grid_data["vr_grid"], grid_data["vz_grid"])
+VelocityGrid(grid_data::Dict) = VelocityGrid(
+    grid_data["r"],
+    grid_data["z"],
+    grid_data["vr_grid"],
+    grid_data["vphi_grid"],
+    grid_data["vz_grid"],
+)
 
 function VelocityGrid(h5_path::String, it_num)
     it_name = @sprintf "iteration_%03d" it_num
@@ -57,18 +77,20 @@ function VelocityGrid(h5_path::String)
     return VelocityGrid(h5_path, maximum(it_nums))
 end
 
-function VelocityGrid(nr::Union{String, Int}, nz::Int, fill::Float64)
+function VelocityGrid(nr::Union{String,Int}, nz::Int, fill::Float64)
     r_range = [-1.0, 0.0]
     z_range = [-1.0, 0.0]
     vr_grid = zeros((2, 2))
+    vphi_grid = zeros((2, 2))
     vz_grid = zeros((2, 2))
-    return VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr, nz)
+    return VelocityGrid(r_range, z_range, vr_grid, vphi_grid, vz_grid, nr, nz)
 end
 
 function VelocityGrid(
     r::Vector{Float64},
     z::Vector{Float64},
     vr::Vector{Float64},
+    vphi::Vector{Float64},
     vz::Vector{Float64},
     r0::Vector{Float64},
     hull::ConcaveHull.Hull;
@@ -80,8 +102,8 @@ function VelocityGrid(
     r_range, z_range = get_spatial_grid(r, z, r0, nr, nz, log = log)
     @info "Constructing velocity interpolators..."
     flush()
-    vr_interp, vz_interp =
-        get_velocity_interpolators(r, z, vr, vz, type = interpolation_type)
+    vr_interp, vphi_interp, vz_interp =
+        get_velocity_interpolators(r, z, vr, vphi, vz, type = interpolation_type)
     @info "Done"
     @info "Filling velocity grids..."
     flush()
@@ -91,20 +113,24 @@ function VelocityGrid(
     vr_grid = reshape(vr_grid, length(z_range), length(r_range))'
     vz_grid = vz_interp(r_grid, z_grid)
     vz_grid = reshape(vz_grid, length(z_range), length(r_range))'
+    vphi_grid = vphi_interp(r_grid, z_grid)
+    vphi_grid = reshape(vphi_grid, length(z_range), length(r_range))'
     for (i, r) in enumerate(r_range)
         for (j, z) in enumerate(z_range)
             point = [r, z]
             if !is_point_in_wind(hull, point)
-                vr_grid[i,j] = 0.0
-                vz_grid[i,j] = 0.0
+                vr_grid[i, j] = 0.0
+                vphi_grid[i, j] = 0.0
+                vz_grid[i, j] = 0.0
             end
         end
     end
     # add z = 0 line
     vr_grid = [vr_grid[:, 1] vr_grid]
+    vphi_grid = [vphi_grid[:, 1] vphi_grid]
     vz_grid = [vz_grid[:, 1] vz_grid]
     pushfirst!(z_range, 0.0)
-    grid = VelocityGrid(r_range, z_range, vr_grid, vz_grid, nr, nz)
+    grid = VelocityGrid(r_range, z_range, vr_grid, vphi_grid, vz_grid, nr, nz)
     @info "Done"
     return grid
 end
@@ -124,11 +150,12 @@ function VelocityGrid(
         n_timesteps = 1000,
         log = false,
     )
-    r, z, vr, vz, n = reduce_integrators(integrators_interpolated)
+    r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
     return VelocityGrid(
         r,
         z,
         vr,
+        vphi,
         vz,
         r0,
         hull,
@@ -145,20 +172,25 @@ function get_velocity(grid::VelocityGrid, r, z)
     end
     ridx = searchsorted_nearest(grid.r_range, r)
     zidx = searchsorted_nearest(grid.z_range, z)
-    return [grid.vr_grid[ridx, zidx], grid.vz_grid[ridx, zidx]]
+    return [grid.vr_grid[ridx, zidx], grid.vphi_grid[ridx, zidx], grid.vz_grid[ridx, zidx]]
 end
 
 function interpolate_velocity(grid::VelocityGrid, r, z)
     if point_outside_grid(grid, r, z)
-        return [0.0, 0.0]
+        return [0.0, 0.0, 0.0]
     end
-    return [grid.vr_interpolator(r, z), grid.vz_interpolator(r, z)]
+    return [
+        grid.vr_interpolator(r, z),
+        grid.vphi_interpolator(r, z),
+        grid.vz_interpolator(r, z),
+    ]
 end
 
 function get_velocity_interpolators(
     r::Vector{Float64},
     z::Vector{Float64},
     vr::Vector{Float64},
+    vphi::Vector{Float64},
     vz::Vector{Float64};
     type = "linear",
 )
@@ -166,20 +198,23 @@ function get_velocity_interpolators(
     r = r[mask]
     z = z[mask]
     vr = vr[mask]
+    vphi = vphi[mask]
     vz = vz[mask]
     r_log = log10.(r)
     z_log = log10.(z)
     points = hcat(r_log, z_log)
     if type == "linear"
         vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
+        vphi_int = scipy_interpolate.LinearNDInterpolator(points, vphi, fill_value = 0)
         vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
     elseif type == "nn"
         vr_int = scipy_interpolate.NearestNDInterpolator(points, vr)
+        vphi_int = scipy_interpolate.NearestNDInterpolator(points, vphi)
         vz_int = scipy_interpolate.NearestNDInterpolator(points, vz)
     else
         error("interpolation type $type not supported")
     end
-    return vr_int, vz_int
+    return vr_int, vphi_int, vz_int
 end
 
 
@@ -189,5 +224,5 @@ function update_velocity_grid(
     max_times,
     hull,
 )
-    return VelocityGrid(integrators, max_times, hull, nr=old_grid.nr, nz=old_grid.nz)
+    return VelocityGrid(integrators, max_times, hull, nr = old_grid.nr, nz = old_grid.nz)
 end

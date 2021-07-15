@@ -162,6 +162,7 @@ struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
     r::T
     z::T
     vr::T
+    vphi::T
     vz::T
     n::T
 end
@@ -197,6 +198,7 @@ function DenseIntegrator(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:r],
         integrator.p.data[:z],
         integrator.p.data[:vr],
+        integrator.p.data[:vphi],
         integrator.p.data[:vz],
         integrator.p.data[:n],
     )
@@ -209,6 +211,7 @@ function load_trajectory(tdata::Dict)
         tdata["r"],
         tdata["z"],
         tdata["vr"],
+        tdata["vphi"],
         tdata["vz"],
         tdata["n"],
     )
@@ -266,6 +269,7 @@ function slice_integrator(integrator::DenseIntegrator; in = 1, fi = nothing)
         integrator.r[in:fi],
         integrator.z[in:fi],
         integrator.vr[in:fi],
+        integrator.vphi[in:fi],
         integrator.vz[in:fi],
         integrator.n[in:fi],
     )
@@ -423,6 +427,7 @@ function interpolate_integrator(
     vr_dense = dense_solution[3, :]
     vz_dense = dense_solution[4, :]
     line_width_dense = r_dense .* integrator.p.lwnorm
+    vphi_dense = integrator.p.l0 ./ r_dense
     density_dense =
         compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
     return DenseIntegrator(
@@ -431,6 +436,7 @@ function interpolate_integrator(
         r_dense,
         z_dense,
         vr_dense,
+        vphi_dense,
         vz_dense,
         density_dense,
     )
@@ -486,6 +492,13 @@ function reduce_integrators(
             for (index, integrator) in zip(time_indices, integrators)
         ],
     )
+    vphi = reduce(
+        vcat,
+        [
+            integrator.p.data[:vphi][1:index]
+            for (index, integrator) in zip(time_indices, integrators)
+        ],
+    )
     vz = reduce(
         vcat,
         [
@@ -500,15 +513,16 @@ function reduce_integrators(
             for (index, integrator) in zip(time_indices, integrators)
         ],
     )
-    return r, z, vr, vz, n
+    return r, z, vr, vphi, vz, n
 end
 
 function reduce_integrators(integrators::Vector{<:DenseIntegrator})
     r = reduce(vcat, [integrator.r for integrator in integrators])
     z = reduce(vcat, [integrator.z for integrator in integrators])
     vr = reduce(vcat, [integrator.vr for integrator in integrators])
+    vphi = reduce(vcat, [integrator.vphi for integrator in integrators])
     vz = reduce(vcat, [integrator.vz for integrator in integrators])
     n = reduce(vcat, [integrator.n for integrator in integrators])
-    return r, z, vr, vz, n
+    return r, z, vr, vphi, vz, n
 end
 
