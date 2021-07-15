@@ -28,13 +28,8 @@ radiative_transfer:
     type: WindInterpolator 
     vacuum_density: 1e2
     n_timesteps: 10000
-<<<<<<< HEAD
-    nz: 500 #500 #"@vary grid 50,100,500,1000"
-    nr: 500
-=======
     nz: 500 
     nr: auto 
->>>>>>> b62e8f5c4e8730ec8e2c94094d7afafd02467391
 
 grid:
   # units of Rg
