@@ -517,7 +517,7 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
                 xray_luminosity,
                 Rg,
             )
-            if tau_x < 5
+            if tau_x < 5 
                 delta_tau = 0.1
             elseif tau_x < 20
                 delta_tau = 0.5
@@ -536,7 +536,7 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
             end
         else
             tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-            if tau_uv < 5
+            if tau_uv < 5 
                 delta_tau = 0.1
             elseif tau_uv < 20
                 delta_tau = 0.5
