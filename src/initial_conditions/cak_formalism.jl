@@ -86,7 +86,7 @@ function beta(bh::BlackHole, vz; r)
     return 1 - cs^2 / vz^2
 end
 
-function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6)
+function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6, mu=0.68)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / bh.Rg
@@ -110,7 +110,6 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6)
 end
 
 function get_wp0(rt::RadiativeTransfer, bh::BlackHole, z, w; r, mdot, alpha = 0.6)
-#    wp0 = (g(rt, bh, z, r = r) / f(rt, bh, z, r = r, alpha = alpha))^(1 / alpha) * mdot
     wp0 = mdot * (1 / f(rt, bh, z, r=r, alpha=alpha))^(1/(alpha-1))
     return wp0
 end
