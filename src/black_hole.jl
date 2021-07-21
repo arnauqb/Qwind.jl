@@ -34,8 +34,8 @@ end
 """
 Computes the Eddington luminosity for the given black hole mass.
 """
-function compute_eddington_luminosity(bh_mass)
-    return 4π * G * bh_mass * M_P * C / SIGMA_T
+function compute_eddington_luminosity(bh_mass; mu_e = 1.17)
+    return 4π * G * bh_mass * C * SIGMA_E / mu_e
 end
 compute_eddington_luminosity(bh::BlackHole) = compute_eddington_luminosity(bh.M)
 
