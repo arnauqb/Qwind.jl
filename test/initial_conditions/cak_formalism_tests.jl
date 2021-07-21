@@ -25,7 +25,7 @@ using Qwind, Test
     @testset "Test g" begin
         # radiation should be stronger at large z 
         for r in range(20.0, 1000.0, length=50)
-            @test Qwind.g(rt, bh, 1000.0, r=r) < 0
+            @test Qwind.g(rt, bh, 10000.0, r=r) < 0
         end
         # radiation should also be stronger at small z and smallish r
         for r in range(20.0, 100.0, length=50)
