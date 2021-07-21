@@ -86,7 +86,7 @@ function beta(bh::BlackHole, vz; r)
     return 1 - cs^2 / vz^2
 end
 
-function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6, mu=0.68)
+function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6, mu_e=1.17)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / bh.Rg
@@ -101,7 +101,7 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6, m
             no_uv_fraction = true,
         )[2] *
         K *
-        (1 / (SIGMA_E * vth))^alpha *
+        (1 / (SIGMA_E / mu_e * vth))^alpha *
         C^2 / bh.Rg
     # remove attentuation
     tauuv = compute_uv_tau(rt.interpolator.density_grid, r, 0.0, r, r - rt.radiation.zh, bh.Rg)
@@ -208,7 +208,7 @@ function find_critical_point_mdot(rt::RadiativeTransfer, bh::BlackHole, r; alpha
     return zero, zc
 end
 
-function get_initial_density(rt, bh::BlackHole, r, mdot; K = 0.3, alpha = 0.6, mu = 0.68)
+function get_initial_density(rt, bh::BlackHole, r, mdot; K = 0.3, alpha = 0.6, mu=0.61)
     sigmadot = mdot * CAK_Σ(rt, bh, r, K = K, alpha = alpha)
     return sigmadot / (compute_thermal_velocity(disk_temperature(bh, r)) * C) / (mu * M_P)
 end
@@ -228,7 +228,6 @@ function find_initial_denisty(model, r)
         mdc,
         K = model.ic.K,
         alpha = model.ic.alpha,
-        mu = model.ic.mu,
     )
     return n
 end
