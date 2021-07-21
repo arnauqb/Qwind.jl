@@ -125,6 +125,12 @@ function parse_variation(value)
             parse(Float64, value_split[3]),
             length = parse(Int, value_split[4]),
         )
+    elseif value_split[1] == "log"
+        return 10 .^ range(
+            log10(parse(Float64, value_split[2])),
+            log10(parse(Float64, value_split[3])),
+            length = parse(Int, value_split[4]),
+        )
     elseif value_split[1] == "grid"
         values = nothing
         try

@@ -1,6 +1,6 @@
 system:
   qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
-  n_cpus: 112
+  n_cpus: 16
   partition: cosma7-shm
   account: dp004
   max_time: 72:00:00
@@ -8,7 +8,7 @@ system:
   
 black_hole:
   M: 1e8 # solar masses
-  mdot: 0.5 # Eddington units
+  mdot: 0.025000000000000005 # Eddington units
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
