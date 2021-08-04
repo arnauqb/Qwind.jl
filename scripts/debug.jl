@@ -21,6 +21,8 @@ model, iterations_dict = get_model("./configs/debug.yaml");
 
 run_iteration!(model, iterations_dict, it_num=1);
 
+run_iteration!(model, iterations_dict, it_num=2);
+
 xl = model.rad.xray_luminosity;
 Rg = model.bh.Rg;
 r_range = range(0, 1000.0, length = 500);
