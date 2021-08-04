@@ -54,10 +54,12 @@ compute_ionization_parameter(r, z, number_density, tau_x, xray_luminosity, Rg; z
         zh = zh,
     )
 
-compute_ionization_parameter(radiation::Radiation, r, z, number_density, tau_x) =
+compute_ionization_parameter(radiation::Radiation, r, z, vr, vz, number_density, tau_x) =
     compute_ionization_parameter(
         r,
         z,
+        vr,
+        vz,
         number_density,
         tau_x,
         radiation.xray_luminosity,
