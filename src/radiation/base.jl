@@ -31,7 +31,7 @@ function compute_ionization_parameter(
 )
     d = sqrt(r^2 + z^2) * Rg
     # relativistic correction to the flux
-    beta = max(sqrt(vr^2 + vz^2), 1e-6)
+    beta = max(min(1.0, sqrt(vr^2 + vz^2)), 1e-5)
     gamma = 1.0 / sqrt(1 - beta^2)
     cosθ = (r * vr + (z - zh) * vz) / (d * beta)
     flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
