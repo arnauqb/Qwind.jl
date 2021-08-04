@@ -18,10 +18,41 @@ end
 """
 Ionization parameter ξ
 """
-function compute_ionization_parameter(r, z, number_density, tau_x, xray_luminosity, Rg)
+function compute_ionization_parameter(
+    r,
+    z,
+    vr,
+    vz,
+    number_density,
+    tau_x,
+    xray_luminosity,
+    Rg;
+    zh = 0.0,
+)
     d = sqrt(r^2 + z^2) * Rg
-    return max(xray_luminosity * exp(-tau_x) / (number_density * d^2), 1e-20)
+    # relativistic correction to the flux
+    beta = max(sqrt(vr^2 + vz^2), 1e-6)
+    gamma = 1.0 / sqrt(1 - beta^2)
+    cosθ = (r * vr + (z - zh) * vz) / (d * beta)
+    flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
+    return max(
+        xray_luminosity * exp(-tau_x) / (number_density * d^2) * flux_correction,
+        1e-20,
+    )
 end
+
+compute_ionization_parameter(r, z, number_density, tau_x, xray_luminosity, Rg; zh = 0.0) =
+    compute_ionization_parameter(
+        r,
+        z,
+        0.0,
+        0.0,
+        number_density,
+        tau_x,
+        xray_luminosity,
+        Rg,
+        zh = zh,
+    )
 
 compute_ionization_parameter(radiation::Radiation, r, z, number_density, tau_x) =
     compute_ionization_parameter(
@@ -31,6 +62,7 @@ compute_ionization_parameter(radiation::Radiation, r, z, number_density, tau_x) 
         tau_x,
         radiation.xray_luminosity,
         radiation.Rg,
+        zh = radiation.zh,
     )
 
 """
@@ -99,7 +131,7 @@ function compute_force_multiplier_eta(ionization_parameter, mode::FMNoInterp)
 end
 
 "This is the sobolev optical depth parameter for the force multiplier"
-function compute_tau_eff(number_density, dv_dr, mu = 0.61, mu_e=1.17)
+function compute_tau_eff(number_density, dv_dr, mu = 0.61, mu_e = 1.17)
     v_thermal_sk = 6.77652505049944e-5 # thermal velocity at T=25e3 K in C units
     if dv_dr == 0
         return 1.0

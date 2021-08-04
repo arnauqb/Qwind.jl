@@ -2,7 +2,7 @@ using Peaks, Roots
 
 get_B0(r) = 1.0 / r^2
 
-function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
+function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1, no_fuv=false)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     frad = compute_disc_radiation_field(
         rt,
@@ -13,6 +13,7 @@ function f(rt::RadiativeTransfer, bh::BlackHole, z; r, alpha = 0.6, zmax = 5e-1)
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,
+        no_uv_fraction=no_fuv,
     )[2]
     frad0 = compute_disc_radiation_field(
         rt,
@@ -50,12 +51,13 @@ function nozzle_function(
     r,
     alpha = 0.6,
     zmax = 5e-1,
+    no_fuv=false
 )
     c = alpha * (1 - alpha)^((1 - alpha) / alpha)
     if g(rt, bh, z, r = r, zmax = zmax) <= 0
         return Inf
     end
-    return c * f(rt, bh, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
+    return c * f(rt, bh, z, r = r, alpha = alpha, zmax = zmax, no_fuv=no_fuv)^(1 / alpha) /
            (g(rt, bh, z, r = r, zmax = zmax))^((1 - alpha) / alpha)
 end
 
@@ -66,9 +68,10 @@ function find_nozzle_function_minimum(
     alpha = 0.6,
     zmax = 5e-1,
     n_z=150,
+    no_fuv=false,
 )
     z_range = 10 .^ range(-4, 3, length = n_z)
-    n_range = nozzle_function.(Ref(rt), Ref(bh), z_range, r = r, alpha = alpha, zmax = zmax)
+    n_range = nozzle_function.(Ref(rt), Ref(bh), z_range, r = r, alpha = alpha, zmax = zmax,no_fuv=no_fuv)
     mask = n_range .!= Inf
     n_range = n_range[mask]
     z_range = z_range[mask]
