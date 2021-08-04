@@ -255,7 +255,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajector
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
     taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     push!(data[:r], r)
@@ -287,7 +287,7 @@ function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, traject
     density = compute_density(r, z, vr, vz, integrator.p)
     taux = compute_xray_tau(radiative_transfer, r, z, density, integrator.p.r0)
     tauuv = compute_uv_tau(radiative_transfer, r, z, density, integrator.p.r0)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
@@ -365,7 +365,7 @@ function compute_radiation_acceleration(
     density = compute_density(r, z, vr, vz, p)
     taux = compute_xray_tau(radiative_transfer, r, z, density, p.r0)
     tauuv = compute_uv_tau(radiative_transfer, r, z, density, p.r0)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
@@ -386,7 +386,7 @@ function compute_radiation_acceleration(
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, p)
     taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(
