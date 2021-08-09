@@ -211,7 +211,7 @@ function load_trajectory(tdata::Dict)
         tdata["r"],
         tdata["z"],
         tdata["vr"],
-        tdata["vphi"],
+        [0.0], #tdata["vphi"],
         tdata["vz"],
         tdata["n"],
     )

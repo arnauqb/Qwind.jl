@@ -41,22 +41,20 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  #r_in: "@vary grid 20,25,30,35,40,45,50,60,70,80,90,100,120,140,150,175,200,250,300"
-  r_in: "@vary grid 25,35,45,60,80,90,120,140,150,175,200,250,300"
-  #r_in: "@vary grid 20,30,40,50,70,100"
-  #r_in: "@vary grid 150,175,200,225,250,300,350,400"
+  r_in: "@vary grid 20,25,30,40,50,75,100,125,150,175,200,300,400,500"
+  #r_in: "@vary grid 25,30"
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
-  mu: 0.68
+  mu: 0.61
 
 integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_lowk"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan_full"
+  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan_rel"
   #save_path: "/home/arnau/code/Qwind.jl/rin_autok"

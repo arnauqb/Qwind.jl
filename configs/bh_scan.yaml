@@ -1,7 +1,6 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
-  #qwind_path: /home/arnau/code/Qwind.jl
-  n_cpus: 16
+  n_cpus: 32
   partition: cosma
   account: durham
   max_time: 72:00:00
@@ -10,7 +9,6 @@ system:
 black_hole:
   M: "@vary grid 1e6,1e7,1e8,1e9,1e10" # solar masses
   mdot: "@vary log 0.025 0.5 5"
-  #mdot: 0.5
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
@@ -50,13 +48,13 @@ initial_conditions:
   z_0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
-  mu: 0.68
+  mu: 0.61
 
 integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/taueff"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/bh_scan"
+  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/bh_scan_ext"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/bh_scan_rin20_rel"
   #save_path: "/cosma7/data/dp004/dc-quer1/qwind_runs/bh_1e8"
   #save_path: "/home/arnau/code/Qwind.jl/bh_scan"

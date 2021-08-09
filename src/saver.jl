@@ -161,6 +161,7 @@ function save_trajectories!(integrators::Vector{<:Sundials.IDAIntegrator}, group
         tgroup["r"] = integ.r
         tgroup["z"] = integ.z
         tgroup["vr"] = integ.vr
+        tgroup["vphi"] = integ.vphi
         tgroup["vz"] = integ.vz
         tgroup["n"] = integ.n
     end
