@@ -169,7 +169,7 @@ end
 
 function get_velocity(grid::VelocityGrid, r, z)
     if point_outside_grid(grid, r, z)
-        return [0.0, 0.0]
+        return [0.0, 0.0, 0.0]
     end
     ridx = searchsorted_nearest(grid.r_range, r)
     zidx = searchsorted_nearest(grid.z_range, z)

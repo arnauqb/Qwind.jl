@@ -1,6 +1,12 @@
 using CSV, DataFrames, YAML, HDF5, Printf, JLD2
 export save_trajectories, save_wind
 
+function escaped(integrator::DenseIntegrator)
+    vt = sqrt.(integrator.vr .^2 + integrator.vz .^2 )
+    d = sqrt.(integrator.r .^2 + integrator.z .^ 2)
+    return maximum(vt .> compute_escape_velocity.(d))
+end
+
 function create_integrators_df(integrators, Rg)
     df = DataFrame()
     for integrator in integrators
@@ -28,12 +34,23 @@ function save_trajectories(integrators, save_path)
     #CSV.write(save_path, df)
 end
 
+function compute_integrator_mdot(integrator::DenseIntegrator, Rg, lw)
+    if escaped(integrator)
+        n0 = integrator.n[1]
+        v0 = integrator.vz[1]
+        mw = 2π * integrator.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
+        return mw
+    else
+        return 0.
+    end
+end
+
 function compute_integrator_mdot(integrator, Rg)
     if escaped(integrator)
         n0 = integrator.p.n0
         v0 = integrator.p.v0
         lw = integrator.p.lwnorm * integrator.p.r0
-        mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P
+        mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
         return mw
     else
         return 0.
@@ -44,7 +61,7 @@ function compute_integrator_momentum(integrator, Rg)
     n0 = integrator.p.n0
     v0 = integrator.p.v0
     lw = integrator.p.lwnorm * integrator.p.r0
-    mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P
+    mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
     vt = sqrt.(integrator.p.data[:vr] .^ 2 + integrator.p.data[:vz] .^ 2) * C
     return mw * vt
 end
@@ -81,6 +98,18 @@ function compute_kinetic_luminosity(integrators::Vector, Rg)
     return kin_lumin
 end
 
+function compute_momentum_density(integrator::DenseIntegrator, Rg, lw)
+    if !escaped(integrator)
+        return 0.0
+    end
+    vrf = integrator.vr[end]
+    vzf = integrator.vz[end]
+    vf = sqrt(vrf^2 + vzf^2) * C
+    ret = compute_integrator_mdot(integrator, Rg, lw) * vf
+    #ret = 0.5 * compute_integrator_mdot(integrator, Rg, lw) * vf^2
+    return ret
+end
+
 function compute_momentum_density(integrator, Rg)
     if !escaped(integrator)
         return 0.0
@@ -90,6 +119,16 @@ function compute_momentum_density(integrator, Rg)
     vf = sqrt(vrf^2 + vzf^2) * C
     ret = compute_integrator_mdot(integrator, Rg) * vf
     return ret
+end
+
+function compute_momentum_density(integrators::Vector{DenseIntegrator}, Rg)
+    ret = 0.0
+    for i in 1:length(integrators)-1
+        lw = (integrators[i+1].r[1] - integrators[i].r[1])
+        integrator = integrators[i]
+        ret += compute_momentum_density(integrator, Rg, lw)
+    end
+    return ret 
 end
 
 function compute_momentum_density(integrators::Vector, Rg)
