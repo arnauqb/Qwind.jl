@@ -81,6 +81,27 @@ function compute_kinetic_luminosity(integrators::Vector, Rg)
     return kin_lumin
 end
 
+function compute_momentum_density(integrator, Rg)
+    if !escaped(integrator)
+        return 0.0
+    end
+    vrf = integrator.p.data[:vr][end]
+    vzf = integrator.p.data[:vz][end]
+    vf = sqrt(vrf^2 + vzf^2) * C
+    ret = compute_integrator_mdot(integrator, Rg) * vf
+    return ret
+end
+
+function compute_momentum_density(integrators::Vector, Rg)
+    ret = 0.0
+    for i in 1:length(integrators)
+        isassigned(integrators, i) || continue
+        integrator = integrators[i]
+        ret += compute_momentum_density(integrator, Rg)
+    end
+    return ret 
+end
+
 function compute_maximum_velocity(integrators)
     maxv = 0.
     for i in 1:length(integrators)
@@ -194,6 +215,7 @@ function save_hdf5(integrators, model, hdf5_save_path, it_num)
         macc = compute_mass_accretion_rate(bh)
         g["mass_accretion_rate"] = macc
         g["kinetic_luminosity"] = compute_kinetic_luminosity(integrators, bh.Rg)
+        g["momentum"] = compute_momentum_density(integrators, bh.Rg)
         mloss = compute_wind_mdot(integrators, bh.Rg)
         g["mass_loss"] = mloss
         g["max_velocity"] = compute_maximum_velocity(integrators)
