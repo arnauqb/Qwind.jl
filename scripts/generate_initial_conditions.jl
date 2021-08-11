@@ -3,7 +3,7 @@ pids = addprocs_slurm(32,
                       topology=:master_worker,
                       p="cosma6",
                       A="dp004",
-                      t="24:00:00",
+                      t="04:00:00",
                       job_file_loc="cpu_logs")
 @everywhere pushfirst!(Base.DEPOT_PATH, "/tmp/julia.cache")
 println("Running on $(nprocs()) cores.")
@@ -61,14 +61,12 @@ end
     model = generate_model(M, mdot, 0.0)
     rr, mdots, zcs = calculate_wind_mdots(model)
     df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
-    #output_file = "src/initial_conditions/critical_points_data/M_$(M)_mdot_$(mdot).csv"
-    #output_file = "/cosma/home/dp004/dc-quer1/critical_points_mu/M_$(M)_mdot_$(mdot).csv"
     output_file = "/cosma6/data/dp004/dc-quer1/critical_points_mu/M_$(M)_mdot_$(mdot).csv"
     CSV.write(output_file, df)
 end
 
 M_range = [1e6, 1e7, 1e8, 1e9, 1e10]
-mdot_range = 10 .^ range(log10(0.025), log10(0.5), length=5) 
+mdot_range = [0.05, 0.1, 0.25] #10 .^ range(log10(0.025), log10(0.5), length=5) 
 
 for M in M_range
     #f(mdot) = generate_and_save_df(M, mdot)

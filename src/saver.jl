@@ -106,7 +106,6 @@ function compute_momentum_density(integrator::DenseIntegrator, Rg, lw)
     vzf = integrator.vz[end]
     vf = sqrt(vrf^2 + vzf^2) * C
     ret = compute_integrator_mdot(integrator, Rg, lw) * vf
-    #ret = 0.5 * compute_integrator_mdot(integrator, Rg, lw) * vf^2
     return ret
 end
 
@@ -165,6 +164,7 @@ function create_wind_properties(integrators, bh::BlackHole)
     ret["kinetic_luminosity"] = compute_kinetic_luminosity(integrators, bh.Rg)
     ret["mass_loss"] = compute_wind_mdot(integrators, bh.Rg)
     ret["max_velocity"] = compute_maximum_velocity(integrators)
+    ret["momentum"] = compute_momentum_density(integrators, bh.Rg)
     ret["mass_loss_fraction"] = ret["mass_loss"] / ret["mass_accretion_rate"]
     return ret
 end

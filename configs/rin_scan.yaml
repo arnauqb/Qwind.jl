@@ -56,5 +56,5 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan_newdensity"
   #save_path: "/home/arnau/code/Qwind.jl/rin_autok"
