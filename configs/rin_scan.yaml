@@ -41,7 +41,8 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  r_in: "@vary grid 20,25,30,40,50,75,100,125,150,175,200,300,400,500"
+  #r_in: "@vary grid 20,25,30,40,50,75,100,125,150,175,200,300,400,500"
+  r_in: "@vary grid 225,250,275"
   #r_in: "@vary grid 25,30"
   r_fi: 1500.0
   n_lines: auto
@@ -56,5 +57,5 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan_newdensity"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan_more"
   #save_path: "/home/arnau/code/Qwind.jl/rin_autok"
