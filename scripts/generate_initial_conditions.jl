@@ -66,7 +66,7 @@ end
 end
 
 M_range = [1e6, 1e7, 1e8, 1e9, 1e10]
-mdot_range = [0.05, 0.1, 0.25] #10 .^ range(log10(0.025), log10(0.5), length=5) 
+mdot_range = [0.01] #10 .^ range(log10(0.025), log10(0.5), length=5) 
 
 for M in M_range
     #f(mdot) = generate_and_save_df(M, mdot)
