@@ -46,6 +46,7 @@ function QsosedRadiation(
     bh::BlackHole,
     nr::Int,
     fx::Float64,
+    fuv::Union{String, Number}
     disk_r_in::Float64,
     z_xray::Float64,
     disk_height::Float64,
@@ -56,7 +57,11 @@ function QsosedRadiation(
     rmin = bh.isco
     rmax = 1400.0
     disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
-    uvf = uv_fractions(bh, disk_grid)
+    if fuv == "auto"
+        uvf = uv_fractions(bh, disk_grid)
+    else
+        uvf = fuv .* ones(length(disk_grid))
+    end
     if any(isnan.(uvf))
         error("UV fractions contain NaN, check radiation and boundaries")
     end
@@ -106,6 +111,7 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
         bh,
         radiation_config[:n_r],
         radiation_config[:f_x],
+        radiation_config[:f_uv],
         disk_r_in,
         radiation_config[:z_xray],
         radiation_config[:disk_height],

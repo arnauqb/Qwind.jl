@@ -16,9 +16,19 @@ struct RERadiation{T} <: Radiation{T}
     isco::T
     spin::T
     fuv::T
+    z_xray::T
+    disk_height::T
+    xray_opacity::XRayOpacity
     xray_luminosity::T
     Rg::T
-    function RERadiation(bh::BlackHole, fuv::T, fx::T) where {T<:AbstractFloat}
+    function RERadiation(
+        bh::BlackHole;
+        fuv::T,
+        fx::T,
+        z_xray::T,
+        disk_height::T,
+        xray_opacity::XRayOpacity,
+    ) where {T<:AbstractFloat}
         bolometric_luminosity = compute_bolometric_luminosity(bh)
         xray_luminosity = fx * bolometric_luminosity
         new{typeof(fx)}(
@@ -35,7 +45,19 @@ end
 
 function RERadiation(bh::BlackHole, config::Dict)
     radiation_config = config[:radiation]
-    return RERadiation(bh, radiation_config[:f_uv], radiation_config[:f_x])
+    if radiation_config[:xray_opacity] == "thomson"
+        xray_opacity = Thomson()
+    else
+        xray_opacity = Boost()
+    end
+    return RERadiation(
+        bh,
+        fuv = radiation_config[:f_uv],
+        fx = radiation_config[:f_x],
+        z_xray = radiation_config[:z_xray],
+        disk_height = radiation_config[:disk_height],
+        xray_opacity = xray_opacity,
+    )
 end
 
 compute_radiation_constant(radiation::RERadiation) =

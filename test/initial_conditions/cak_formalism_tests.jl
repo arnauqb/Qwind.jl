@@ -39,7 +39,7 @@ using Qwind, Test
         end
         # radiation should also be stronger at small z and smallish r
         for r in range(20.0, 100.0, length=50)
-            @test Qwind.g(rt, bh, 1e-10, r=r) < 0
+            @test Qwind.g(rt, bh, 1, r=r) < 0
         end
     end
 end
