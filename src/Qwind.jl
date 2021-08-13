@@ -16,7 +16,6 @@ include("thermodynamics.jl")
 include("radiation/base.jl")
 include("radiation/disk.jl")
 include("radiation/qsosed.jl")
-include("radiation/risaliti_elvis.jl")
 
 # radiative transfer
 include("radiative_transfer/base.jl")
