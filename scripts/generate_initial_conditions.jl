@@ -31,35 +31,9 @@ flush(stderr)
     return model
 end
 
-@everywhere function calculate_wind_mdots(model)
-    rr = 10 .^ range(log10(15.0), log10(1500), length = 50)
-    mdots = []
-    zcs = []
-    f(r) = Qwind.find_nozzle_function_minimum(
-            model.rt,
-            model.bh,
-            r,
-            alpha = 0.6,
-            zmax = 1e-2,
-        )
-    results = pmap(f, rr)
-    zcs = [res[1] for res in results]
-    mdots = [res[2] for res in results]
-    #for r in rr
-    #    zc, mdc =         println(r)
-    #    println(mdc)
-    #    push!(zcs, zc)
-    #    push!(mdots, mdc)
-    #end
-    rr = rr[.!isnan.(mdots)]
-    mdots = mdots[.!isnan.(mdots)]
-    zcs = zcs[zcs .!= Inf]
-    return rr, mdots, zcs
-end
-
 @everywhere function generate_and_save_df(M, mdot)
     model = generate_model(M, mdot, 0.0)
-    rr, mdots, zcs = calculate_wind_mdots(model)
+    rr, mdots, zcs = calculate_wind_mdots(model.rt, molde.bh)
     df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
     output_file = "/cosma6/data/dp004/dc-quer1/critical_points_mu/M_$(M)_mdot_$(mdot).csv"
     CSV.write(output_file, df)

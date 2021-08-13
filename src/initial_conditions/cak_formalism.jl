@@ -1,4 +1,5 @@
 using Peaks, Roots
+export calculate_wind_mdots
 
 get_B0(r) = 1.0 / r^2
 
@@ -233,4 +234,24 @@ function find_initial_denisty(model, r)
         alpha = model.ic.alpha,
     )
     return n
+end
+
+function calculate_wind_mdots(rt, bh)
+    rr = 10 .^ range(log10(15.0), log10(1500), length = 50)
+    mdots = []
+    zcs = []
+    f(r) = find_nozzle_function_minimum(
+            rt,
+            bh,
+            r,
+            alpha = 0.6,
+            zmax = 1e-2,
+        )
+    results = pmap(f, rr)
+    zcs = [res[1] for res in results]
+    mdots = [res[2] for res in results]
+    rr = rr[.!isnan.(mdots)]
+    mdots = mdots[.!isnan.(mdots)]
+    zcs = zcs[zcs .!= Inf]
+    return rr, mdots, zcs
 end

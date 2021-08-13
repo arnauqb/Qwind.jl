@@ -27,6 +27,33 @@ function radiation_force_integrand!(
     v[:] = fuv * mdot * nt * common_projection * [r_projection, z - radiation.zh]
 end
 
+# Tau UV center, non relativistic, no UV fraction
+function radiation_force_integrand!(
+    uv_fraction::NoUVFraction,
+    tau_uv_calculation::TauUVCenter,
+    flux_correction::NoRelativistic,
+    radiative_transfer::RadiativeTransfer,
+    radiation::Radiation,
+    density_grid::InterpolationGrid,
+    Rg,
+    v,
+    rd,
+    phid,
+    r,
+    z,
+    vr,
+    vz,
+    beta,
+    gamma,
+)
+    delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
+    nt = disk_nt_rel_factors(radiation, rd)
+    r_projection = (r - rd * cos(phid))
+    common_projection = 1.0 / (rd^2 * delta^4)
+    fuv, mdot = get_fuv_mdot(radiation, rd)
+    v[:] = mdot * nt * common_projection * [r_projection, z - radiation.zh]
+end
+
 # Tau UV from disk, non relativistic 
 function radiation_force_integrand!(
     uv_fraction::UVFraction,
@@ -223,7 +250,7 @@ end
 
 # Tau uv from center
 function integrate_radiation_force_integrand(
-    uv_fraction::UVFraction,
+    uv_fraction::UVFractionFlag,
     tau_uv_calculation::TauUVCenter,
     radiative_transfer::RadiativeTransfer,
     r,

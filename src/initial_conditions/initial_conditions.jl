@@ -18,7 +18,7 @@ struct UniformIC{T} <: InitialConditions{T}
     logspaced::Bool
 end
 
-function UniformIC(radiation, black_hole, config)
+function UniformIC(radiation, radiative_transfer, black_hole, config)
     icc = config[:initial_conditions]
     if :launch_range in keys(icc)
         rin, rfi = icc[:launch_range]
@@ -61,13 +61,17 @@ struct CAKIC{T} <: InitialConditions{T}
     critical_points_df::DataFrame
 end
 
-function CAKIC(radiation, black_hole, config)
+function CAKIC(radiation, radiative_transfer, black_hole, config)
     icc = config[:initial_conditions]
     M = config[:black_hole][:M]
     mdot = config[:black_hole][:mdot]
-    filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
-    critical_points_df =
-        CSV.read(joinpath(@__DIR__, filename), DataFrame)
+    if icc[:use_precalculated]
+        filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
+        critical_points_df = CSV.read(joinpath(@__DIR__, filename), DataFrame)
+    else
+        rr, mdots, zcs = calculate_wind_mdots(radiative_transfer, black_hole)
+        critical_points_df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
+    end
     if :launch_range in keys(icc)
         rin, rfi = icc[:launch_range]
     else
