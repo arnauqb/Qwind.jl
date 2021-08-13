@@ -14,6 +14,7 @@ struct QsosedRadiation{T} <: Radiation{T}
     Rg::T
     flux_correction::FluxCorrection
     xray_opacity::XRayOpacity
+    tau_uv_calculation::TauUVCalculation
     disk_integral_rtol::T
 end
 
@@ -43,16 +44,17 @@ end
 
 
 function QsosedRadiation(
-    bh::BlackHole,
+    bh::BlackHole;
     nr::Int,
     fx::Float64,
-    fuv::Union{String, Number}
+    fuv::Union{String, Number},
     disk_r_in::Float64,
     z_xray::Float64,
     disk_height::Float64,
     relativistic::FluxCorrection,
     xray_opacity::XRayOpacity,
-    disk_integral_rtol = 1e-3
+    tau_uv_calculation::TauUVCalculation,
+    disk_integral_rtol = 1e-3,
 )
     rmin = bh.isco
     rmax = 1400.0
@@ -81,6 +83,7 @@ function QsosedRadiation(
         bh.Rg,
         relativistic,
         xray_opacity,
+        tau_uv_calculation,
         disk_integral_rtol
     )
 end
@@ -101,6 +104,12 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
     elseif disk_r_in == "r_in"
         disk_r_in = config[:initial_conditions][:r_in]
     end
+    tau_uv_calc = radiation_config[:tau_uv_calculation]
+    if tau_uv_calc == "center"
+        tau_uv_calc = TauUVCenter()
+    elseif tau_uv_calc == "disk"
+        tau_uv_calc = TauUVDisk()
+    end
     if radiation_config[:xray_opacity] == "thomson"
         xray_opacity = Thomson()
     else
@@ -109,15 +118,16 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
     disk_rtol = get(radiation_config,:disk_integral_rtol,1e-3)
     return QsosedRadiation(
         bh,
-        radiation_config[:n_r],
-        radiation_config[:f_x],
-        radiation_config[:f_uv],
-        disk_r_in,
-        radiation_config[:z_xray],
-        radiation_config[:disk_height],
-        mode,
-        xray_opacity,
-        disk_rtol
+        nr=radiation_config[:n_r],
+        fx=radiation_config[:f_x],
+        fuv=radiation_config[:f_uv],
+        disk_r_in=disk_r_in,
+        z_xray=radiation_config[:z_xray],
+        disk_height=radiation_config[:disk_height],
+        relativistic=mode,
+        xray_opacity=xray_opacity,
+        tau_uv_calculation=tau_uv_calc,
+        disk_integral_rtol=disk_rtol
     )
 end
 

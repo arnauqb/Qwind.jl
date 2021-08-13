@@ -6,7 +6,11 @@ export DensityInterpolator,
     FMInterp,
     Relativistic,
     NoRelativistic,
-    NoUVFraction,
+    ConstantUVFraction,
+    RadialUVFraction,
+    TauUVCalculation,
+    TauUVCenter,
+    TauUVDisk,
     Boost,
     Thomson
 
@@ -33,8 +37,13 @@ struct Relativistic <: FluxCorrection end
 struct NoRelativistic <: FluxCorrection end
 
 # Options for disc integral
-abstract type UVFraction <: Flag end
-struct NoUVFraction <: UVFraction end
+abstract type UVFractionFlag <: Flag end
+struct NoUVFraction <: UVFractionFlag end
+struct UVFraction <: UVFractionFlag end
+
+abstract type TauUVCalculation end
+struct TauUVCenter <: TauUVCalculation end
+struct TauUVDisk <: TauUVCalculation end
 
 # Radiative transfer
 abstract type CellIterator{T<:AbstractFloat} end

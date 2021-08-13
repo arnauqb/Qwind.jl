@@ -19,7 +19,9 @@ end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
 
-run_iteration!(model, iterations_dict, it_num=1);
+run!(model);
+
+run_iteration!(model, iterations_dict, it_num=1, parallel=false);
 
 run_iteration!(model, iterations_dict, it_num=2);
 

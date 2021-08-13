@@ -13,14 +13,15 @@ black_hole:
 
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
-  relativistic: true
-  f_uv: "auto"
+  relativistic: false
+  f_uv: 0.85
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
+  tau_uv_calculation: center
   disk_integral_rtol: 1e-3
 
 radiative_transfer:
@@ -43,7 +44,7 @@ initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: 10 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   #n_0: 1e10
@@ -57,4 +58,4 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
-  save_path: "./tests"
+  save_path: "./qwind_original"
