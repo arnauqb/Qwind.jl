@@ -20,8 +20,6 @@ include("radiation/qsosed.jl")
 # radiative transfer
 include("radiative_transfer/base.jl")
 include("radiative_transfer/regular_grid.jl")
-# risaliti elvis
-include("radiative_transfer/risaliti_elvis.jl")
 # wind interpolation
 include("radiative_transfer/wind_interpolator/base.jl")
 include("radiative_transfer/wind_interpolator/grids.jl")

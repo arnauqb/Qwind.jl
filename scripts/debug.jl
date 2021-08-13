@@ -7,13 +7,13 @@ include("scripts/plotting.jl")
 using Profile, PProf
 
 function get_model(config)
-    model = Model(config);
+    model = Model(config)
     try
-        mv(model.config[:integrator][:save_path], "backup",  force=true)
+        mv(model.config[:integrator][:save_path], "backup", force = true)
     catch
     end
-    model = Model(config);
-    iterations_dict = Dict();
+    model = Model(config)
+    iterations_dict = Dict()
     return model, iterations_dict
 end
 
@@ -21,9 +21,9 @@ model, iterations_dict = get_model("./configs/debug.yaml");
 
 run!(model);
 
-run_iteration!(model, iterations_dict, it_num=1, parallel=false);
+run_iteration!(model, iterations_dict, it_num = 1, parallel = false);
 
-run_iteration!(model, iterations_dict, it_num=2);
+run_iteration!(model, iterations_dict, it_num = 2);
 
 xl = model.rad.xray_luminosity;
 Rg = model.bh.Rg;
@@ -36,7 +36,7 @@ grid = DensityGrid(r_range, z_range, density_grid);
 res = zeros((length(r_range_test), length(z_range_test)));
 for (i, r) in enumerate(r_range_test)
     for (j, z) in enumerate(z_range_test)
-        res[i,j] = compute_xray_tau(grid, Boost(), 0.0, 0.0, r, z, xl, Rg)
+        res[i, j] = compute_xray_tau(grid, Boost(), 0.0, 0.0, r, z, xl, Rg)
     end
 end
 
@@ -44,13 +44,13 @@ LogNorm = matplotlib.colors.LogNorm;
 
 f, ax = plt.subplots()
 #cm = ax.pcolormesh(r_range_test, z_range_test, res', norm=LogNorm())
-cm = ax.contourf(r_range_test, z_range_test, res', norm=LogNorm())
-plt.colorbar(cm, ax=ax)
+cm = ax.contourf(r_range_test, z_range_test, res', norm = LogNorm())
+plt.colorbar(cm, ax = ax)
 
 
-run_iteration!(model, iterations_dict, it_num=1, parallel=true)
+run_iteration!(model, iterations_dict, it_num = 1, parallel = true)
 
-run_iteration!(model, iterations_dict, it_num=2, parallel=true)
+run_iteration!(model, iterations_dict, it_num = 2, parallel = true)
 
 #using JLD2
 #@save "./it_dict.jld2" iterations_dict
@@ -100,7 +100,7 @@ pprof()
 
 #run!(model, iterations_dict, parallel=true)
 Profile.clear()
-@profile run_iteration!(model, iterations_dict, it_num=2, parallel=false)
+@profile run_iteration!(model, iterations_dict, it_num = 2, parallel = false)
 pprof()
 
 lr, lw = Qwind.compute_lines_range(model);

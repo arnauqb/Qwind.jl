@@ -5,10 +5,10 @@ name: CI
 # Controls when the action will run. 
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - 'README.md'
+  #push:
+  #  branches: [ main ]
+  #  paths-ignore:
+  #    - 'README.md'
   pull_request:
     branches: [ main ]
     paths-ignore:
