@@ -108,7 +108,13 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6, m
         (1 / (SIGMA_E / mu_e * vth))^alpha *
         C^2 / bh.Rg
     # remove attentuation
-    tauuv = compute_uv_tau(rt.interpolator.density_grid, r, 0.0, r, r - rt.radiation.zh, bh.Rg)
+    if rt.radiation.tau_uv_calculation == TauUVDisk()
+        tauuv = compute_uv_tau(rt.interpolator.density_grid, r, 0.0, r, r - rt.radiation.zh, bh.Rg)
+    elseif rt.radiation.tau_uv_calculation == TauUVCenter()
+        tauuv = compute_uv_tau(rt.interpolator.density_grid, 0.0, 0.0, r, r - rt.radiation.zh, bh.Rg)
+    else
+        error("tau UV  calc. not recognised.")
+    end
     gamma0 = gamma0 / exp(-tauuv)
     return cc * gamma0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
@@ -123,7 +129,6 @@ function Feq(rt::RadiativeTransfer, bh::BlackHole, z, w, wp, mdot; r, alpha = 0.
     fv = f(rt, bh, z, r = r, alpha = alpha)
     vz = sqrt(2 * r * get_B0(r) * w)
     cs = compute_thermal_velocity(disk_temperature(bh, r))
-    #ret = wp * (1 - cs^2 / (2w)) - gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
     ret = wp * (1 - cs^2 / (vz^2)) + gv - fv * (1 / mdot)^alpha * abs(wp)^alpha
     return ret
 end

@@ -17,11 +17,11 @@ function get_model(config)
     return model, iterations_dict
 end
 
-model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./configs/comparison_1.yaml");
 
-run!(model);
+run!(model, iterations_dict);
 
-run_iteration!(model, iterations_dict, it_num = 1, parallel = false);
+run_iteration!(model, iterations_dict, it_num = 1, parallel = true);
 
 run_iteration!(model, iterations_dict, it_num = 2);
 
