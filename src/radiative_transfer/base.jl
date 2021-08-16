@@ -270,7 +270,18 @@ function integrate_radiation_force_integrand(
     no_uv_fraction = false,
 )
     Rg = radiative_transfer.radiation.Rg
-    tau_uv = compute_uv_tau(radiative_transfer.interpolator.density_grid, r, 0.0, r, z - radiative_transfer.radiation.zh, Rg)
+    density_grid = radiative_transfer.interpolator.density_grid
+    tau_uv = compute_uv_tau(
+        density_grid,
+        density_grid.iterator,
+        0.0, #rd
+        0.0, #phid
+        radiative_transfer.radiation.zh,
+        r,
+        0.0,
+        z,
+        Rg,
+    )
     f(x, v) = radiation_force_integrand!(
         uv_fraction,
         tau_uv_calculation,
