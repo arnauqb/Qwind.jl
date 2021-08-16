@@ -143,7 +143,7 @@ function radiation_force_integrand!(
 end
 
 # No UV fraction version
-function radiation_force_integrand_no_uv_fraction!(
+function radiation_force_integrand!(
     uv_fraction::NoUVFraction,
     tau_uv_calculation::TauUVDisk,
     flux_correction::Relativistic,
@@ -190,6 +190,77 @@ function radiation_force_integrand_no_uv_fraction!(
         [r_projection, z - radiation.zh]
 end
 
+# No tau UV version
+function radiation_force_integrand!(
+    uv_fraction::UVFraction,
+    tau_uv_calculation::NoTauUV,
+    flux_correction::Relativistic,
+    radiative_transfer::RadiativeTransfer,
+    radiation::Radiation,
+    density_grid::InterpolationGrid,
+    Rg,
+    v,
+    rd,
+    phid,
+    r,
+    z,
+    vr,
+    vz,
+    beta,
+    gamma,
+)
+    delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
+    fuv, mdot = get_fuv_mdot(radiation, rd)
+    nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
+    r_projection = (r - rd * cos(phid))
+    # relativistic correction to the flux
+    cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
+    flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
+    # common geometric term for r and z
+    common_projection = 1.0 / (rd^2 * delta^4)
+    v[:] = flux_correction *
+        mdot *
+        fuv *
+        nt *
+        common_projection *
+        [r_projection, z - radiation.zh]
+end
+
+# No tau UV no fuv version
+function radiation_force_integrand!(
+    uv_fraction::NoUVFraction,
+    tau_uv_calculation::NoTauUV,
+    flux_correction::Relativistic,
+    radiative_transfer::RadiativeTransfer,
+    radiation::Radiation,
+    density_grid::InterpolationGrid,
+    Rg,
+    v,
+    rd,
+    phid,
+    r,
+    z,
+    vr,
+    vz,
+    beta,
+    gamma,
+)
+    delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
+    _, mdot = get_fuv_mdot(radiation, rd)
+    nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
+    r_projection = (r - rd * cos(phid))
+    # relativistic correction to the flux
+    cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
+    flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
+    # common geometric term for r and z
+    common_projection = 1.0 / (rd^2 * delta^4)
+    v[:] = flux_correction *
+        mdot *
+        nt *
+        common_projection *
+        [r_projection, z - radiation.zh]
+end
+
 """
 Integrates the radiation acceleration integrand on the disc.
 
@@ -200,7 +271,7 @@ Integrates the radiation acceleration integrand on the disc.
 """
 function integrate_radiation_force_integrand(
     uv_fraction::UVFractionFlag,
-    tau_uv_calculation::TauUVDisk,
+    tau_uv_calculation::Union{TauUVDisk, NoTauUV},
     radiative_transfer::RadiativeTransfer,
     r,
     z,
@@ -342,6 +413,20 @@ function compute_disc_radiation_field_vertical(
     tauuv = compute_uv_tau(grid, 0.0, 0.0, r, z - radiation.zh, Rg)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
     return [0.0, nt * constant * mdot * exp(-tauuv) * fuv / r^3]
+end
+
+function compute_disc_radiation_field_vertical(
+    tau_uv_calculation::NoTauUV,
+    radiation::Radiation,
+    grid::InterpolationGrid,
+    r,
+    z,
+)
+    Rg = radiation.Rg
+    constant = 3 / (2 * radiation.efficiency)
+    fuv, mdot = get_fuv_mdot(radiation, r)
+    nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
+    return [0.0, nt * constant * mdot * fuv / r^3]
 end
 
 function compute_disc_radiation_field_vertical(

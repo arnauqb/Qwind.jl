@@ -109,6 +109,10 @@ function QsosedRadiation(bh::BlackHole, config::Dict)
         tau_uv_calc = TauUVCenter()
     elseif tau_uv_calc == "disk"
         tau_uv_calc = TauUVDisk()
+    elseif tau_uv_calc == "no_tau_uv"
+        tau_uv_calc = NoTauUV()
+    else
+        error("tau uv calc not recognised")
     end
     if radiation_config[:xray_opacity] == "thomson"
         xray_opacity = Thomson()

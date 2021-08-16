@@ -11,6 +11,7 @@ export DensityInterpolator,
     TauUVCalculation,
     TauUVCenter,
     TauUVDisk,
+    NoTauUV,
     Boost,
     Thomson
 
@@ -44,6 +45,7 @@ struct UVFraction <: UVFractionFlag end
 abstract type TauUVCalculation end
 struct TauUVCenter <: TauUVCalculation end
 struct TauUVDisk <: TauUVCalculation end
+struct NoTauUV <: TauUVCalculation end
 
 # Radiative transfer
 abstract type CellIterator{T<:AbstractFloat} end

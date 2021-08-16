@@ -13,7 +13,7 @@ black_hole:
 
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
-  relativistic: false
+  relativistic: true
   f_uv: 0.85
   f_x: 0.15
   n_r: 1000
@@ -21,7 +21,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: center
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
 
 radiative_transfer:

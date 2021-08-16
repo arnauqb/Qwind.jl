@@ -112,6 +112,8 @@ function CAK_Σ(rt::RadiativeTransfer, bh::BlackHole, r; K = 0.3, alpha = 0.6, m
         tauuv = compute_uv_tau(rt.interpolator.density_grid, r, 0.0, r, r - rt.radiation.zh, bh.Rg)
     elseif rt.radiation.tau_uv_calculation == TauUVCenter()
         tauuv = compute_uv_tau(rt.interpolator.density_grid, 0.0, 0.0, r, r - rt.radiation.zh, bh.Rg)
+    elseif rt.radiation.tau_uv_calculation == NoTauUV()
+        tauuv = 0.0
     else
         error("tau UV  calc. not recognised.")
     end

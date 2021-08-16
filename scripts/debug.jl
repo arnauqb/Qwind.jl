@@ -17,7 +17,7 @@ function get_model(config)
     return model, iterations_dict
 end
 
-model, iterations_dict = get_model("./configs/comparison_1.yaml");
+model, iterations_dict = get_model("./configs/debug.yaml");
 
 run!(model, iterations_dict);
 
