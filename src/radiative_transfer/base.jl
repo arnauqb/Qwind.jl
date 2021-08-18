@@ -194,7 +194,7 @@ end
 function radiation_force_integrand!(
     uv_fraction::UVFraction,
     tau_uv_calculation::NoTauUV,
-    flux_correction::Relativistic,
+    flux_correction::NoRelativistic,
     radiative_transfer::RadiativeTransfer,
     radiation::Radiation,
     density_grid::InterpolationGrid,
@@ -215,7 +215,7 @@ function radiation_force_integrand!(
     r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
     cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
-    flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
+    flux_correction = 1.0 #1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
     common_projection = 1.0 / (rd^2 * delta^4)
     v[:] = flux_correction *
@@ -230,7 +230,7 @@ end
 function radiation_force_integrand!(
     uv_fraction::NoUVFraction,
     tau_uv_calculation::NoTauUV,
-    flux_correction::Relativistic,
+    flux_correction::NoRelativistic,
     radiative_transfer::RadiativeTransfer,
     radiation::Radiation,
     density_grid::InterpolationGrid,
@@ -251,7 +251,7 @@ function radiation_force_integrand!(
     r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
     cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
-    flux_correction = 1.0 / (gamma * (1 + beta * cosθ))^4
+    flux_correction = 1.0 #1.0 / (gamma * (1 + beta * cosθ))^4
     # common geometric term for r and z
     common_projection = 1.0 / (rd^2 * delta^4)
     v[:] = flux_correction *
@@ -381,7 +381,8 @@ function integrate_radiation_force_integrand(
         error_norm = norm,
         maxevals = maxevals,
     )
-    return ret .* exp(-tau_uv)
+    d = sqrt(r^2 + z^2)
+    return ret .* exp.(-tau_uv .* [r / d, z / d]) # project tau uv 
 end
 
 

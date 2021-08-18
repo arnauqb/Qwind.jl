@@ -45,7 +45,7 @@ initial_conditions:
   mode: CAKIC 
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: 50
+  n_lines: auto 
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
@@ -58,6 +58,6 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/bh_scan_ext"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/comparisons/old"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/comparisons/old_newtau"
   #save_path: "/cosma7/data/dp004/dc-quer1/qwind_runs/bh_1e8"
   #save_path: "/home/arnau/code/Qwind.jl/scan"
