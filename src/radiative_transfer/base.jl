@@ -209,10 +209,10 @@ function radiation_force_integrand!(
     beta,
     gamma,
 )
+    r_projection = (r - rd * cos(phid))
     delta = sqrt(r^2 + rd^2 + (z - radiation.zh)^2 - 2 * r * rd * cos(phid))
     fuv, mdot = get_fuv_mdot(radiation, rd)
     nt = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
-    r_projection = (r - rd * cos(phid))
     # relativistic correction to the flux
     cosθ = (r_projection * vr + (z - radiation.zh) * vz) / (delta * beta)
     flux_correction = 1.0 #1.0 / (gamma * (1 + beta * cosθ))^4

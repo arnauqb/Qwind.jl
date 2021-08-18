@@ -13,7 +13,7 @@ black_hole:
 
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
-  relativistic: true
+  relativistic: false
   f_uv: 0.85
   f_x: 0.15
   n_r: 1000
@@ -44,13 +44,13 @@ initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: auto #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: 10 #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.61
-  use_precalculated: false
+  use_precalculated: true
 
 integrator:
   n_iterations: 50

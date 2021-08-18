@@ -5,6 +5,7 @@ version = "0.1.1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 BoundaryValueDiffEq = "764a87c0-6b3e-53db-9096-fe964310641d"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 ClusterManagers = "34f1f09b-3a8b-5176-ab39-66d58a4d544e"
@@ -52,6 +53,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [compat]
