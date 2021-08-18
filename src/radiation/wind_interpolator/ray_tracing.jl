@@ -171,6 +171,7 @@ mutable struct GridIterator{T, U, V}
     current_r_idx::U
     current_z_idx::U
     intersection::Vector{T}
+    previous_point::Vector{T}
     finished::V
     function GridIterator(r_range, z_range)
         r_range = round.(r_range, digits = 6)
@@ -196,6 +197,7 @@ mutable struct GridIterator{T, U, V}
             1,
             1,
             1,
+            [0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0],
             false,
         )
@@ -315,6 +317,7 @@ function set_iterator!(iterator::GridIterator, ri, phii, zi, rf, phif, zf)
     iterator.intersection[1] = ri
     iterator.intersection[2] = phii
     iterator.intersection[3] = zi
+    iterator.previous_point .= iterator.intersection
     iterator.finished = false
     return
 end
@@ -359,28 +362,11 @@ function step_ray!(iterator::GridIterator, lambda_r, lambda_z, r_index)
     x = iterator.xi * (1 - lambda) + lambda * iterator.xf
     y = iterator.yi * (1 - lambda) + lambda * iterator.yf
     z = iterator.zi * (1 - lambda) + lambda * iterator.zf
-    #phi = atan(y, x)
     phi = atan(y, x)
     r = sqrt(x^2 + y^2)
     iterator.intersection[1] = r
     iterator.intersection[2] = phi
     iterator.intersection[3] = z
-    #if (iterator.current_r_idx == 1) && (iterator.direction_r == -1)
-    #    # time to reverse
-    #    iterator.direction_r = 1
-    #end
-
-    #epsilon_z = 1e-5 * iterator.direction_z
-
-    #iterator.current_r_idx =
-    #    searchsorted_first(iterator.r_range, r+epsilon_r, iterator.direction_r)
-    #iterator.current_z_idx =
-    #    searchsorted_first(iterator.z_range, z+epsilon_z, iterator.direction_z)
-
-    #epsilon_r = 1e-5 * iterator.direction_r
-    #iterator.current_r_idx =
-    #    searchsorted_first(iterator.r_range, r+epsilon_r, iterator.direction_r)
-    #adjust_r!(iterator, r)
     update_direction_r!(iterator, lambda)
     if lambda_r < lambda_z || isnan(lambda_z)
         iterator.current_r_idx = r_index
@@ -531,7 +517,7 @@ end
 
 function dist_to_intersection(iterator, point)
     r0, phi0, z0 = iterator.intersection
-    r1, phi1, z1 = point
+    r1, phi1, z1 = point 
     # max rquired here because of roundoff errors
     return sqrt(max(0.0, r0^2 + r1^2 + (z1 - z0)^2 - 2.0 * r0 * r1 * cos(phi0 - phi1)))
 end
@@ -552,16 +538,13 @@ function compute_tau_xray(
     end
     set_iterator!(iterator, ri, 0.0, zi, rf, 0.0, zf)
     initial_point = [ri, 0.0, zi]
-    previous_point = copy(iterator.intersection)
     ret = 0.0
     while !iterator.finished
-        previous_point[1] = iterator.intersection[1]
-        previous_point[2] = iterator.intersection[2]
-        previous_point[3] = iterator.intersection[3]
+        iterator.previous_point .= iterator.intersection
         cell_density = get_density(grid, iterator)
         distance_from_source = dist_to_intersection(iterator, initial_point) * Rg
         next_intersection!(iterator)
-        intersection_size = dist_to_intersection(iterator, previous_point) * Rg
+        intersection_size = dist_to_intersection(iterator, iterator.previous_point) * Rg
         ret = compute_tau_xray_cell(
             xray_opacity,
             intersection_size,
@@ -617,17 +600,14 @@ function compute_tau_uv(
         return 0.0
     end
     set_iterator!(iterator, ri, phii, zi, rf, phif, zf)
-    previous_point = copy(iterator.intersection)
     ret = 0.0
     dist = 0.0
     sigmarg = Rg * SIGMA_T
     while !iterator.finished
-        previous_point[1] = iterator.intersection[1]
-        previous_point[2] = iterator.intersection[2]
-        previous_point[3] = iterator.intersection[3]
+        iterator.previous_point .= iterator.intersection
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
-        intersection_size = dist_to_intersection(iterator, previous_point)
+        intersection_size = dist_to_intersection(iterator, iterator.previous_point)
         dist += intersection_size
         ret += compute_tau_uv_cell(intersection_size, cell_density)
         if ret * sigmarg > max_tau

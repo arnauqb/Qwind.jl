@@ -12,15 +12,15 @@ black_hole:
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
-  relativistic: true
-  f_uv: auto
+  relativistic: false 
+  f_uv: 0.85
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: disk
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     vacuum_density: 1e2

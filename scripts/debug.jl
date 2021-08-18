@@ -19,29 +19,49 @@ end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
 
+@time compute_disc_radiation_field(
+    model.rad,
+    r = 100.0,
+    z = 1,
+    vr = 0.0,
+    vz = 0.0,
+    rtol=1e-6,
+    maxevals=0
+)
+
 run_iteration!(model, iterations_dict, it_num = 1, parallel = true);
 
+run_iteration!(model, iterations_dict, it_num = 2, parallel = true);
 
-function profile_integ(radiation)
-    rr = range(20.0, 1000.0, length=10)
-    zz = 10 .^ range(-6, 3.0, length=10)
+function profile_integ(model)
+    rr = range(20.0, 1000.0, length = 10)
+    zz = 10 .^ range(-6, 3.0, length = 10)
     for r in rr
         for z in zz
-            compute_disc_radiation_field(radiation, r=r, z=z, vr=0.0, vz=0.0)
+            compute_disc_radiation_field(model.rad, r = r, z = z, vr = 0.0, vz = 0.0)
         end
     end
 end
 
 disable_timer!(timer)
-            
+
 enable_timer!(timer)
 
-reset_timer!(timer); compute_disc_radiation_field(model.rad, r=100.0, z=1.0, vr=0.0, vz=0.0); timer
+reset_timer!(timer);
+compute_disc_radiation_field(model.rad, r = 100.0, z = 1.0, vr = 0.0, vz = 0.0);
+timer;
 
 
-@btime compute_disc_radiation_field(model.rad, r=100.0, z=1.0, vr=0.0, vz=0.0)
+@time compute_disc_radiation_field(
+    model.rad,
+    r = 100.0,
+    z = 1.0,
+    vr = 0.0,
+    vz = 0.0,
+    rtol = 1e-3,
+)
 
-profile_integ(model.rad)
+@btime profile_integ(model)
 
 Profile.clear()
 @profile profile_integ(model.rad)

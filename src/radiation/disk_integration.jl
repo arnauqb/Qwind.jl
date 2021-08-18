@@ -76,7 +76,8 @@ force_prefactors(radiation::Radiation, flag::TauUVCalculationFlag, r, z) =
 function force_prefactors(radiation::Radiation, ::TauUVCenter, r, z)
     constant = 3 / (π * radiation.bh.efficiency)
     tau_uv = compute_uv_tau(radiation, rd = 0.0, phid = 0.0, r = r, z = z)
-    return constant * exp(-tau_uv)
+    d = sqrt(r^2 + z^2)
+    return constant * exp(-tau_uv .* [r / d, z / d])
 end
 force_prefactors(radiation::Radiation, r, z) =
     force_prefactors(radiation, radiation.tau_uv_calculation, r, z)
@@ -190,7 +191,7 @@ function compute_disc_radiation_field(
             maxevals = maxevals,
         )
         prefactors = force_prefactors(radiation, r, z)
-        force = (z - radiation.z_disk) * prefactors .* integration
+        force = (z - radiation.z_disk) .* prefactors .* integration
     end
     return force
 end
