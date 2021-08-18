@@ -69,7 +69,7 @@ function CAKIC(radiation, radiative_transfer, black_hole, config)
         filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
         critical_points_df = CSV.read(joinpath(@__DIR__, filename), DataFrame)
     else
-        rr, mdots, zcs = calculate_wind_mdots(radiative_transfer, black_hole)
+        rr, mdots, zcs = calculate_wind_mdots(radiation)
         critical_points_df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
     end
     if :launch_range in keys(icc)
@@ -99,17 +99,10 @@ function CAKIC(radiation, radiative_transfer, black_hole, config)
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
-function getn0(ic::CAKIC, rt::RadiativeTransfer, bh::BlackHole, r0)
+function getn0(ic::CAKIC, radiation::Radiation, r0)
     rv, ridx = findmin(abs.(ic.critical_points_df.r .- r0))
-    zc = ic.critical_points_df.zc[ridx]
     mdot = ic.critical_points_df.mdot[ridx]
-    if ic.K == "auto"
-        taux = compute_xray_tau(rt, rt.radiation.z_xray, r0, zc)
-        density = get_density(rt.interpolator.density_grid, r0, zc)
-        ξ = compute_ionization_parameter(rt.radiation, r0, zc, density, taux)
-        K = compute_force_multiplier_k(ξ)
-    end
-    n = get_initial_density(rt, bh, r0, mdot; K = ic.K, alpha = ic.alpha)
+    n = get_initial_density(radiation, r = r0, mdot = mdot, K = ic.K, alpha = ic.alpha)
     return n
 end
 getn0(model, r0) = getn0(model.ic, model.rt, model.bh, r0)

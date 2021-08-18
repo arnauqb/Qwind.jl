@@ -7,16 +7,6 @@ function filter_array(a, b, value)
     return a[mask], b[mask]
 end
 
-function Hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdigits = 6)
-    # remove points that are too close to each other
-    points = hcat(r, z)
-    points = round.(points, sigdigits = sigdigits)
-    points = unique(points, dims = 1)
-    points = [[points[i, 1], points[i, 2]] for i = 1:size(points)[1]]
-    hull = ConcaveHull.concave_hull(points)
-    return hull
-end
-
 function get_max_positions(integrator)
     data = integrator.p.data
     return [minimum(data[:r]), minimum(data[:z]), maximum(data[:r]), maximum(data[:z])]
@@ -42,6 +32,17 @@ function filter_close_trajectories(
     push!(ret, integrators[end])
     return ret
 end
+
+function Hull(r::Vector{Float64}, z::Vector{Float64}, r0::Vector{Float64}; sigdigits = 6)
+    # remove points that are too close to each other
+    points = hcat(r, z)
+    points = round.(points, sigdigits = sigdigits)
+    points = unique(points, dims = 1)
+    points = [[points[i, 1], points[i, 2]] for i = 1:size(points)[1]]
+    hull = ConcaveHull.concave_hull(points)
+    return hull
+end
+
 
 function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
     integrators = filter_close_trajectories(integrators, 5e-2)
@@ -93,6 +94,8 @@ function Hull(h5_path::String)
     it_nums = [parse(Int, split(key, "_")[end]) for key in it_keys]
     return Hull(h5_path, maximum(it_nums))
 end
+
+Hull() = concave_hull([[-1e8,0.0],[1e8,0.0],[0.0,1e8],[0.0,-1e8]])
 
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
     return ConcaveHull.in_hull(point, hull)

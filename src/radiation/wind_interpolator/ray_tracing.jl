@@ -1,6 +1,6 @@
 using Distances
 export compute_cell_intersection,
-    next!, GridIterator, compute_xray_tau, compute_uv_tau, set_iterator!, next_intersection!
+    next!, GridIterator, compute_tau_xray, compute_tau_uv, set_iterator!, next_intersection!
 
 function point_outside_grid(r_range, z_range, r, z)
     if !(r_range[1] <= r <= r_range[end]) || !(z_range[1] <= z <= z_range[end])
@@ -16,15 +16,12 @@ function get_time_to_intersection_r(r, a, b, ri, current_lambda)
     end
     c = ri^2 - r^2
     rad = b^2 - 4.0 * a * c
-    #println("a $a b $b ri $ri")
-    #println("rad $rad")
     if rad < 0.0
         return NaN
     end
     rad = sqrt(rad)
     sol1 = (-b + rad) / (2a)
     sol2 = (-b - rad) / (2a)
-    #println("sol1 $sol1 sol2 $sol2")
     if current_lambda > max(sol1, sol2)
         return Inf
     end
@@ -57,10 +54,7 @@ function get_time_to_intersection_r(iterator)
     n_steps = 0
     while true
         index = max(abs(iterator.current_r_idx + (n_steps + 1) * iterator.direction_r), 1)
-        #println("index $index")
-        #println(length(iterator.r_range))
         if index > length(iterator.r_range)
-            #println("BREAKING")
             return Inf, 0.0
         end
         r = iterator.r_range[index]
@@ -71,9 +65,6 @@ function get_time_to_intersection_r(iterator)
             iterator.ri,
             iterator.lambda,
         )
-        #println("n_steps $n_steps")
-        #println("l $lambda")
-        #println("r $r")
         n_steps += 1
         if !isnan(lambda)
             break
@@ -300,19 +291,12 @@ function set_iterator!(iterator::GridIterator, ri, phii, zi, rf, phif, zf)
         zf,
         from_outside = false,
     )
-    #if (ri * rf * cos(phif-phii) - ri^2 >= 0)
-    #    direction_r = 1
-    #else
-    #    direction_r = -1
-    #end
-    #(rf == ri) && (direction_r = 1)
     iterator.change_direction_r =
         (ri^2 - ri * rf * cos(phif - phii)) / (ri^2 + rf^2 - 2 * ri * rf * cos(phif - phii))
     update_direction_r!(iterator, 0.0)
     iterator.direction_z = sign(zf - zi)
     current_r_idx = searchsorted_first(iterator.r_range, ri, iterator.direction_r)
     current_z_idx = searchsorted_first(iterator.z_range, zi, iterator.direction_z)
-    #println("first $current_r_idx")
     iterator.ri = ri
     iterator.phii = phii
     iterator.zi = zi
@@ -348,10 +332,6 @@ function update_direction_r!(iterator, lambda)
 end
 
 function next_r(iterator::GridIterator)
-    #println(iterator.intersection)
-    #println(iterator.current_r_idx)
-    #println(iterator.r_range)
-    #println(iterator.direction_r)
     index =
         min(max(iterator.current_r_idx + iterator.direction_r, 1), length(iterator.r_range))
     return iterator.r_range[index]
@@ -361,12 +341,6 @@ function next_z(iterator::GridIterator)
     index = iterator.current_z_idx + iterator.direction_z
     return iterator.z_range[index]
 end
-#next_z(iterator::GridIterator) =
-#    iterator.z_range[max(1, abs(iterator.current_z_idx + iterator.direction_z))]
-#previous_r(iterator::GridIterator) =
-#    iterator.r_range[iterator.current_r_idx - iterator.direction_r]
-#previous_z(iterator::GridIterator) =
-#    iterator.z_range[iterator.current_z_idx - iterator.direction_z]
 
 function GridIterator(interpolator::WindInterpolator, ri, zi, rf, zf)
     return GridIterator(
@@ -380,8 +354,6 @@ function GridIterator(interpolator::WindInterpolator, ri, zi, rf, zf)
 end
 
 function pick_lambda(lambda_r, lambda_z)
-    #println("lambda_r $lambda_r")
-    #println("lambda_z $lambda_z")
     if lambda_r < lambda_z || isnan(lambda_z)
         lambda = lambda_r
     elseif lambda_z < lambda_r || isnan(lambda_r)
@@ -393,8 +365,6 @@ function pick_lambda(lambda_r, lambda_z)
 end
 
 function step_ray!(iterator::GridIterator, lambda_r, lambda_z, r_index)
-    #println("lr $lambda_r")
-    #println("lz $lambda_z")
     lambda = pick_lambda(lambda_r, lambda_z)
     iterator.lambda = lambda
     x = iterator.xi * (1 - lambda) + lambda * iterator.xf
@@ -431,25 +401,7 @@ function step_ray!(iterator::GridIterator, lambda_r, lambda_z, r_index)
         iterator.current_r_idx = r_index
         iterator.current_z_idx += iterator.direction_z
     end
-    #println("lr $lambda_r lz $lambda_z ridx $(iterator.current_r_idx)")
 end
-
-#function adjust_r!(iterator, r)
-#    println("r $r")
-#    println("$(iterator.r_range)")
-#    rr = current_r(iterator)
-#    if iterator.direction_r == 1
-#        while r < rr
-#            iterator.current_r_idx += 1
-#            rr = current_r(iterator)
-#        end
-#    else
-#        while r > rr
-#            iterator.current_r_idx -= 1
-#            rr = current_r(iterator)
-#        end
-#    end
-#end
 
 function is_in_final_cell(iterator, r0, r1, z0, z1, phi0, lambda_r, lambda_z)
     r_cond = false
@@ -483,11 +435,6 @@ function is_in_final_cell(iterator, r0, r1, z0, z1, phi0, lambda_r, lambda_z)
             end
         end
     end
-    #println("\n")
-    #println("r0 $r0, r1 $r1, rf $rf")
-    #println("z0 $z0, z1 $z1, zf $zf")
-    #println(r_cond)
-    #println(z_cond)
     return r_cond && z_cond
 end
 
@@ -502,13 +449,8 @@ function next_intersection!(iterator::GridIterator)
     z0 = iterator.intersection[3]
     r1 = next_r(iterator)
     z1 = next_z(iterator)
-    #println("current r $r0")
-    #println("current z $z0")
-    #println("finding r intersection to $r1")
-    #println("finding z intersection to $z1")
     lambda_r, r_index = get_time_to_intersection_r(iterator)
     lambda_z = get_time_to_intersection_z(z1, iterator.zi, iterator.zf)
-    #println("lr $lambda_r lz $lambda_z")
     if is_in_final_cell(iterator, r0, r1, z0, z1, phi0, lambda_r, lambda_z)
         iterator.finished = true
         iterator.intersection[1] = iterator.rf
@@ -537,7 +479,7 @@ function ionization_cell_xi_kernel(
     end
 end
 
-function compute_xray_tau_cell(
+function compute_tau_xray_cell(
     xray_opacity::Boost,
     intersection_size::T,
     distance_from_source::T,
@@ -575,7 +517,7 @@ function compute_xray_tau_cell(
     end
 end
 
-function compute_xray_tau_cell(
+function compute_tau_xray_cell(
     xray_opacity::Thomson,
     intersection_size::T,
     distance_from_source::T,
@@ -593,9 +535,7 @@ function get_density(grid::InterpolationGrid, iterator::GridIterator)
     ridx = iterator.current_r_idx
     r = iterator.r_range[max(iterator.current_r_idx, 1)]
     z = iterator.z_range[iterator.current_z_idx]
-    #println("getting density at r $r z $z")
     density = grid.grid[max(iterator.current_r_idx, 1), iterator.current_z_idx]
-    #println("density $density")
     return density
 end
 
@@ -607,7 +547,7 @@ function dist_to_intersection(iterator, point)
     return sqrt(max(0.0, r0^2 + r1^2 + (z1 - z0)^2 - 2.0 * r0 * r1 * cos(phi0 - phi1)))
 end
 
-function compute_xray_tau(
+function compute_tau_xray(
     grid::InterpolationGrid{T},
     iterator::GridIterator{T},
     xray_opacity::XRayOpacity,
@@ -621,7 +561,6 @@ function compute_xray_tau(
     if grid.grid === nothing
         return 0.0
     end
-    #iterator = grid.iterator
     set_iterator!(iterator, ri, 0.0, zi, rf, 0.0, zf)
     initial_point = [ri, 0.0, zi]
     previous_point = copy(iterator.intersection)
@@ -631,11 +570,10 @@ function compute_xray_tau(
         previous_point[2] = iterator.intersection[2]
         previous_point[3] = iterator.intersection[3]
         cell_density = get_density(grid, iterator)
-        #cell_density = get_density(grid, iterator.intersection)
         distance_from_source = dist_to_intersection(iterator, initial_point) * Rg
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, previous_point) * Rg
-        ret = compute_xray_tau_cell(
+        ret = compute_tau_xray_cell(
             xray_opacity,
             intersection_size,
             distance_from_source,
@@ -644,17 +582,11 @@ function compute_xray_tau(
             xray_luminosity,
             Rg,
         )
-        #println("previous $(previous_point)")
-        #println("next point $(iterator.intersection)")
-        #println("---")
-        #if ret > 40
-        #    return ret
-        #end
     end
     return ret
 end
 
-function compute_xray_tau(
+function compute_tau_xray(
     grid::InterpolationGrid,
     xray_opacity::XRayOpacity,
     ri,
@@ -664,7 +596,7 @@ function compute_xray_tau(
     xray_luminosity,
     Rg,
 )
-    compute_xray_tau(
+    compute_tau_xray(
         grid::InterpolationGrid,
         grid.iterator,
         xray_opacity,
@@ -677,10 +609,10 @@ function compute_xray_tau(
     )
 end
 
-compute_uv_tau_cell(intersection_size::Float64, cell_density::Float64)::Float64 =
+compute_tau_uv_cell(intersection_size::Float64, cell_density::Float64)::Float64 =
     intersection_size * cell_density
 
-function compute_uv_tau(
+function compute_tau_uv(
     grid::InterpolationGrid,
     iterator::CellIterator,
     ri,
@@ -708,23 +640,17 @@ function compute_uv_tau(
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, previous_point)
-        #println("$(previous_point[1])/$(previous_point[3])\n")
-        #println("previous $(previous_point)")
-        #println("next point $(iterator.intersection)")
-        #println("index $(iterator.current_r_idx)")
-        #println("---")
         dist += intersection_size
-        ret += compute_uv_tau_cell(intersection_size, cell_density)
+        ret += compute_tau_uv_cell(intersection_size, cell_density)
         if ret * sigmarg > max_tau
             return max_tau
         end
     end
-    #println("total distance $dist")
     return ret * sigmarg
 end
 
-compute_uv_tau(grid::InterpolationGrid, ri, phii, zi, rf, phif, zf, Rg; max_tau = 20.0) =
-    compute_uv_tau(
+compute_tau_uv(grid::InterpolationGrid; ri, phii, zi, rf, phif, zf, Rg, max_tau = 20.0) =
+    compute_tau_uv(
         grid::InterpolationGrid,
         grid.iterator,
         ri,
@@ -737,16 +663,3 @@ compute_uv_tau(grid::InterpolationGrid, ri, phii, zi, rf, phif, zf, Rg; max_tau 
         max_tau = max_tau,
     )
 
-compute_uv_tau(grid::InterpolationGrid, ri, phii, rf, zf, Rg; max_tau = 20.0) =
-    compute_uv_tau(
-        grid::InterpolationGrid,
-        grid.iterator,
-        ri,
-        phii,
-        0.0,
-        rf,
-        0.0,
-        zf,
-        Rg,
-        max_tau = max_tau,
-    )

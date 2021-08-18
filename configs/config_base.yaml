@@ -6,12 +6,14 @@ black_hole:
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
   relativistic: true
+  f_uv: auto
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
+  tau_uv_calculation: disk
 
 radiative_transfer:
   mode: RegularGrid

@@ -1,8 +1,6 @@
 export BlackHole,
     compute_eddington_luminosity,
     compute_bolometric_luminosity,
-    compute_isco,
-    compute_efficiency,
     compute_mass_accretion_rate,
     compute_gravitational_acceleration,
     compute_escape_velocity,
