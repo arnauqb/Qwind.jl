@@ -95,7 +95,7 @@ function Hull(h5_path::String)
     return Hull(h5_path, maximum(it_nums))
 end
 
-Hull() = concave_hull([[-1e8,0.0],[1e8,0.0],[0.0,1e8],[0.0,-1e8]])
+Hull() = ConcaveHull.concave_hull([[-1e8,0.0],[1e8,0.0],[0.0,1e8],[0.0,-1e8]])
 
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
     return ConcaveHull.in_hull(point, hull)

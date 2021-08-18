@@ -240,9 +240,9 @@ save_wind_hull!(hull::Nothing, group) = nothing
 
 function save_hdf5(integrators, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
-    density_grid = model.rt.interpolator.density_grid
-    velocity_grid = model.rt.interpolator.velocity_grid
-    wind_hull = model.rt.interpolator.wind_hull
+    density_grid = model.rad.wi.density_grid
+    velocity_grid = model.rad.wi.velocity_grid
+    wind_hull = model.rad.wi.wind_hull
     bh = model.bh
     h5open(hdf5_save_path,isfile(hdf5_save_path) ? "r+" : "w") do file
         g = create_group(file, iteration)

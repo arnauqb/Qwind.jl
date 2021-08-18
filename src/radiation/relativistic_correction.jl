@@ -1,7 +1,7 @@
 export relativistic_correction, beta, gamma
 
-beta(vr, vz) = max(min(1.0, sqrt(vr^2 + vz^2)), 1e-4)
-gemma(beta) = 1.0 / sqrt(1 - beta^2)
+compute_beta(vr, vz) = max(min(1.0, sqrt(vr^2 + vz^2)), 1e-4)
+compute_gamma(beta) = 1.0 / sqrt(1 - beta^2)
 
 relativistic_correction(::NoRelativistic; r, z, vr, vz, beta, gamma, r_projection, delta) =
     1.0
@@ -23,8 +23,8 @@ end
 
 # for testing
 function relativistic_correction(rd, phid, zd, r, z, vr, vz)
-    beta = sqrt(vr^2 + vz^2)
-    gamma = 1.0 / sqrt(1 - beta^2)
+    beta = compute_beta(vr, vz)
+    gamma = compute_gamma(beta) 
     r_projection = (r - rd * cos(phid))
     delta = distance_from_disk(rd, phid, zd, r, 0.0, z)
     return relativistic_correction(

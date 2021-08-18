@@ -20,25 +20,7 @@ Base.length(integrator::Sundials.IDAIntegrator) = length(integrator.p.data[:r])
 
 function make_save_data(trajectory_id = -1)
     ret = Dict{Symbol,Any}(:trajectory_id => trajectory_id)
-    keys = [
-        :r,
-        :z,
-        :vr,
-        :vphi,
-        :vz,
-        :n,
-        #    :ar,
-        #    :az,
-        :fm,
-        :xi,
-        :dvdr,
-        #    :disc_radiation_field_r,
-        #    :disc_radiation_field_z,
-        :xi,
-        :taueff,
-        :taux,
-        :tauuv,
-    ]
+    keys = [:r, :z, :vr, :vphi, :vz, :n, :fm, :xi, :dvdr, :xi, :taueff, :taux, :tauuv]
     for key in keys
         ret[key] = Float64[]
     end
@@ -72,8 +54,7 @@ function compute_density(r, z, vr, vz, parameters::Parameters)
 end
 
 function initialize_integrator(
-    rt,
-    bh,
+    rad,
     grid,
     ic,
     r0,
@@ -86,7 +67,7 @@ function initialize_integrator(
 )
     l0 = getl0(ic, r0)
     z0 = getz0(ic, r0)
-    n0 = getn0(ic, rt, bh, r0)
+    n0 = getn0(ic, rad, r0)
     v0 = getv0(ic, r0)
     lwnorm = linewidth / r0
     termination_callback = DiscreteCallback(
@@ -99,18 +80,18 @@ function initialize_integrator(
     if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
-            (u, t, integrator) -> save(u, t, integrator, rt, trajectory_id),
+            (u, t, integrator) -> save(u, t, integrator, rad, trajectory_id),
             saved_data,
         )
         callback_set = CallbackSet(termination_callback, saving_callback)
     else
         callback_set = CallbackSet(termination_callback)
     end
-    a₀ = compute_initial_acceleration(rt, bh, r0, z0, 0, v0, params)
+    a₀ = compute_initial_acceleration(rad, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
-    dae_problem = create_dae_problem(rt, bh, residual!, du₀, u₀, tspan, params)
+    dae_problem = create_dae_problem(rad, residual!, du₀, u₀, tspan, params)
     integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
     integrator.opts.abstol = atol
     integrator.opts.reltol = rtol
@@ -127,8 +108,7 @@ initialize_integrator(
     trajectory_id = -1,
     save_results = true,
 ) = initialize_integrator(
-    model.rt,
-    model.bh,
+    model.rad,
     model.wind_grid,
     model.ic,
     r0,
@@ -216,7 +196,8 @@ function failed(integrator::Sundials.IDAIntegrator, r, z)
     too_long = length(integrator.p.data[:r]) > 500
     integrator.u[1] < 0.0 ||
         integrator.u[2] < max(integrator.p.grid.z_min, integrator.p.z0) ||
-        intersects || too_long
+        intersects ||
+        too_long
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -242,7 +223,7 @@ function affect!(integrator)
     terminate!(integrator)
 end
 
-function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajectory_id)
+function save(u, t, integrator, radiation::Radiation, trajectory_id)
     if integrator.p.finished[1]
         return 0.0
     end
@@ -254,8 +235,8 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajector
     vphi = integrator.p.l0 / sqrt(r^2 + z^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
-    taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, vr, vz, density, taux)
+    taux = compute_tau_xray(radiation, r = r, z = z)
+    ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     push!(data[:r], r)
@@ -273,7 +254,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, trajector
     return 0.0
 end
 
-function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du, u, p, t)
+function residual!(radiation::Radiation, out, du, u, p, t)
     r, z, vr, vz = u
     r_dot, z_dot, vr_dot, vz_dot = du
     if r <= 0 || z < 0 # we force it to fail
@@ -281,8 +262,7 @@ function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du
         centrifugal_term = 0.0
         gravitational_acceleration = compute_gravitational_acceleration(abs(r), abs(z))
     else
-        radiation_acceleration =
-            compute_radiation_acceleration(radiative_transfer, du, u, p)
+        radiation_acceleration = compute_radiation_acceleration(radiation, du, u, p)
         centrifugal_term = p.l0^2 / r^3
         gravitational_acceleration = compute_gravitational_acceleration(r, z)
     end
@@ -294,16 +274,8 @@ function residual!(radiative_transfer::RadiativeTransfer, bh::BlackHole, out, du
     out[4] = vz_dot - az
 end
 
-function create_dae_problem(
-    radiative_transfer::RadiativeTransfer,
-    bh::BlackHole,
-    residual!,
-    du₀,
-    u₀,
-    tspan,
-    params,
-)
-    func!(out, du, u, p, t) = residual!(radiative_transfer, bh, out, du, u, p, t)
+function create_dae_problem(radiation::Radiation, residual!, du₀, u₀, tspan, params)
+    func!(out, du, u, p, t) = residual!(radiation, out, du, u, p, t)
     return DAEProblem(
         func!,
         du₀,
@@ -314,37 +286,31 @@ function create_dae_problem(
     )
 end
 
-function compute_radiation_acceleration(
-    radiative_transfer::RadiativeTransfer,
-    du,
-    u,
-    p::Parameters,
-)
+function compute_radiation_acceleration(radiation::Radiation, du, u, p::Parameters)
     r, z, vr, vz = u
     _, _, ar, az = du
     vt = sqrt(vr^2 + vz^2)
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, p)
-    taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, vr, vz, density, taux)
+    taux = compute_tau_xray(radiation, r = r, z = z)
+    ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(
-        radiative_transfer,
-        r,
-        z,
-        vr,
-        vz,
-        rtol = radiative_transfer.radiation.disk_integral_rtol,
+        radiation,
+        r = r,
+        z = z,
+        vr = vr,
+        vz = vz,
+        rtol = radiation.disk_integral_rtol,
     )
     force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end
 
 function compute_initial_acceleration(
-    radiative_transfer::RadiativeTransfer,
-    bh::BlackHole,
+    radiation::Radiation,
     r,
     z,
     vr,
@@ -354,8 +320,7 @@ function compute_initial_acceleration(
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
     gravitational_acceleration = compute_gravitational_acceleration(r, z)
-    radiation_acceleration =
-        compute_radiation_acceleration(radiative_transfer, du, u, params)
+    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
     centrifugal_term = params.l0^2 / r^3
     if r == 0
         centrifugal_term = 0.0
@@ -364,59 +329,10 @@ function compute_initial_acceleration(
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     # second estimation
     du = [vr, vz, ar, az]
-    radiation_acceleration =
-        compute_radiation_acceleration(radiative_transfer, du, u, params)
+    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
     ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     return [ar, az]
-end
-
-function compute_delta_r_x(grid::DensityGrid, rc, xray_luminosity, Rg, tau_x, delta_tau)
-    delta_r = find_zero(
-        delta_r ->
-            delta_tau - (
-                compute_xray_tau(grid, 0.0, 0.0, rc + delta_r, 0.0, xray_luminosity, Rg) - tau_x
-            ),
-        1,
-        atol = 1e-7,
-        rtol = 1e-3,
-    )
-    return delta_r
-end
-
-function compute_delta_r_uv(grid::DensityGrid, rc, Rg, tau_uv, delta_tau)
-    delta_r = find_zero(
-        delta_r ->
-            delta_tau - (compute_uv_tau(grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv),
-        1.0,
-        atol = 1e-7,
-        rtol = 1e-3,
-    )
-    return delta_r
-end
-
-function compute_delta_r(grid::DensityGrid, rc, xray_luminosity, Rg)
-    density = get_density(grid, rc, 0.0)
-    tau_x_0 = log(xray_luminosity / (1e5 * density))
-    tau_x = compute_xray_tau(grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-    tau_uv = compute_uv_tau(grid, 0.0, 0.0, rc, 0.0, Rg)
-    delta_tau = 0.1
-    delta_r = 0.0
-    if tau_x < 2 * tau_x_0
-        try
-            delta_r = compute_delta_r_x(grid, rc, xray_luminosity, Rg, tau_x, delta_tau)
-        catch
-            return 0.0
-        end
-        return min(delta_r, 0.5)
-    else
-        try
-            delta_r = compute_delta_r_uv(grid, rc, Rg, tau_uv, delta_tau)
-            return min(delta_r, 5)
-        catch
-            return 0.0
-        end
-    end
 end
 
 function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
@@ -432,33 +348,44 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
     xr_opacity = model.rad.xray_opacity
     fx(delta_r, rc, delta_tau, tau_x) =
         delta_tau - (
-            compute_xray_tau(
+            compute_tau_xray(
                 interp_grid,
                 xr_opacity,
-                1e-6,
-                0.0,
-                rc + delta_r,
-                0.0,
-                xray_luminosity,
-                Rg,
+                ri = 1e-6,
+                zi = 0.0,
+                rf = rc + delta_r,
+                zf = 0.0,
+                xray_luminosity = xray_luminosity,
+                Rg = Rg,
             ) - tau_x
         )
     fuv(delta_r, rc, delta_tau, tau_uv) =
-        delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
+        delta_tau - (
+            compute_tau_uv(
+                interp_grid,
+                ri = 0.0,
+                phii = 0.0,
+                zi = 0.0,
+                rf = rc + delta_r,
+                phif = 0.0,
+                zf = 0.0,
+                Rg = Rg,
+            ) - tau_uv
+        )
     rc = rin
     while rc < rfi
         if tau_x < 50
-            tau_x = compute_xray_tau(
+            tau_x = compute_tau_xray(
                 interp_grid,
                 xr_opacity,
-                0.0,
-                0.0,
-                rc,
-                0.0,
-                xray_luminosity,
-                Rg,
+                ri = 0.0,
+                zi = 0.0,
+                rf = rc,
+                zf = 0.0,
+                xray_luminosity = xray_luminosity,
+                Rg = Rg,
             )
-            if tau_x < 5 
+            if tau_x < 5
                 delta_tau = 0.1
             elseif tau_x < 20
                 delta_tau = 0.5
@@ -476,8 +403,17 @@ function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
                 break
             end
         else
-            tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-            if tau_uv < 5 
+            tau_uv = compute_tau_uv(
+                interp_grid,
+                ri = 0.0,
+                phii = 0.0,
+                zi = 0.0,
+                rf = rc,
+                phif = 0.0,
+                zf = 0.0,
+                Rg = Rg,
+            )
+            if tau_uv < 5
                 delta_tau = 0.1
             elseif tau_uv < 20
                 delta_tau = 0.5

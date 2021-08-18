@@ -65,7 +65,7 @@ Computes the analytical approximation for the force multiplier,
 from Stevens and Kallman 1990. Note that we modify it slightly to avoid
 numerical overflow.
 """
-function compute_force_multiplier(t, ionization_parameter, mode::FMInterpolationType)
+function compute_force_multiplier(t, ionization_parameter, mode::FMInterpolationFlag)
     @assert t >= 0
     @assert ionization_parameter >= 0
     ALPHA = 0.6

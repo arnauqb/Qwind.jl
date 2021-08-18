@@ -46,8 +46,8 @@ compute_ionization_parameter(radiation::Radiation, r, z, vr, vz, number_density,
         number_density,
         tau_x,
         radiation.xray_luminosity,
-        radiation.Rg,
-        zh = radiation.zh,
+        radiation.bh.Rg,
+        zh = radiation.z_disk,
     )
 
 """

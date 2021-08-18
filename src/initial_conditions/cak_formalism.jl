@@ -3,11 +3,17 @@ export calculate_wind_mdots
 
 get_B0(r) = 1.0 / r^2
 
-function gamma0(radiation, r, z)
-    ret = compute_disc_radiation_field_small_heights(radiation, r, z, 0.0, 0.0)[2]
+function gamma0(radiation, r)
+    ret = compute_disc_radiation_field_small_heights(
+        radiation,
+        r = r,
+        z = 1.0,
+        vr = 0.0,
+        vz = 0.0,
+    )[2]
     # remove attenuation and fuv
-    fuv, mdot = get_fuv_mdot(radiation)
-    tau_uv = compute_tau_uv(radiation, r, 0.0, r, z)
+    fuv, mdot = get_fuv_mdot(radiation, r)
+    tau_uv = compute_tau_uv(radiation, rd = r, phid = 0.0, r = r, z = 1.0)
     ret = ret / fuv / exp(-tau_uv)
     return ret
 end
@@ -24,8 +30,8 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 5e-1)
         rtol = 1e-4,
         maxevals = 100000,
     )[2]
-    gamma0 = gamma0(radiation, r, z)
-    return cc * frad / gamma0
+    f0 = gamma0(radiation, r)
+    return cc * frad / f0
 end
 
 function g(radiation::Radiation, z; r, zmax = 5e-1)
@@ -94,14 +100,15 @@ function CAK_Σ(radiation::Radiation, r; K = 0.3, alpha = 0.6, mu_e = 1.17)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / radiation.bh.Rg
-    gamma0 = gamma0(radiation r, 1.0, 0.0, 0.0)
+    γ0 = gamma0(radiation, r)
     constant = K * (1 / (SIGMA_E / mu_e * vth))^alpha * C^2 / radiation.bh.Rg
-    return cc * constant * gamma0^(1 / alpha) / B0^((1 - alpha) / alpha)
+    return cc * constant * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 
 function get_initial_density(radiation::Radiation; r, mdot, K = 0.3, alpha = 0.6, mu = 0.61)
-    sigmadot = mdot * CAK_Σ(rt, bh, r, K = K, alpha = alpha)
-    return sigmadot / (compute_thermal_velocity(disk_temperature(bh, r)) * C) / (mu * M_P)
+    sigmadot = mdot * CAK_Σ(radiation, r, K = K, alpha = alpha)
+    return sigmadot / (compute_thermal_velocity(disk_temperature(radiation.bh, r)) * C) /
+           (mu * M_P)
 end
 
 function calculate_wind_mdots(radiation::Radiation)

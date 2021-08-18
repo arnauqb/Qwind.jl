@@ -13,9 +13,9 @@ end
 
 function Model(config::Dict)
     bh = BlackHole(config)
-    rad = getfield(Qwind, Symbol(config[:radiation][:mode]))(bh, config)
+    rad = Radiation(bh, config)
     wind_grid = Rectangular(config)
-    ic = getfield(Qwind, Symbol(config[:initial_conditions][:mode]))(rad, rt, bh, config)
+    ic = getfield(Qwind, Symbol(config[:initial_conditions][:mode]))(rad, config)
     save_path = config[:integrator][:save_path]
     return Model(config, wind_grid, bh, rad, ic)
 end
@@ -33,7 +33,7 @@ run!(config::Dict, iterations_dict = nothing) =
     run!(Model(config), iterations_dict = iterations_dict)
 
 initialize_integrators(model::Model) = initialize_integrators(
-    model.radiation,
+    model.rad,
     model.wind_grid,
     model.ic,
     atol = model.config[:integrator][:atol],
@@ -88,7 +88,7 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=tr
     @info "Done"
     flush()
     iterations_dict[it_num + 1] = Dict()
-    iterations_dict[it_num + 1]["rad"] = model.radiation
+    iterations_dict[it_num + 1]["rad"] = model.rad
     return
 end
 

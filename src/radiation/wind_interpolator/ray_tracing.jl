@@ -550,7 +550,7 @@ end
 function compute_tau_xray(
     grid::InterpolationGrid{T},
     iterator::GridIterator{T},
-    xray_opacity::XRayOpacity,
+    xray_opacity::XRayOpacityFlag,
     ri::T,
     zi::T,
     rf::T,
@@ -588,7 +588,7 @@ end
 
 function compute_tau_xray(
     grid::InterpolationGrid,
-    xray_opacity::XRayOpacity,
+    xray_opacity::XRayOpacityFlag;
     ri,
     zi,
     rf,

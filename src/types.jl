@@ -15,7 +15,6 @@ export DensityInterpolator,
     Boost,
     Thomson
 
-abstract type WindInterpolator{T<:AbstractFloat} end
 abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
 abstract type InterpolationGrid{T<:AbstractFloat} end

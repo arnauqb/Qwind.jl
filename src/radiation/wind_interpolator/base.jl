@@ -2,13 +2,27 @@ using PyCall
 import ConcaveHull, Interpolations, Sundials
 export WindInterpolator, get_density
 
-struct WindInterpolator{T<:AbstractFloat}
+struct WindInterpolator{T}
     wind_hull::ConcaveHull.Hull
     density_grid::InterpolationGrid{T}
     velocity_grid::InterpolationGrid{T}
     vacuum_density::T
     n_timesteps::Int
 end
+
+WindInterpolator(nr, nz; vacuum_density = 1e2, n_timesteps = 1000) = WindInterpolator(
+    Hull(),
+    DensityGrid(nr, nz, vacuum_density),
+    VelocityGrid(nr, nz, 0.0),
+    vacuum_density,
+    n_timesteps,
+)
+WindInterpolator(config::Dict) = WindInterpolator(
+    config[:nr],
+    config[:nz],
+    vacuum_density = config[:vacuum_density],
+    n_timesteps = config[:n_integrator_interpolation],
+)
 
 function WindInterpolator(
     integrators;
@@ -22,7 +36,7 @@ function WindInterpolator(
     end
     nz = Int(nz)
     if integrators === nothing
-        hull = Hull() 
+        hull = Hull()
         density_grid = DensityGrid(nr, nz, vacuum_density)
         velocity_grid = VelocityGrid(nr, nz, 0.0)
     else
@@ -35,13 +49,6 @@ function WindInterpolator(
     return WindInterpolator(hull, density_grid, velocity_grid, vacuum_density, n_timesteps)
 end
 
-WindInterpolator(nr, nz; vacuum_density = 1e2, n_timesteps = 1000) = WindInterpolator(
-    Hull(),
-    DensityGrid(nr, nz, vacuum_density),
-    VelocityGrid(nr, nz, 0.0),
-    vacuum_density,
-    n_timesteps,
-)
 
 function update_wind_interpolator(wi::WindInterpolator, integrators)
     if maximum(wi.density_grid.grid) == wi.vacuum_density

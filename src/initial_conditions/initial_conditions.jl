@@ -44,13 +44,12 @@ end
 
 getz0(ic::UniformIC, r) = ic.z0
 getn0(ic::UniformIC, r) = ic.n0
-getn0(ic::UniformIC, rt::RadiativeTransfer, bh::BlackHole, r0) = ic.n0
+getn0(ic::UniformIC, rad::Radiation, r0) = ic.n0
 getv0(ic::UniformIC, r) = ic.v0
 ## CAK
 
 struct CAKIC{T} <: InitialConditions{T}
     radiation::Radiation
-    bh::BlackHole
     rin::T
     rfi::T
     nlines::Union{Int,String}
@@ -61,7 +60,7 @@ struct CAKIC{T} <: InitialConditions{T}
     critical_points_df::DataFrame
 end
 
-function CAKIC(radiation, radiative_transfer, black_hole, config)
+function CAKIC(radiation, config)
     icc = config[:initial_conditions]
     M = config[:black_hole][:M]
     mdot = config[:black_hole][:mdot]
@@ -86,7 +85,6 @@ function CAKIC(radiation, radiative_transfer, black_hole, config)
     end
     return CAKIC(
         radiation,
-        black_hole,
         rin,
         rfi,
         nlines,
@@ -105,5 +103,5 @@ function getn0(ic::CAKIC, radiation::Radiation, r0)
     n = get_initial_density(radiation, r = r0, mdot = mdot, K = ic.K, alpha = ic.alpha)
     return n
 end
-getn0(model, r0) = getn0(model.ic, model.rt, model.bh, r0)
-getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.bh, r0))
+getn0(model, r0) = getn0(model.ic, model.rad, r0)
+getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0))

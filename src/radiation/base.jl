@@ -14,13 +14,57 @@ struct Radiation{T<:AbstractFloat}
     disk_integral_rtol::T
 end
 
-# read from config
-function Radiation(bh::BlackHole, wi::WindInterpolator, config::Dict)
-    rc = config[:radiation]
-    if parse(Bool, rc[:relativistic])
-        rel = RelativisticFlag()
+function Radiation(
+    bh::BlackHole,
+    wi::WindInterpolator;
+    nr::Int,
+    fx::Float64,
+    fuv::Union{String,Number},
+    disk_r_in::Float64,
+    z_xray::Float64,
+    disk_height::Float64,
+    relativistic::RelativisticFlag,
+    xray_opacity::XRayOpacityFlag,
+    tau_uv_calculation::TauUVCalculationFlag,
+    disk_integral_rtol = 1e-3,
+)
+    rmin = bh.isco
+    rmax = 1400.0
+    disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
+    if fuv == "auto"
+        uvf = uv_fractions(bh, disk_grid)
     else
-        rel = NoRelativisticFlag()
+        uvf = fuv .* ones(length(disk_grid))
+    end
+    if any(isnan.(uvf))
+        error("UV fractions contain NaN, check radiation and boundaries")
+    end
+    mdot_grid = bh.mdot .* ones(length(disk_grid))
+    xray_luminosity = fx * compute_bolometric_luminosity(bh)
+    return Radiation(
+        bh,
+        wi,
+        disk_grid,
+        uvf,
+        mdot_grid,
+        xray_luminosity,
+        disk_r_in,
+        z_xray,
+        disk_height,
+        relativistic,
+        xray_opacity,
+        tau_uv_calculation,
+        disk_integral_rtol,
+    )
+end
+
+# read from config
+function Radiation(bh::BlackHole, config::Dict)
+    rc = config[:radiation]
+    if rc[:relativistic]
+        rel = Relativistic()
+    else
+        rel = NoRelativistic()
     end
     disk_r_in = rc[:disk_r_in]
     if disk_r_in == "isco"
@@ -30,11 +74,11 @@ function Radiation(bh::BlackHole, wi::WindInterpolator, config::Dict)
     end
     tau_uv_calc = rc[:tau_uv_calculation]
     if tau_uv_calc == "center"
-        tau_uv_calc = TauUVCenterFlag()
+        tau_uv_calc = TauUVCenter()
     elseif tau_uv_calc == "disk"
-        tau_uv_calc = TauUVDiskFlag()
+        tau_uv_calc = TauUVDisk()
     elseif tau_uv_calc == "no_tau_uv"
-        tau_uv_calc = NoTauUVFlag()
+        tau_uv_calc = NoTauUV()
     else
         error("tau uv calc not recognised")
     end
@@ -43,9 +87,11 @@ function Radiation(bh::BlackHole, wi::WindInterpolator, config::Dict)
     else
         xray_opacity = Boost()
     end
-    disk_rtol = get(radiation_config, :disk_integral_rtol, 1e-3)
+    disk_rtol = get(rc, :disk_integral_rtol, 1e-3)
+    wi = WindInterpolator(rc[:wind_interpolator])
     return Radiation(
         bh,
+        wi,
         nr = rc[:n_r],
         fx = rc[:f_x],
         fuv = rc[:f_uv],
@@ -60,7 +106,7 @@ function Radiation(bh::BlackHole, wi::WindInterpolator, config::Dict)
 end
 
 # quick access to BH functions
-disk_nt_rel_factors(radiation::Radiation, radius) = disk_nt_rel_factors(radiation.bh, r)
+disk_nt_rel_factors(radiation::Radiation, r) = disk_nt_rel_factors(radiation.bh, r)
 compute_eddington_luminosity(radiation::Radiation) =
     compute_eddington_luminosity(radiation.bh)
 compute_bolometric_luminosity(radiation::Radiation) =
@@ -87,12 +133,12 @@ end
 
 # Quick access to wind interpolator functions
 
-get_density(radiation::Radiation, r, z) = get_density(radiation.wind_interpolator, r, z)
+get_density(radiation::Radiation, r, z) = get_density(radiation.wi, r, z)
 
 function update_radiation(radiation::Radiation, integrators)
     @info "Updating radiation... "
     flush()
-    new_interp = update_wind_interpolator(rt.interpolator, integrators)
+    new_interp = update_wind_interpolator(radiation.wi, integrators)
     return Radiation(
         radiation.bh,
         new_interp,
@@ -111,9 +157,11 @@ function update_radiation(radiation::Radiation, integrators)
 end
 
 # Optical depths
+
+# UV
 function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z)
     return compute_tau_uv(
-        radiation.wind_interpolator.density_grid,
+        radiation.wi.density_grid,
         ri = 0.0,
         phii = 0.0,
         zi = radiation.z_disk,
@@ -124,13 +172,14 @@ function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z)
 end
 function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z)
     return compute_tau_uv(
-        radiation.wind_interpolator.density_grid,
+        radiation.wi.density_grid,
         ri = rd,
         phii = phid,
         zi = radiation.z_disk,
         rf = r,
         zf = z,
         phif = 0.0,
+        Rg = radiation.bh.Rg,
     )
 end
 compute_tau_uv(radiation::Radiation, ::NoTauUV; rd, phid, r, z) = 0.0
@@ -142,4 +191,16 @@ compute_tau_uv(radiation::Radiation; rd, phid, r, z) = compute_tau_uv(
     phid = phid,
     r = r,
     z = z,
+)
+
+# X-ray
+compute_tau_xray(radiation::Radiation; r, z) = compute_tau_xray(
+    radiation.wi.density_grid,
+    radiation.xray_opacity,
+    ri = 0.0,
+    zi = radiation.z_disk,
+    rf = r,
+    zf = z,
+    xray_luminosity = radiation.xray_luminosity,
+    Rg = radiation.bh.Rg,
 )
