@@ -4,7 +4,7 @@ using Distributed
 @everywhere using Qwind
 using YAML, HDF5, CSV, DataFrames, PyPlot
 include("scripts/plotting.jl")
-using Profile, PProf, TimerOutputs
+using Profile, PProf, TimerOutputs, BenchmarkTools
 
 function get_model(config)
     model = Model(config)
