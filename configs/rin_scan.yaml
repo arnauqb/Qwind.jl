@@ -1,6 +1,5 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
-  #qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
   n_cpus: 32
   partition: cosma
   account: durham
@@ -13,24 +12,20 @@ black_hole:
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
-  mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
   relativistic: true
+  f_uv: auto
   f_x: 0.15
   n_r: 2000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-
-
-radiative_transfer:
-  mode: RegularGrid
-  interpolator: 
-    type: WindInterpolator #"@vary grid VIGrid,WindInterpolator"
+  tau_uv_calculation: disk
+  wind_interpolator:
     vacuum_density: 1e2
-    n_timesteps: 10000
-    nz: 500 #"@vary grid 50,100,500,1000"
-    nr: auto
+    n_integrator_interpolation: 10000
+    nz: 500 
+    nr: auto 
 
 grid:
   # units of Rg
@@ -41,8 +36,8 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  #r_in: "@vary grid 20,25,30,40,50,75,100,125,150,175,200,300,400,500"
-  r_in: "@vary grid 225,250,275"
+  r_in: "@vary grid 20,25,30,40,50,75,100,125,150,175,200,300,400,500"
+  #r_in: "@vary grid 225,250,275"
   #r_in: "@vary grid 25,30"
   r_fi: 1500.0
   n_lines: auto
@@ -56,6 +51,4 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan"
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rin_scan_more"
-  #save_path: "/home/arnau/code/Qwind.jl/rin_autok"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rework/rin_scan"
