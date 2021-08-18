@@ -1,14 +1,14 @@
 export VelocityGrid, get_velocity, interpolate_velocity, update_velocity_grid
 
-struct VelocityGrid{T} <: InterpolationGrid{T}
+struct VelocityGrid{T, U, V} <: InterpolationGrid
     r_range::Vector{T}
     z_range::Vector{T}
     vr_grid::Array{T,2}
     vphi_grid::Array{T,2}
     vz_grid::Array{T,2}
-    nr::Union{Int,String}
-    nz::Int
-    iterator::CellIterator{T}
+    nr::Union{U, String}
+    nz::U
+    iterator::GridIterator{T, U, V}
     vr_interpolator::Any
     vphi_interpolator::Any
     vz_interpolator::Any
@@ -37,7 +37,7 @@ struct VelocityGrid{T} <: InterpolationGrid{T}
         vr_interpolator = Interpolations.extrapolate(vr_interpolator, 0.0)
         vphi_interpolator = Interpolations.extrapolate(vphi_interpolator, 0.0)
         vz_interpolator = Interpolations.extrapolate(vz_interpolator, 0.0)
-        return new{typeof(r_range[1])}(
+        return new{typeof(r_range[1]), Int, Bool}(
             r_range,
             z_range,
             vr_grid,

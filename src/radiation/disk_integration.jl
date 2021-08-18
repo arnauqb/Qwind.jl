@@ -1,14 +1,22 @@
-using Cubature
+using Cubature, TimerOutputs
 export compute_disc_radiation_field
 
-compute_tau_uv_integrand(
+
+function compute_tau_uv_integrand(
     radiation::Radiation,
     tau_uv_calculation::TauUVDisk;
     rd,
     phid,
     r,
     z,
-) = compute_uv_tau(radiation, rd = rd, phid = phid, r = r, z = z)
+)
+    ret = compute_tau_uv(radiation, rd = rd, phid = phid, r = r, z = z)
+    #ret = compute_tau_uv(radiation.wi.density_grid, radiation.wi.density_grid.iterator, rd, phid, 0.0,  r, 0.0, z, radiation.bh.Rg)
+    ret
+end
+
+
+
 
 compute_tau_uv_integrand(
     radiation::Radiation,
@@ -19,7 +27,7 @@ compute_tau_uv_integrand(
     z,
 ) = 0.0
 
-compute_tau_uv_integrand(radiation; rd, phid, r, z) = compute_tau_uv(
+compute_tau_uv_integrand(radiation; rd, phid, r, z) = compute_tau_uv_integrand(
     radiation,
     radiation.tau_uv_calculation,
     rd = rd,
@@ -58,14 +66,9 @@ function radiation_force_integrand!(
     )
     tau_uv = compute_tau_uv_integrand(radiation, rd = rd, phid = phid, r = r, z = z)
     fuv, mdot = get_fuv_mdot(radiation, rd)
-    v[:] =
-        fuv *
-        mdot *
-        rel *
-        nt *
-        exp(-tau_uv) *
-        common_projection *
-        [r_projection, z - radiation.z_disk]
+    factors = fuv * mdot * rel * nt * exp(-tau_uv) * common_projection
+    v[1] = factors * r_projection
+    v[2] = factors * (z - radiation.z_disk)
 end
 
 force_prefactors(radiation::Radiation, flag::TauUVCalculationFlag, r, z) =
@@ -159,7 +162,7 @@ function compute_disc_radiation_field(
     rtol = 1e-3,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
-    max_z_vertical_flux = 1e-1,
+    max_z_vertical_flux = 5e-1,
 )
     if (z - radiation.z_disk) < max_z_vertical_flux
         if r < radiation.disk_r_in

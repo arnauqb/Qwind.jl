@@ -149,7 +149,7 @@ function get_intersection_with_grid(
     return r, z
 end
 
-mutable struct GridIterator{T} <: CellIterator{T}
+mutable struct GridIterator{T, U, V} 
     r_range::Vector{T}
     z_range::Vector{T}
     ri::T
@@ -166,16 +166,16 @@ mutable struct GridIterator{T} <: CellIterator{T}
     b::T
     lambda::T
     change_direction_r::T
-    direction_r::Int
-    direction_z::Int
-    current_r_idx::Int
-    current_z_idx::Int
-    intersection::Vector{Float64}
-    finished::Bool
+    direction_r::U
+    direction_z::U
+    current_r_idx::U
+    current_z_idx::U
+    intersection::Vector{T}
+    finished::V
     function GridIterator(r_range, z_range)
         r_range = round.(r_range, digits = 6)
         z_range = round.(z_range, digits = 6)
-        new{typeof(r_range[1])}(
+        new{typeof(r_range[1]), Int, Bool}(
             r_range,
             z_range,
             0.0,
@@ -340,17 +340,6 @@ end
 function next_z(iterator::GridIterator)
     index = iterator.current_z_idx + iterator.direction_z
     return iterator.z_range[index]
-end
-
-function GridIterator(interpolator::WindInterpolator, ri, zi, rf, zf)
-    return GridIterator(
-        interpolator.density_grid.r_range,
-        interpolator.density_grid.z_range,
-        ri,
-        zi,
-        rf,
-        zf,
-    )
 end
 
 function pick_lambda(lambda_r, lambda_z)
@@ -548,8 +537,8 @@ function dist_to_intersection(iterator, point)
 end
 
 function compute_tau_xray(
-    grid::InterpolationGrid{T},
-    iterator::GridIterator{T},
+    grid::InterpolationGrid,
+    iterator::GridIterator,
     xray_opacity::XRayOpacityFlag,
     ri::T,
     zi::T,
@@ -614,7 +603,7 @@ compute_tau_uv_cell(intersection_size::Float64, cell_density::Float64)::Float64 
 
 function compute_tau_uv(
     grid::InterpolationGrid,
-    iterator::CellIterator,
+    iterator::GridIterator,
     ri,
     phii,
     zi,
@@ -627,7 +616,6 @@ function compute_tau_uv(
     if grid.grid === nothing
         return 0.0
     end
-    #iterator = grid.iterator
     set_iterator!(iterator, ri, phii, zi, rf, phif, zf)
     previous_point = copy(iterator.intersection)
     ret = 0.0

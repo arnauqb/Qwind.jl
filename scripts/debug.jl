@@ -4,7 +4,7 @@ using Distributed
 @everywhere using Qwind
 using YAML, HDF5, CSV, DataFrames, PyPlot
 include("scripts/plotting.jl")
-using Profile, PProf
+using Profile, PProf, TimerOutputs
 
 function get_model(config)
     model = Model(config)
@@ -22,13 +22,27 @@ model, iterations_dict = get_model("./configs/debug.yaml");
 run_iteration!(model, iterations_dict, it_num = 1, parallel = true);
 
 
-@profile
-function profile_integ()
-    rr = range(20.0, 1000.0, length=50)
-    zz = 10 .^ range(-6, 3.0, length=50)
+function profile_integ(radiation)
+    rr = range(20.0, 1000.0, length=10)
+    zz = 10 .^ range(-6, 3.0, length=10)
     for r in rr
         for z in zz
-            compute_disk_radiation_field(radiation, r, z, 0.0, 0.0)
+            compute_disc_radiation_field(radiation, r=r, z=z, vr=0.0, vz=0.0)
         end
     end
 end
+
+disable_timer!(timer)
+            
+enable_timer!(timer)
+
+reset_timer!(timer); compute_disc_radiation_field(model.rad, r=100.0, z=1.0, vr=0.0, vz=0.0); timer
+
+
+@btime compute_disc_radiation_field(model.rad, r=100.0, z=1.0, vr=0.0, vz=0.0)
+
+profile_integ(model.rad)
+
+Profile.clear()
+@profile profile_integ(model.rad)
+pprof()

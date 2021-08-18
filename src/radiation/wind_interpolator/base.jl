@@ -2,10 +2,10 @@ using PyCall
 import ConcaveHull, Interpolations, Sundials
 export WindInterpolator, get_density
 
-struct WindInterpolator{T}
+struct WindInterpolator{T, U, V}
     wind_hull::ConcaveHull.Hull
-    density_grid::InterpolationGrid{T}
-    velocity_grid::InterpolationGrid{T}
+    density_grid::DensityGrid{T, U, V}
+    velocity_grid::VelocityGrid{T, U, V}
     vacuum_density::T
     n_timesteps::Int
 end
@@ -83,3 +83,14 @@ function get_density(wi::WindInterpolator, r, z)
     end
 end
 get_density(wi::WindInterpolator, point) = get_density(wi, point[1], point[2])
+
+function GridIterator(interpolator::WindInterpolator, ri, zi, rf, zf)
+    return GridIterator(
+        interpolator.density_grid.r_range,
+        interpolator.density_grid.z_range,
+        ri,
+        zi,
+        rf,
+        zf,
+    )
+end

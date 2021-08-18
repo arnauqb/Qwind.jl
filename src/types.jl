@@ -17,7 +17,7 @@ export DensityInterpolator,
 
 abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
-abstract type InterpolationGrid{T<:AbstractFloat} end
+abstract type InterpolationGrid end
 
 # Radiation flags
 abstract type Flag end
@@ -47,6 +47,3 @@ abstract type TauUVCalculationFlag end
 struct TauUVCenter <: TauUVCalculationFlag end
 struct TauUVDisk <: TauUVCalculationFlag end
 struct NoTauUV <: TauUVCalculationFlag end
-
-# Radiative transfer
-abstract type CellIterator{T<:AbstractFloat} end

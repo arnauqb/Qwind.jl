@@ -1,5 +1,6 @@
 import ConcaveHull
 import ConcaveHull: Hull
+import Sundials
 export DenseIntegrator, DenseIntegrators, Hull
 
 function filter_array(a, b, value)
@@ -100,5 +101,4 @@ Hull() = ConcaveHull.concave_hull([[-1e8,0.0],[1e8,0.0],[0.0,1e8],[0.0,-1e8]])
 function is_point_in_wind(hull::ConcaveHull.Hull, point)
     return ConcaveHull.in_hull(point, hull)
 end
-is_point_in_wind(wi::WindInterpolator, point) = is_point_in_wind(wi.hull, point)
 is_point_in_wind(hull::ConcaveHull.Hull, r, z) = is_point_in_wind(hull, [r, z])

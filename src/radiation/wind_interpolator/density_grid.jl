@@ -2,13 +2,13 @@ using HDF5, Printf
 import ConcaveHull
 export DensityGrid, get_density, update_density_grid, interpolate_density
 
-struct DensityGrid{T} <: InterpolationGrid{T}
+struct DensityGrid{T, U, V} <: InterpolationGrid
     r_range::Vector{T}
     z_range::Vector{T}
     grid::Array{T,2}
-    nr::Union{Int,String}
-    nz::Int
-    iterator::CellIterator{T}
+    nr::Union{U, String}
+    nz::U
+    iterator::GridIterator{T, U, V}
     interpolator::Any
     function DensityGrid(r_range, z_range, grid, nr = nothing, nz = nothing)
         if nr === nothing
@@ -21,7 +21,7 @@ struct DensityGrid{T} <: InterpolationGrid{T}
         interpolator =
             Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
         interpolator = Interpolations.extrapolate(interpolator, 1e2)
-        return new{typeof(r_range[1])}(
+        return new{typeof(r_range[1]), Int, Bool}(
             r_range,
             z_range,
             grid,
