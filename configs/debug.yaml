@@ -12,15 +12,15 @@ black_hole:
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
-  relativistic: false 
-  f_uv: 0.85
+  relativistic: true 
+  f_uv: auto
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: no_tau_uv
+  tau_uv_calculation: disk
   disk_integral_rtol: 1e-3
   wind_interpolator:
     vacuum_density: 1e2
@@ -39,7 +39,7 @@ initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: 10 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: 50 #"@vary grid 50,100,500,1000,5000,10000" #2000
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
@@ -48,7 +48,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 50
+  n_iterations: 50 
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
