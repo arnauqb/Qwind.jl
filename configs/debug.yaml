@@ -20,7 +20,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: disk
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     vacuum_density: 1e2
@@ -39,7 +39,7 @@ initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: 50 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: auto
   log_spaced: true
   z_0: 0.0 # Rg
   K: 0.03
