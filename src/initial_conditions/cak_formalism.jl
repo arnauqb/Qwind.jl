@@ -22,10 +22,10 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 5e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     frad = compute_disc_radiation_field(
         radiation,
-        r,
-        z,
-        0.0,
-        0.0,
+        r = r,
+        z = z,
+        vr = 0.0,
+        vz = 0.0,
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,
@@ -43,10 +43,10 @@ function g(radiation::Radiation, z; r, zmax = 5e-1)
     radiation.wi.density_grid.grid .= 0.0
     fr = compute_disc_radiation_field(
         radiation,
-        r,
-        z,
-        0.0,
-        0.0,
+        r = r,
+        z = z,
+        vr = 0.0,
+        vz = 0.0,
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,
@@ -75,15 +75,7 @@ function find_nozzle_function_minimum(
     n_z = 150,
 )
     z_range = 10 .^ range(-4, 3, length = n_z)
-    n_range =
-        nozzle_function.(
-            Ref(radiation),
-            z_range,
-            r = r,
-            alpha = alpha,
-            zmax = zmax,
-            no_fuv = no_fuv,
-        )
+    n_range = nozzle_function.(Ref(radiation), z_range, r = r, alpha = alpha, zmax = zmax)
     mask = n_range .!= Inf
     n_range = n_range[mask]
     z_range = z_range[mask]

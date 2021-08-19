@@ -14,15 +14,11 @@ radiation:
   disk_height: 0.0
   xray_opacity: boost
   tau_uv_calculation: disk
-
-radiative_transfer:
-  mode: RegularGrid
-  interpolator: 
-    type: WindInterpolator 
+  wind_interpolator:
     vacuum_density: 1e2
-    n_timesteps: 10000
+    n_integrator_interpolation: 10000
     nz: 500 
-    nr: "auto"
+    nr: auto 
 
 grid:
   # units of Rg
