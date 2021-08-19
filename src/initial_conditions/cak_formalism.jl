@@ -105,9 +105,9 @@ function CAK_Σ(radiation::Radiation, r; K = 0.3, alpha = 0.6, mu_e = 1.17)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / radiation.bh.Rg
-    γ0 = gamma0(radiation, r)
     constant = K * (1 / (SIGMA_E / mu_e * vth))^alpha * C^2 / radiation.bh.Rg
-    return cc * constant * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
+    γ0 = gamma0(radiation, r) * constant
+    return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 
 function get_initial_density(radiation::Radiation; r, mdot, K = 0.3, alpha = 0.6, mu = 0.61)
