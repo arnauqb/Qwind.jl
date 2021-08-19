@@ -10,13 +10,8 @@ function compute_tau_uv_integrand(
     r,
     z,
 )
-    ret = compute_tau_uv(radiation, rd = rd, phid = phid, r = r, z = z)
-    #ret = compute_tau_uv(radiation.wi.density_grid, radiation.wi.density_grid.iterator, rd, phid, 0.0,  r, 0.0, z, radiation.bh.Rg)
-    ret
+    return compute_tau_uv(radiation, rd = rd, phid = phid, r = r, z = z)
 end
-
-
-
 
 compute_tau_uv_integrand(
     radiation::Radiation,

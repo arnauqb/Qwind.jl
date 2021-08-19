@@ -22,31 +22,10 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 5e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     frad = compute_disc_radiation_field(
         radiation,
-        r=r,
-        z=z,
-        vr=0.0,
-        vz=0.0,
-        max_z_vertical_flux = zmax,
-        rtol = 1e-4,
-        maxevals = 100000,
-    )[2]
-    f0 = gamma0(radiation, r)
-    return cc * frad / f0
-end
-
-function g(radiation::Radiation, z; r, zmax = 5e-1)
-    grav = compute_gravitational_acceleration(r, z + disk_height(radiation.bh, r))[2]
-    # Hack to set UV fractions to 1 for this calculation, and no attenuation
-    fuv_copy = copy(radiation.fuv_grid)
-    dgrid_copy = copy(radiation.wi.density_grid.grid)
-    radiation.fuv_grid .= 1.0
-    radiation.wi.density_grid.grid .= 0.0
-    fr = compute_disc_radiation_field(
-        radiation,
-        r=r,
-        z=z,
-        vr=0.0,
-        vz=0.0,
+        r = r,
+        z = z,
+        vr = 0.0,
+        vz = 0.0,
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,

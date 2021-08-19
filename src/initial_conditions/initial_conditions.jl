@@ -18,7 +18,7 @@ struct UniformIC{T} <: InitialConditions{T}
     logspaced::Bool
 end
 
-function UniformIC(radiation, radiative_transfer, black_hole, config)
+function UniformIC(radiation, config)
     icc = config[:initial_conditions]
     if :launch_range in keys(icc)
         rin, rfi = icc[:launch_range]
