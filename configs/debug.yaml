@@ -45,7 +45,7 @@ initial_conditions:
   K: 0.03
   alpha: 0.6
   mu: 0.61
-  use_precalculated: true
+  use_precalculated: false 
 
 integrator:
   n_iterations: 50 
