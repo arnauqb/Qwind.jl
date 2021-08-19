@@ -1,7 +1,7 @@
 using Distributed, ClusterManagers
-pids = addprocs_slurm(16,
+pids = addprocs_slurm(25,
                       topology=:master_worker,
-                      p="cosma6",
+                      p="cosma7-shm",
                       A="dp004",
                       t="04:00:00",
                       job_file_loc="cpu_logs")
