@@ -1,8 +1,8 @@
 using Distributed, ClusterManagers
-pids = addprocs_slurm(25,
+pids = addprocs_slurm(16,
                       topology=:master_worker,
-                      p="cosma7-shm",
-                      A="dp004",
+                      p="cosma",
+                      A="durham",
                       t="04:00:00",
                       job_file_loc="cpu_logs")
 
@@ -42,8 +42,9 @@ end
 end
 
 M_range = [1e6, 1e7, 1e8, 1e9, 1e10]
-mdot_range = 10 .^ range(log10(0.025), log10(0.5), length=5) 
-mdot_range = vcat(mdot_range, [0.01, 0.1, 0.05])
+#mdot_range = 10 .^ range(log10(0.025), log10(0.5), length=5) 
+#mdot_range = vcat(mdot_range, [0.01, 0.1, 0.05])
+mdot_range = [0.25]
 
 for M in M_range
     for mdot in mdot_range
