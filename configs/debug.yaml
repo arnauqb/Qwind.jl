@@ -42,7 +42,7 @@ initial_conditions:
   n_lines: auto
   log_spaced: true
   z_0: 0.0 # Rg
-  K: 0.03
+  K: auto
   alpha: 0.6
   mu: 0.61
   use_precalculated: true

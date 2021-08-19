@@ -100,7 +100,15 @@ getz0(ic::CAKIC, r0) = ic.z0
 function getn0(ic::CAKIC, radiation::Radiation, r0)
     rv, ridx = findmin(abs.(ic.critical_points_df.r .- r0))
     mdot = ic.critical_points_df.mdot[ridx]
-    n = get_initial_density(radiation, r = r0, mdot = mdot, K = ic.K, alpha = ic.alpha)
+    zc = ic.critical_points_df.zc[ridx]
+    K = ic.K
+    if K == "auto"
+        taux = compute_tau_xray(radiation, r=r0, z=zc)
+        density = get_density(radiation.wi.density_grid, r0, zc)
+        ξ = compute_ionization_parameter(radiation, r0, zc, 0.0, 0.0, density, taux)
+        K = compute_force_multiplier_k(ξ, FMNoInterp())
+    end
+    n = get_initial_density(radiation, r = r0, mdot = mdot, K = K, alpha = ic.alpha)
     return n
 end
 getn0(model, r0) = getn0(model.ic, model.rad, r0)

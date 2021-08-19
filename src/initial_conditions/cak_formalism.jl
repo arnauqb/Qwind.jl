@@ -18,7 +18,7 @@ function gamma0(radiation, r)
     return ret
 end
 
-function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 5e-1)
+function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-2)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     frad = compute_disc_radiation_field(
         radiation,
@@ -96,7 +96,7 @@ function find_nozzle_function_minimum(
     if length(minima_values) == 0
         return Inf, NaN
     end
-    minn = argmin(minima_values)
+    minn = 1 #argmin(minima_values)
     minnarg = minima_arg[minn]
     return z_range[minnarg], minima_values[minn]
 end
