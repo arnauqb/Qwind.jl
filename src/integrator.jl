@@ -2,6 +2,7 @@ using DiffEqBase, DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
 using Roots: find_zero, Bisection
 using Distributed
+using QuadGK
 import Qwind.out_of_grid, Qwind.compute_density
 import Base.push!
 export initialize_integrator,
@@ -335,136 +336,164 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
-function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
-    lines_range = [rin]
+function compute_lines_range(model; rin, rfi, delta_mdot, fill_delta = 5, max_delta=1)
+    lines_range = []
     lines_widths = []
-    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
-    z_range = [0.0, 1.0]
-    density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(model), r_range)
-    interp_grid = DensityGrid(r_range, z_range, density_grid)
-    tau_x = 0.0
-    tau_uv = 0.0
-    xr_opacity = model.rad.xray_opacity
-    fx(delta_r, rc, delta_tau, tau_x) =
-        delta_tau - (
-            compute_tau_xray(
-                interp_grid,
-                xr_opacity,
-                ri = 1e-6,
-                zi = 0.0,
-                rf = rc + delta_r,
-                zf = 0.0,
-                xray_luminosity = xray_luminosity,
-                Rg = Rg,
-            ) - tau_x
-        )
-    fuv(delta_r, rc, delta_tau, tau_uv) =
-        delta_tau - (
-            compute_tau_uv(
-                interp_grid,
-                ri = 0.0,
-                phii = 0.0,
-                zi = 0.0,
-                rf = rc + delta_r,
-                phif = 0.0,
-                zf = 0.0,
-                Rg = Rg,
-            ) - tau_uv
-        )
-    rc = rin
-    while rc < rfi
-        if tau_x < 50
-            tau_x = compute_tau_xray(
-                interp_grid,
-                xr_opacity,
-                ri = 0.0,
-                zi = 0.0,
-                rf = rc,
-                zf = 0.0,
-                xray_luminosity = xray_luminosity,
-                Rg = Rg,
-            )
-            if tau_x < 5
-                delta_tau = 0.1
-            elseif tau_x < 20
-                delta_tau = 0.5
-            else
-                delta_tau = 1
-            end
-            try
-                delta_r = find_zero(
-                    delta_r -> fx(delta_r, rc, delta_tau, tau_x),
-                    0.1,
-                    atol = 1e-7,
-                    rtol = 1e-3,
-                )
-            catch
-                break
-            end
-        else
-            tau_uv = compute_tau_uv(
-                interp_grid,
-                ri = 0.0,
-                phii = 0.0,
-                zi = 0.0,
-                rf = rc,
-                phif = 0.0,
-                zf = 0.0,
-                Rg = Rg,
-            )
-            if tau_uv < 5
-                delta_tau = 0.1
-            elseif tau_uv < 20
-                delta_tau = 0.5
-            elseif tau_uv < 50
-                delta_tau = 1
-            elseif tau_uv < 1000
-                delta_tau = 10
-            else
-                break
-            end
-            try
-                delta_r = find_zero(
-                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
-                    (0, 2),
-                    atol = 1e-6,
-                    rtol = 1e-3,
-                )
-            catch
-                break
-            end
-            if delta_r < 0
-                break
-            end
-            #else
-            #    break
+    r = rin
+    function mass_loss_kernel(model; r)
+        n0 = getn0(model, r)
+        v0 = getv0(model, r)
+        return n0 * M_P * v0 * C * 2π * r * model.bh.Rg^2
+    end
+    function find_delta_r(model, r; delta_mdot=0.01, max_delta=max_delta)
+        mass_loss(delta_r) = quadgk(r-> mass_loss_kernel(model, r=r), r, r + delta_r, rtol=1e-2, atol=0)[1]
+        target = delta_mdot * compute_mass_accretion_rate(model.bh)
+        if mass_loss(1000) < target
+            return fill_delta
         end
-        delta_r = min(delta_r, 1)
-        push!(lines_range, rc + delta_r / 2)
+        delta_r = find_zero(delta_r -> mass_loss(delta_r) - target, (1e-5, 1000), atol=0, rtol=1e-2)
+        return min(delta_r, max_delta)
+    end
+    while r < rfi
+        delta_r = find_delta_r(model, r, delta_mdot=delta_mdot, max_delta=max_delta)
+        push!(lines_range, r + delta_r / 2)
         push!(lines_widths, delta_r)
-        rc += delta_r
+        r += delta_r
     end
-    if rc < 200
-        additional_range = range(rc, 200.0, step = 2)
-        additional_range = vcat(additional_range, range(201.0, rfi, step = 5))
-    else
-        additional_range = range(rc, rfi, step = 5)
-    end
-    additional_widths = diff(additional_range)
-    pushfirst!(additional_widths, additional_range[1] - lines_range[end])
-    lines_range = vcat(lines_range, additional_range)
-    lines_widths = vcat(lines_widths, additional_widths)
-    # discard last radius
-    lines_range = lines_range[1:(end - 1)]
     return lines_range, lines_widths
 end
+
+#function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
+#    lines_range = [rin]
+#    lines_widths = []
+#    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
+#    z_range = [0.0, 1.0]
+#    density_grid = zeros((length(r_range), length(z_range)))
+#    density_grid[:, 1] .= getn0.(Ref(model), r_range)
+#    interp_grid = DensityGrid(r_range, z_range, density_grid)
+#    tau_x = 0.0
+#    tau_uv = 0.0
+#    xr_opacity = model.rad.xray_opacity
+#    fx(delta_r, rc, delta_tau, tau_x) =
+#        delta_tau - (
+#            compute_tau_xray(
+#                interp_grid,
+#                xr_opacity,
+#                ri = 1e-6,
+#                zi = 0.0,
+#                rf = rc + delta_r,
+#                zf = 0.0,
+#                xray_luminosity = xray_luminosity,
+#                Rg = Rg,
+#            ) - tau_x
+#        )
+#    fuv(delta_r, rc, delta_tau, tau_uv) =
+#        delta_tau - (
+#            compute_tau_uv(
+#                interp_grid,
+#                ri = 0.0,
+#                phii = 0.0,
+#                zi = 0.0,
+#                rf = rc + delta_r,
+#                phif = 0.0,
+#                zf = 0.0,
+#                Rg = Rg,
+#            ) - tau_uv
+#        )
+#    rc = rin
+#    while rc < rfi
+#        if tau_x < 50
+#            tau_x = compute_tau_xray(
+#                interp_grid,
+#                xr_opacity,
+#                ri = 0.0,
+#                zi = 0.0,
+#                rf = rc,
+#                zf = 0.0,
+#                xray_luminosity = xray_luminosity,
+#                Rg = Rg,
+#            )
+#            if tau_x < 5
+#                delta_tau = 0.1
+#            elseif tau_x < 20
+#                delta_tau = 0.5
+#            else
+#                delta_tau = 1
+#            end
+#            try
+#                delta_r = find_zero(
+#                    delta_r -> fx(delta_r, rc, delta_tau, tau_x),
+#                    0.1,
+#                    atol = 1e-7,
+#                    rtol = 1e-3,
+#                )
+#            catch
+#                break
+#            end
+#        else
+#            tau_uv = compute_tau_uv(
+#                interp_grid,
+#                ri = 0.0,
+#                phii = 0.0,
+#                zi = 0.0,
+#                rf = rc,
+#                phif = 0.0,
+#                zf = 0.0,
+#                Rg = Rg,
+#            )
+#            if tau_uv < 5
+#                delta_tau = 0.1
+#            elseif tau_uv < 20
+#                delta_tau = 0.5
+#            elseif tau_uv < 50
+#                delta_tau = 1
+#            elseif tau_uv < 1000
+#                delta_tau = 10
+#            else
+#                break
+#            end
+#            try
+#                delta_r = find_zero(
+#                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
+#                    (0, 2),
+#                    atol = 1e-6,
+#                    rtol = 1e-3,
+#                )
+#            catch
+#                break
+#            end
+#            if delta_r < 0
+#                break
+#            end
+#            #else
+#            #    break
+#        end
+#        delta_r = min(delta_r, 1)
+#        push!(lines_range, rc + delta_r / 2)
+#        push!(lines_widths, delta_r)
+#        rc += delta_r
+#    end
+#    if rc < 200
+#        additional_range = range(rc, 200.0, step = 2)
+#        additional_range = vcat(additional_range, range(201.0, rfi, step = 5))
+#    else
+#        additional_range = range(rc, rfi, step = 5)
+#    end
+#    additional_widths = diff(additional_range)
+#    pushfirst!(additional_widths, additional_range[1] - lines_range[end])
+#    lines_range = vcat(lines_range, additional_range)
+#    lines_widths = vcat(lines_widths, additional_widths)
+#    # discard last radius
+#    lines_range = lines_range[1:(end - 1)]
+#    return lines_range, lines_widths
+#end
 
 
 compute_lines_range(model) = compute_lines_range(
     model,
-    model.ic.rin,
-    model.ic.rfi,
-    model.bh.Rg,
-    model.rad.xray_luminosity,
+    rin=model.ic.rin,
+    rfi=model.ic.rfi,
+    delta_mdot=0.01,
+    fill_delta=5,
+    max_delta=1,
 )

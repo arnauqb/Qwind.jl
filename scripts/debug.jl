@@ -20,22 +20,26 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
+lr, lw = Qwind.compute_lines_range(model, rin=6.1, rfi=1500, delta_mdot=0.01)
 
-integrators = iterations_dict[4]["integrators"];
-hull = iterations_dict[5]["rad"].wi.wind_hull;
-fig, ax = QwindPlotting.plot_wind_hull(hull, rmax=2000, zmax=2000, nr =500, nz=500);
+fig, ax = plt.subplots()
+for l in lr
+    ax.axvline(lr)
+end
+
+
+iterations_dict[1] = Dict()
+integrators = run_integrators!(model, iterations_dict, it_num=1, parallel=true);
+
+
+
+integrators = iterations_dict[1]["integrators"];
+fig, ax = plt.subplots()
 QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25, color="black")
 ax.set_xlim(0,2000)
 ax.set_ylim(0,2000)
 
 max_times = get_intersection_times(integrators);
-
-QwindPlotting.plot_streamlines(integrators);
-
-#integrators = Qwind.filter_close_trajectories(integrators, 5e-2);
-#length(integrators)
-
-QwindPlotting.plot_streamlines(integrators);
 
 r0 = [integ.p.r0 for integ in integrators];
 integrators_interpolated_linear = interpolate_integrators(
@@ -53,7 +57,10 @@ hull = Hull(r, z, r0, sigdigits = 6);
 
 hull = iterations_dict[1]["rad"].wi.wind_hull;
 
-fig, ax = QwindPlotting.plot_wind_hull(model.rad.wi.wind_hull, rmax=2000, zmax=1, nr =500, nz=500);
+integrators = iterations_dict[1]["integrators"];
+whull = iterations_dict[2]["rad"].wi.wind_hull;
+
+fig, ax = QwindPlotting.plot_wind_hull(whull, rmin=1, rmax=2000, zmax=100, nr =500, nz=500);
 QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25)
 
 
