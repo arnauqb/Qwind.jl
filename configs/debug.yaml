@@ -48,7 +48,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 2
+  n_iterations: 1
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"

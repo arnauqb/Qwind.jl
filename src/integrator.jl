@@ -336,7 +336,7 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
-function compute_lines_range(model; rin, rfi, delta_mdot, fill_delta = 5, max_delta=1)
+function compute_lines_range(model, rin, rfi; delta_mdot, fill_delta = 5, max_delta=1)
     lines_range = []
     lines_widths = []
     r = rin
@@ -491,8 +491,8 @@ end
 
 compute_lines_range(model) = compute_lines_range(
     model,
-    rin=model.ic.rin,
-    rfi=model.ic.rfi,
+    model.ic.rin,
+    model.ic.rfi,
     delta_mdot=0.01,
     fill_delta=5,
     max_delta=1,

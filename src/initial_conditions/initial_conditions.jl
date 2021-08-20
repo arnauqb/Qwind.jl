@@ -119,4 +119,4 @@ function getn0(ic::CAKIC, radiation::Radiation, r0)
 end
 getn0(model, r0) = getn0(model.ic, model.rad, r0)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0))
-getv0(model::Model, r0) = getv0(model.ic, r0)
+getv0(model, r0) = getv0(model.ic, r0)
