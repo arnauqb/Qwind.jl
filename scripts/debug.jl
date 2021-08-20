@@ -62,5 +62,3 @@ whull = iterations_dict[2]["rad"].wi.wind_hull;
 
 fig, ax = QwindPlotting.plot_wind_hull(whull, rmin=1, rmax=2000, zmax=100, nr =500, nz=500);
 QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25)
-
-
