@@ -28,36 +28,24 @@ using Qwind, Test
     end
 end
 
-#@testset "Test empty interpolation grid" begin
-#    r_range = range(0, 1000, length = 100)
-#    z_range = range(0, 1000, length = 100)
-#    empty_grid = Qwind.construct_interpolation_grid(10, 20)
-#    @test empty_grid.nr == 10
-#    @test empty_grid.nz == 20
-#    @test empty_grid.r_range == [0.0, 0.0]
-#    @test empty_grid.z_range == [0.0, 0.0]
-#    for (i, r) in enumerate(r_range)
-#        for (j, z) in enumerate(z_range)
-#            @test empty_grid.interpolator(r, z) == 1e2
-#        end
-#    end
-#end
-
 @testset "Construct wind hull" begin
-    rr = collect(range(1.0, 100, length = 10))
-    rr = vcat(rr, 100.0 .* ones(10))
-    zz = collect(range(1.0, 100, length = 10))
-    zz = vcat(zz, range(1.0, 100, length = 10))
-    rr = vcat(rr, range(0, 100, length = 20))
-    zz = vcat(zz, zeros(20))
-    @test length(rr) == length(zz)
-    r0s = collect(range(1.0, 100.0, length = 20))
-    hull = Hull(rr, zz, r0s)
+    n = 10000
+    # make a triangle
+    r_randoms = 100 .* rand(n)
+    z_randoms = 100 .* rand(n)
+    rs = Float64[]
+    zs = Float64[]
+    for (rp, zp) in zip(r_randoms, z_randoms)
+        if rp >= zp
+            push!(rs, rp)
+            push!(zs, zp)
+        end
+    end
+    @test length(rs) == length(zs)
+    hull = Hull(rs, zs)
     @test Qwind.is_point_in_wind(hull, [0, 10]) == false
-    @test Qwind.is_point_in_wind(hull, [50, 0]) == true
-    @test Qwind.is_point_in_wind(hull, [99, 99]) == true
-    @test Qwind.is_point_in_wind(hull, [99, 100]) == false
-    @test Qwind.is_point_in_wind(hull, [99, 98]) == true
+    @test Qwind.is_point_in_wind(hull, [50, 10]) == true
+    @test Qwind.is_point_in_wind(hull, [90, 80]) == true
     @test Qwind.is_point_in_wind(hull, [40, 30]) == true
     @test Qwind.is_point_in_wind(hull, [200, 0]) == false
 end
@@ -75,7 +63,6 @@ end
     hull = Hull(
         [0.01, 200, 0.01, 200],
         [0.01, 200, 200, 0.01],
-        [0.01, 200.0, 0.01, 200.0]
     );
     r0_range = collect(range(0.1, 100.0, step = 10));
     func(r, z) = 1e12 * exp(-z / 100) / r;
