@@ -168,6 +168,7 @@ function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z)
         rf = r,
         zf = z,
         phif = 0.0,
+        Rg = radiation.bh.Rg
     )
 end
 function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z)

@@ -116,8 +116,8 @@ function get_initial_density(radiation::Radiation; r, mdot, K = 0.3, alpha = 0.6
            (mu * M_P)
 end
 
-function calculate_wind_mdots(radiation::Radiation)
-    rr = 10 .^ range(log10(15.0), log10(1500), length = 50)
+function calculate_wind_mdots(radiation::Radiation; rmin=6.1, rmax=1500.0, nr=100)
+    rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
     f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-2)
