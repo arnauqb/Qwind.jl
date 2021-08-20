@@ -1,4 +1,4 @@
-using Roots, CSV, DataFrames
+using Roots, CSV, DataFrames, Interpolations
 using Optim: optimize, Brent
 export InitialConditions,
     UniformIC, CAKIC, getz0, getrin, getrfi, getn0, getv0, getnlines, getl0
@@ -58,6 +58,8 @@ struct CAKIC{T} <: InitialConditions{T}
     alpha::Union{T,String}
     logspaced::Bool
     critical_points_df::DataFrame
+    mdot_interpolator::Interpolations.Extrapolation
+    zc_interpolator::Interpolations.Extrapolation
 end
 
 function CAKIC(radiation, config)
@@ -77,6 +79,8 @@ function CAKIC(radiation, config)
         rin = icc[:r_in]
         rfi = icc[:r_fi]
     end
+    mdot_interpolator = LinearInterpolation(critical_points_df[!, :r], critical_points_df[!, :mdot], extrapolation_bc=Line())
+    zc_interpolator = LinearInterpolation(critical_points_df[!, :r], critical_points_df[!, :zc], extrapolation_bc=Line())
     rin = max(rin, minimum(critical_points_df[!, :r]))
     rfi = min(rfi, maximum(critical_points_df[!, :r]))
     nlines = icc[:n_lines]
@@ -93,14 +97,16 @@ function CAKIC(radiation, config)
         icc[:alpha],
         icc[:log_spaced],
         critical_points_df,
+        mdot_interpolator,
+        zc_interpolator
     )
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
 function getn0(ic::CAKIC, radiation::Radiation, r0)
-    rv, ridx = findmin(abs.(ic.critical_points_df.r .- r0))
-    mdot = ic.critical_points_df.mdot[ridx]
-    zc = ic.critical_points_df.zc[ridx]
+    #rv, ridx = findmin(abs.(ic.critical_points_df.r .- r0))
+    mdot = ic.mdot_interpolator(r0) #ic.critical_points_df.mdot[ridx]
+    zc = ic.zc_interpolator(r0) #ic.critical_points_df.zc[ridx]
     K = ic.K
     if K == "auto"
         taux = compute_tau_xray(radiation, r=r0, z=zc)
