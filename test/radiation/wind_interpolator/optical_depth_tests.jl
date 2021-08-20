@@ -42,7 +42,17 @@ end
                     for pd in phid_range_test
                         #println("rdp $rdp rp $rp zp $zp pd $pd")
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg, max_tau=Inf)
+                        qwsol = compute_tau_uv(
+                            grid,
+                            ri = rdp,
+                            phii = pd,
+                            zi = 0.0,
+                            rf = rp,
+                            phif = 0.0,
+                            zf = zp,
+                            Rg = Rg,
+                            max_tau = Inf,
+                        )
                         @test qwsol ≈ truesol rtol = 1e-6
                     end
                 end
@@ -56,7 +66,7 @@ end
         rp_range_test = range(10, 90, length = 10)
         r_range_test = range(10, 90, length = 10)
         z_range_test = range(10, 90, length = 10)
-        phid_range_test = range(0, π-0.1, length = 10)
+        phid_range_test = range(0, π - 0.1, length = 10)
         density_grid = zeros((length(r_range), length(z_range)))
         dens_func(r, z) = 1e8 * (2 * r + z)
         for (i, rp) in enumerate(r_range)
@@ -66,16 +76,21 @@ end
         end
         grid = DensityGrid(r_range, z_range, density_grid)
         function f_anl_kernel(t, rd, phid, r, z)
-            x = rd * cos(phid) * (1-t) + r * t 
-            y = rd * sin(phid) * (1-t)
+            x = rd * cos(phid) * (1 - t) + r * t
+            y = rd * sin(phid) * (1 - t)
             zp = z * t
             rp = sqrt(x^2 + y^2)
             dens = dens_func(rp, zp)
             return dens
         end
         function f_anl(rd, phid, r, z)
-            dens_line =
-                quadgk(t -> f_anl_kernel(t, rd, phid, r, z), 0, 1, rtol = 1e-2, atol = 1e-8)[1]
+            dens_line = quadgk(
+                t -> f_anl_kernel(t, rd, phid, r, z),
+                0,
+                1,
+                rtol = 1e-2,
+                atol = 1e-8,
+            )[1]
             return dens_line * compute_delta(rd, phid, r, z) * SIGMA_T * Rg
         end
         for rdp in rp_range_test
@@ -86,7 +101,17 @@ end
                         delta = compute_delta(rdp, pd, rp, zp)
                         #println("delta $delta")
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg, max_tau=Inf)
+                        qwsol = compute_tau_uv(
+                            grid,
+                            ri = rdp,
+                            phii = pd,
+                            zi = 0.0,
+                            rf = rp,
+                            phif = 0.0,
+                            zf = zp,
+                            Rg = Rg,
+                            max_tau = Inf,
+                        )
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
                 end
@@ -100,9 +125,9 @@ end
         rp_range_test = range(10, 90, length = 10)
         r_range_test = range(10, 90, length = 10)
         z_range_test = range(10, 90, length = 10)
-        phid_range_test = range(0, π-0.1, length = 10)
-        density_grid = zeros((length(r_range), length(z_range)));
-        dens_func(r, z) = 1e8 * exp(-r -z^2)
+        phid_range_test = range(0, π - 0.1, length = 10)
+        density_grid = zeros((length(r_range), length(z_range)))
+        dens_func(r, z) = 1e8 * exp(-r - z^2)
         for (i, rp) in enumerate(r_range)
             for (j, zp) in enumerate(z_range)
                 density_grid[i, j] = dens_func(rp, zp)
@@ -110,8 +135,8 @@ end
         end
         grid = DensityGrid(r_range, z_range, density_grid)
         function f_anl_kernel(t, rd, phid, r, z)
-            x = rd * cos(phid) * (1-t) + r * t 
-            y = rd * sin(phid) * (1-t)
+            x = rd * cos(phid) * (1 - t) + r * t
+            y = rd * sin(phid) * (1 - t)
             zp = z * t
             rp = sqrt(x^2 + y^2)
             dens = dens_func(rp, zp)
@@ -127,7 +152,17 @@ end
                 for zp in z_range_test
                     for pd in phid_range_test
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_uv_tau(grid, rdp, pd, rp, zp, Rg, max_tau=Inf)
+                        qwsol = compute_tau_uv(
+                            grid,
+                            ri = rdp,
+                            phii = pd,
+                            zi = 0,
+                            rf = rp,
+                            phif = 0,
+                            zf = zp,
+                            Rg = Rg,
+                            max_tau = Inf,
+                        )
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
                 end
@@ -155,14 +190,23 @@ end
             for rp in r_range_test
                 for zp in z_range_test
                     truesol = f_anl(rp, zp)
-                    qwsol = compute_xray_tau(grid, Thomson(), 0.0, 0.0, rp, zp, xl, Rg)
+                    qwsol = compute_tau_xray(
+                        grid,
+                        Thomson(),
+                        ri = 0.0,
+                        zi = 0.0,
+                        rf = rp,
+                        zf = zp,
+                        xray_luminosity = xl,
+                        Rg = Rg,
+                    )
                     @test truesol ≈ qwsol rtol = 1e-3
                 end
             end
         end
         @testset "Boost" begin
             function get_ion_radius(density)
-                f(r) = 10^5 - xl / (density * (r*Rg)^2) * exp(-r * density * SIGMA_T * Rg)
+                f(r) = 10^5 - xl / (density * (r * Rg)^2) * exp(-r * density * SIGMA_T * Rg)
                 zero = find_zero(f, (10, 1000))
                 return zero
             end
@@ -172,14 +216,23 @@ end
                 if d <= rx
                     return d * srg
                 else
-                    return rx * srg + 100 * (d-rx) * srg
+                    return rx * srg + 100 * (d - rx) * srg
                 end
             end
             rx = get_ion_radius(2e8)
             for rp in r_range_test
                 for zp in z_range_test
                     truesol = f_anl(rp, zp, rx)
-                    qwsol = compute_xray_tau(grid, Boost(), 0.0, 0.0, rp, zp, xl, Rg)
+                    qwsol = compute_tau_xray(
+                        grid,
+                        Boost(),
+                        ri = 0.0,
+                        zi = 0.0,
+                        rf = rp,
+                        zf = zp,
+                        xray_luminosity = xl,
+                        Rg = Rg,
+                    )
                     @test truesol ≈ qwsol rtol = 1e-3
                 end
             end

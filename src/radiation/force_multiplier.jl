@@ -1,5 +1,6 @@
 using Interpolations
 export compute_force_multiplier
+
 """
 Calculates the fitting parameter k for the force multiplier calculation
 in Steven & Kallman 1990

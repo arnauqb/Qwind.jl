@@ -44,7 +44,7 @@ end
 
 getz0(ic::UniformIC, r) = ic.z0
 getn0(ic::UniformIC, r) = ic.n0
-getn0(ic::UniformIC, rad::Radiation, r0) = ic.n0
+getn0(ic::UniformIC, rad, r0) = ic.n0
 getv0(ic::UniformIC, r) = ic.v0
 ## CAK
 

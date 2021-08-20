@@ -274,7 +274,7 @@ function residual!(radiation::Radiation, out, du, u, p, t)
     out[4] = vz_dot - az
 end
 
-function create_dae_problem(radiation::Radiation, residual!, du₀, u₀, tspan, params)
+function create_dae_problem(radiation, residual!, du₀, u₀, tspan, params)
     func!(out, du, u, p, t) = residual!(radiation, out, du, u, p, t)
     return DAEProblem(
         func!,

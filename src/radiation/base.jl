@@ -1,3 +1,5 @@
+export Radiation, update_radiation
+
 struct Radiation{T<:AbstractFloat}
     bh::BlackHole{T}
     wi::WindInterpolator{T}
@@ -135,13 +137,22 @@ end
 
 get_density(radiation::Radiation, r, z) = get_density(radiation.wi, r, z)
 
-function update_radiation(radiation::Radiation, integrators)
+function update_radiation(radiation::Radiation, integrators::Vector{<:Sundials.IDAIntegrator})
     @info "Updating radiation... "
     flush()
     new_interp = update_wind_interpolator(radiation.wi, integrators)
+    return update_radiation(radiation, new_interp)
+end
+
+function update_radiation(radiation::Radiation, dgrid::DensityGrid)
+    new_interp = update_wind_interpolator(radiation.wi, dgrid)
+    return update_radiation(radiation, new_interp)
+end
+
+function update_radiation(radiation::Radiation, wind_interpolator::WindInterpolator)
     return Radiation(
         radiation.bh,
-        new_interp,
+        wind_interpolator,
         radiation.disk_grid,
         radiation.fuv_grid,
         radiation.mdot_grid,

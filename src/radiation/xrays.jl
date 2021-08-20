@@ -1,3 +1,5 @@
+export compute_ionization_parameter, compute_xray_opacity
+
 """
 Ionization parameter ξ
 """

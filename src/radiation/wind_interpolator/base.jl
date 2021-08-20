@@ -50,7 +50,7 @@ function WindInterpolator(
 end
 
 
-function update_wind_interpolator(wi::WindInterpolator, integrators)
+function update_wind_interpolator(wi::WindInterpolator, integrators::Vector{<:Sundials.IDAIntegrator})
     if maximum(wi.density_grid.grid) == wi.vacuum_density
         # first iteration, do not average
         return WindInterpolator(
@@ -70,6 +70,26 @@ function update_wind_interpolator(wi::WindInterpolator, integrators)
         hull,
         density_grid,
         velocity_grid,
+        wi.vacuum_density,
+        wi.n_timesteps,
+    )
+end
+
+function update_wind_interpolator(wi::WindInterpolator, dgrid::DensityGrid)
+    return WindInterpolator(
+        wi.wind_hull,
+        dgrid,
+        wi.velocity_grid,
+        wi.vacuum_density,
+        wi.n_timesteps,
+    )
+end
+
+function update_wind_interpolator(wi::WindInterpolator, vgrid::VelocityGrid)
+    return WindInterpolator(
+        wi.wind_hull,
+        vgrid,
+        wi.velocity_grid,
         wi.vacuum_density,
         wi.n_timesteps,
     )
