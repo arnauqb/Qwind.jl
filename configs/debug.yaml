@@ -20,7 +20,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: no_tau_uv
+  tau_uv_calculation: disk
   disk_integral_rtol: 1e-3
   wind_interpolator:
     vacuum_density: 1e2
@@ -42,13 +42,13 @@ initial_conditions:
   n_lines: auto
   log_spaced: true
   z_0: 0.0 # Rg
-  K: auto
+  K: 0.03
   alpha: 0.6
   mu: 0.61
   use_precalculated: true
 
 integrator:
-  n_iterations: 1
+  n_iterations: 2
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
