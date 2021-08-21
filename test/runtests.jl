@@ -20,6 +20,7 @@ include("radiation/wind_interpolator/optical_depth_tests.jl")
 include("radiation/wind_interpolator/density_interpolators/interpolation_tests.jl")
 
 include("thermodynamics_tests.jl")
+include("trajectory_intersection_tests.jl")
 
 include("utils_tests.jl")
 end

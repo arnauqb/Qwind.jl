@@ -21,13 +21,13 @@ end
     z1 = [5.43, 12.17, 12.21, 6.65]
     r2 = [5.74, 7.6, 12.58, 15.8]
     z2 = [6.19, 14.51, 14.33, 6.09]
-    index = intersect!(r1, z1, r2, z2)
+    index = intersect(r1, z1, r2, z2)
     @test index == 2
     # don't intersect
     r1 = [7.39, 11.88, 16.0, 11.64]
     z1 = [-2.7, 1.27, -2, -4.92]
     r2 = [8.85, 11.41, 14.52]
     z2 = [-2.28, -1.16, -1.97]
-    index = intersect!(r1, z1, r2, z2)
+    index = intersect(r1, z1, r2, z2)
     @test index == 4
 end
