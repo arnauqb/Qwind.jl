@@ -20,7 +20,7 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
-lr, lw = Qwind.compute_lines_range(model, rin=6.1, rfi=1500, delta_mdot=0.01)
+lr, lw = Qwind.compute_lines_range(model, 6.1, 1500, delta_mdot=0.01)
 
 fig, ax = plt.subplots()
 for l in lr

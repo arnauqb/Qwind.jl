@@ -336,7 +336,7 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
-function compute_lines_range(model, rin, rfi; delta_mdot, fill_delta = 5, max_delta=1)
+function compute_lines_range(model, rin, rfi; delta_mdot=0.01, fill_delta = 20, max_tau=0.1)
     lines_range = []
     lines_widths = []
     r = rin
@@ -345,17 +345,29 @@ function compute_lines_range(model, rin, rfi; delta_mdot, fill_delta = 5, max_de
         v0 = getv0(model, r)
         return n0 * M_P * v0 * C * 2π * r * model.bh.Rg^2
     end
-    function find_delta_r(model, r; delta_mdot=0.01, max_delta=max_delta)
-        mass_loss(delta_r) = quadgk(r-> mass_loss_kernel(model, r=r), r, r + delta_r, rtol=1e-2, atol=0)[1]
-        target = delta_mdot * compute_mass_accretion_rate(model.bh)
-        if mass_loss(1000) < target
-            return fill_delta
-        end
-        delta_r = find_zero(delta_r -> mass_loss(delta_r) - target, (1e-5, 1000), atol=0, rtol=1e-2)
-        return min(delta_r, max_delta)
+    function tau_kernel(model; r)
+        n0 = getn0(model, r)
+        return n0 * SIGMA_T * model.bh.Rg
     end
+    get_tau(delta_r) = quadgk(r -> tau_kernel(model, r=r), r, r+delta_r, rtol=1e-2, atol=0)[1]
+    mass_loss(delta_r) = quadgk(r-> mass_loss_kernel(model, r=r), r, r + delta_r, rtol=1e-2, atol=0)[1]
+    function find_delta_r(model, r; delta_mdot, tau_total)
+        if tau_total > 10
+            target = delta_mdot * compute_mass_accretion_rate(model.bh)
+            if mass_loss(1000) < target
+                return fill_delta
+            end
+            delta_r = find_zero(delta_r -> mass_loss(delta_r) - target, (1e-5, 1000), atol=0, rtol=1e-4)
+        else
+            target = max_tau
+            delta_r = find_zero(delta_r -> get_tau(delta_r) - target, (1e-5, 1000), atol=0, rtol=1e-4)
+        end
+        return delta_r
+    end
+    tau_total = 0.0
     while r < rfi
-        delta_r = find_delta_r(model, r, delta_mdot=delta_mdot, max_delta=max_delta)
+        delta_r = find_delta_r(model, r, delta_mdot=delta_mdot, tau_total=tau_total)
+        tau_total += get_tau(delta_r)
         push!(lines_range, r + delta_r / 2)
         push!(lines_widths, delta_r)
         r += delta_r
@@ -494,6 +506,6 @@ compute_lines_range(model) = compute_lines_range(
     model.ic.rin,
     model.ic.rfi,
     delta_mdot=0.01,
-    fill_delta=5,
-    max_delta=1,
+    max_tau=0.1,
+    fill_delta=20,
 )
