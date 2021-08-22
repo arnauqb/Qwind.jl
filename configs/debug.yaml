@@ -37,7 +37,7 @@ grid:
 
 initial_conditions:
   mode: CAKIC
-  r_in: 115.0
+  r_in: 6.1
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
@@ -48,7 +48,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 5
+  n_iterations: 1
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"

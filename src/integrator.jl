@@ -336,7 +336,15 @@ function compute_initial_acceleration(
     return [ar, az]
 end
 
-function compute_lines_range(model, rin, rfi; delta_mdot=0.01, fill_delta = 20, max_tau=0.1)
+function compute_lines_range(
+    model,
+    rin,
+    rfi;
+    delta_mdot = 0.01,
+    fill_delta = 20,
+    max_delta_tau = 0.1,
+    max_tau = 20,
+)
     lines_range = []
     lines_widths = []
     r = rin
@@ -349,24 +357,47 @@ function compute_lines_range(model, rin, rfi; delta_mdot=0.01, fill_delta = 20, 
         n0 = getn0(model, r)
         return n0 * SIGMA_T * model.bh.Rg
     end
-    get_tau(delta_r) = quadgk(r -> tau_kernel(model, r=r), r, r+delta_r, rtol=1e-2, atol=0)[1]
-    mass_loss(delta_r) = quadgk(r-> mass_loss_kernel(model, r=r), r, r + delta_r, rtol=1e-2, atol=0)[1]
+    get_tau(delta_r) =
+        quadgk(r -> tau_kernel(model, r = r), r, r + delta_r, rtol = 1e-2, atol = 0)[1]
+    mass_loss(delta_r) =
+        quadgk(r -> mass_loss_kernel(model, r = r), r, r + delta_r, rtol = 1e-2, atol = 0)[1]
+    target_mdot = delta_mdot * compute_mass_accretion_rate(model.bh)
     function find_delta_r(model, r; delta_mdot, tau_total)
-        if tau_total > 10
-            target = delta_mdot * compute_mass_accretion_rate(model.bh)
-            if mass_loss(1000) < target
-                return fill_delta
-            end
-            delta_r = find_zero(delta_r -> mass_loss(delta_r) - target, (1e-5, 1000), atol=0, rtol=1e-4)
+        if mass_loss(1000) < target_mdot
+            delta_r_mdot = fill_delta
         else
-            target = max_tau
-            delta_r = find_zero(delta_r -> get_tau(delta_r) - target, (1e-5, 1000), atol=0, rtol=1e-4)
+            delta_r_mdot = find_zero(
+                delta_r -> mass_loss(delta_r) - target_mdot,
+                (1e-5, 1000),
+                atol = 0,
+                rtol = 1e-4,
+            )
         end
-        return delta_r
+        if tau_total < 1
+            max_delta_tau = 0.05
+        elseif tau_total < 10
+            max_delta_tau = 0.5
+        elseif tau_total < 100
+            max_delta_tau = 5
+        else
+            max_delta_tau = 10
+        end
+        if get_tau(1000) < max_delta_tau
+            delta_r_tau = fill_delta
+        else
+            delta_r_tau = find_zero(
+                delta_r -> get_tau(delta_r) - max_delta_tau,
+                (1e-5, 1000),
+                atol = 0,
+                rtol = 1e-4,
+            )
+        end
+        delta_r = min(delta_r_tau, delta_r_mdot)
+        return min(delta_r, fill_delta)
     end
     tau_total = 0.0
     while r < rfi
-        delta_r = find_delta_r(model, r, delta_mdot=delta_mdot, tau_total=tau_total)
+        delta_r = find_delta_r(model, r, delta_mdot = delta_mdot, tau_total = tau_total)
         tau_total += get_tau(delta_r)
         push!(lines_range, r + delta_r / 2)
         push!(lines_widths, delta_r)
@@ -374,6 +405,16 @@ function compute_lines_range(model, rin, rfi; delta_mdot=0.01, fill_delta = 20, 
     end
     return lines_range, lines_widths
 end
+
+compute_lines_range(model) = compute_lines_range(
+    model,
+    model.ic.rin,
+    model.ic.rfi,
+    delta_mdot = 0.01,
+    max_delta_tau = 0.1,
+    fill_delta = 20,
+    max_tau = 50,
+)
 
 #function compute_lines_range(model, rin, rfi, Rg, xray_luminosity)
 #    lines_range = [rin]
@@ -501,11 +542,3 @@ end
 #end
 
 
-compute_lines_range(model) = compute_lines_range(
-    model,
-    model.ic.rin,
-    model.ic.rfi,
-    delta_mdot=0.01,
-    max_tau=0.1,
-    fill_delta=20,
-)

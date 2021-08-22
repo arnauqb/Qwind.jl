@@ -20,12 +20,17 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
-lr, lw = Qwind.compute_lines_range(model, 6.1, 1500, delta_mdot=0.01)
+fig, ax = plt.subplots()
+rr = range(6, 1000, length=50)
+ax.loglog(rr, getn0.(Ref(model), rr))
+#ax.set_xlim(0,50)
 
+lr, lw = Qwind.compute_lines_range(model, 6.1, 1500, max_delta_tau=0.1, max_tau=25);
 fig, ax = plt.subplots()
 for l in lr
-    ax.axvline(lr)
+    ax.axvline(l)
 end
+#ax.set_xlim(6, 10)
 
 
 iterations_dict[1] = Dict()
