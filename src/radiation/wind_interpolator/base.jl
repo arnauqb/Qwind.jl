@@ -20,12 +20,13 @@ WindInterpolator(nr, nz; vacuum_density = 1e2, n_timesteps = 1000, update_grid_f
     update_grid_flag
 )
 function WindInterpolator(config::Dict)
-    if config[:update_grid_method] == "average"
+    update_method = get(config, :update_grid_method, "average")
+    if update_method == "average"
         update_method = AverageGrid()
-    elseif config[:update_grid_method] == "replace"
+    elseif update_method == "replace"
         update_method = ReplaceGrid()
     else
-        error("Grid update method $(config[:update_grid_method]) not recoginsed")
+        error("Grid update method $update_method not recoginsed")
     end
     return WindInterpolator(
         config[:nr],

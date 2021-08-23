@@ -23,7 +23,7 @@ radiation:
   tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
-    update_grid_method: "replace"
+    update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
     nz: 500 
