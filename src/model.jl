@@ -82,6 +82,7 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=tr
     flush()
     @info "Wind properties"
     @info "Mass loss fraction $(wind_properties["mass_loss_fraction"])"
+    @info "KL fraction $(wind_properties["kinetic_luminosity"] / wind_properties["bolometric_luminosity"])"
     flush()
     new_radiation = update_radiation(model.rad, integrators)
     update_model!(model, new_radiation)

@@ -3,6 +3,8 @@ using Distributed
 @everywhere @quickactivate "Qwind"
 @everywhere using Qwind
 using YAML, HDF5, CSV, DataFrames, PyPlot
+LogNorm = matplotlib.colors.LogNorm
+SymLogNorm = matplotlib.colors.SymLogNorm
 include("scripts/plotting.jl")
 using Profile, PProf, TimerOutputs, BenchmarkTools
 
@@ -18,12 +20,24 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
-
 run!(model, iterations_dict)
 
-integrators = iterations_dict[10]["integrators"];
+rr = 10 .^ range(log10(6.1), log10(50), length=100);
+zz = 10 .^ range(log10(1e-2), log10(10), length=100);
+r_force = zeros(length(rr), length(zz));
+for (i, r) in enumerate(rr)
+    for (j, z) in enumerate(zz)
+        r_force[i, j] = compute_disc_radiation_field(model.rad, r=r, z=z, vr=0, vz=0)[1]
+    end
+end
 
-QwindPlotting.plot_streamlines(integrators[end:end])
+fig, ax = plt.subplots()
+cm = ax.contourf(rr, zz, r_force', norm=SymLogNorm(linthresh=1e-5),  cmap="RdBu_r")
+plt.colorbar(cm, ax=ax)
+
+
+integrators = iterations_dict[2]["integrators"];
+QwindPlotting.plot_streamlines(integrators)
 
 
 
