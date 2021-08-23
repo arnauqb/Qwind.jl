@@ -342,7 +342,6 @@ function compute_lines_range(
     rfi;
     delta_mdot = 0.01,
     fill_delta = 20,
-    max_delta_tau = 0.1,
     max_tau = 25,
 )
     lines_range = []
@@ -380,7 +379,7 @@ function compute_lines_range(
         elseif tau_total < 100
             max_delta_tau = 5
         else
-            max_delta_tau = 10
+            max_delta_tau = Inf
         end
         if get_tau(1000) < max_delta_tau
             delta_r_tau = fill_delta
@@ -410,8 +409,7 @@ compute_lines_range(model) = compute_lines_range(
     model,
     model.ic.rin,
     model.ic.rfi,
-    delta_mdot = 0.01,
-    max_delta_tau = 0.1,
+    delta_mdot = 0.1,
     fill_delta = 20,
     max_tau = 25,
 )

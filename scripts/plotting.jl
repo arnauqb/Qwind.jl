@@ -223,7 +223,8 @@ function plot_xray_grid(
     z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
     r_range_grid = r_range .* ones(nz)'
     z_range_grid = z_range' .* ones(nr)
-    ret = compute_xray_tau.(Ref(grid), Ref(Qwind.Boost()), 0.0, zx, r_range_grid, z_range_grid, xray_luminosity, Rg)
+    f(r, z) = compute_tau_xray(grid, Qwind.Boost(), ri=0.0, zi=zx, rf=r, zf=z, xray_luminosity=xray_luminosity, Rg=Rg)
+    ret = f.(r_range_grid, z_range_grid)
     if ax === nothing
         fig, ax = plt.subplots()
     end
@@ -248,6 +249,7 @@ function plot_xray_grid(
     end
     return fig, ax, cm
 end
+
 
 function plot_xray_contour(
     grid::DensityGrid,

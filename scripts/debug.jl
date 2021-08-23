@@ -20,9 +20,23 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
+integrators = iterations_dict[10]["integrators"];
+
+QwindPlotting.plot_streamlines(integrators[end:end])
+
+
+
+
+fig,ax = plt.subplots()
+for integ in integrators[76:end]
+    ax.loglog(integ.p.data[:z], integ.p.data[:fm])
+end
+
+
+
 fig, ax = plt.subplots()
-rr = range(6, 1000, length=50)
-ax.loglog(rr, getn0.(Ref(model), rr))
+rr = range(6, 1500, length=5000)
+ax.loglog(rr, getn0.(Ref(model), rr), "o-")
 #ax.set_xlim(0,50)
 
 lr, lw = Qwind.compute_lines_range(model);
@@ -34,38 +48,20 @@ for l in lr
 end
 #ax.set_xlim(6, 10)
 
-
-iterations_dict[1] = Dict()
-integrators = run_integrators!(model, iterations_dict, it_num=1, parallel=true);
-
-
-
-integrators = iterations_dict[2]["integrators"];
-fig, ax = plt.subplots()
-QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25, color="black")
-ax.set_xlim(0,2000)
-ax.set_ylim(0,2000)
-
-max_times = get_intersection_times(integrators);
-
-r0 = [integ.p.r0 for integ in integrators];
-integrators_interpolated_linear = interpolate_integrators(
-    integrators,
-    max_times = max_times,
-    n_timesteps = 100,
-    log = true,
-);
-#QwindPlotting.plot_streamlines(integrators_interpolated_linear)
-r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear);
-plt.scatter(r, z)
-
-
-hull = Hull(r, z, r0, sigdigits = 6);
-
-hull = iterations_dict[1]["rad"].wi.wind_hull;
+rad = iterations_dict[2]["rad"];
+QwindPlotting.plot_xray_grid(rad.wi.density_grid, rad.xray_luminosity, rad.bh.Rg, vmin=1e-2, vmax=1e2)
 
 integrators = iterations_dict[1]["integrators"];
-whull = iterations_dict[2]["rad"].wi.wind_hull;
+fig, ax = plt.subplots()
+QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25, color="black")
+#ax.set_xlim(0,5000)
+#ax.set_ylim(0,5000)
+#
 
-fig, ax = QwindPlotting.plot_wind_hull(whull, rmin=1, rmax=2000, zmax=100, nr =500, nz=500);
-QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25)
+rad = iterations_dict[6]["rad"];
+QwindPlotting.plot_density_grid(rad.wi.density_grid);
+
+r0s = [integ.p.r0 for integ in integrators];
+n0s = [integ.p.n0 for integ in integrators];
+plt.loglog(r0s, n0s)
+

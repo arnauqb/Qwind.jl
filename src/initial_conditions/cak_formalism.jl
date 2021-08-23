@@ -101,7 +101,7 @@ function find_nozzle_function_minimum(
     return z_range[minnarg], minima_values[minn]
 end
 
-function CAK_Σ(radiation::Radiation, r; K = 0.3, alpha = 0.6, mu_e = 1.17)
+function CAK_Σ(radiation::Radiation, r; K = 0.03, alpha = 0.6, mu_e = 1.17)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / radiation.bh.Rg
@@ -110,7 +110,7 @@ function CAK_Σ(radiation::Radiation, r; K = 0.3, alpha = 0.6, mu_e = 1.17)
     return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 
-function get_initial_density(radiation::Radiation; r, mdot, K = 0.3, alpha = 0.6, mu = 0.61)
+function get_initial_density(radiation::Radiation; r, mdot, K = 0.03, alpha = 0.6, mu = 0.61)
     sigmadot = mdot * CAK_Σ(radiation, r, K = K, alpha = alpha)
     return sigmadot / (compute_thermal_velocity(disk_temperature(radiation.bh, r)) * C) /
            (mu * M_P)

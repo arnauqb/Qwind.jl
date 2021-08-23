@@ -210,7 +210,7 @@ compute_tau_xray(radiation::Radiation; r, z) = compute_tau_xray(
     radiation.wi.density_grid,
     radiation.xray_opacity,
     ri = 0.0,
-    zi = radiation.z_disk,
+    zi = radiation.z_xray,
     rf = r,
     zf = z,
     xray_luminosity = radiation.xray_luminosity,

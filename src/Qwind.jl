@@ -19,7 +19,6 @@ include("thermodynamics.jl")
 
 # wind interpolator
 include("radiation/wind_interpolator/grids.jl")
-include("radiation/wind_interpolator/integrators_interpolator.jl")
 include("radiation/wind_interpolator/wind_hull.jl")
 include("radiation/wind_interpolator/ray_tracing.jl")
 include("radiation/wind_interpolator/density_grid.jl")
