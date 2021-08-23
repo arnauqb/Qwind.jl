@@ -3,12 +3,13 @@ using Test
 import Qwind.compute_radiation_acceleration
 import Qwind.compute_initial_acceleration
 import Qwind.residual!
-abstract type TestRadiation{T} <: RadiativeTransfer{T} end
-struct TestRadiation1{T} <: TestRadiation{T}
-    bh::BlackHole{T}
+
+abstract type TestRadiation end
+struct TestRadiation1 <: TestRadiation
+    bh::BlackHole
 end
-struct TestRadiation2{T} <: TestRadiation{T}
-    bh::BlackHole{T}
+struct TestRadiation2 <: TestRadiation
+    bh::BlackHole
 end
 
 
@@ -89,7 +90,6 @@ end
     radiation = TestRadiation1(earth)
     integrator = initialize_integrator(
         radiation,
-        earth,
         grid,
         ic,
         0.0,
@@ -117,7 +117,6 @@ end
     radiation = TestRadiation2(earth)
     integrator = initialize_integrator(
         radiation,
-        earth,
         grid,
         ic,
         0.0,

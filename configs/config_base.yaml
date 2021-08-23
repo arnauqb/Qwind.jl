@@ -6,21 +6,19 @@ black_hole:
 radiation:
   mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
   relativistic: true
+  f_uv: auto
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-
-radiative_transfer:
-  mode: RegularGrid
-  interpolator: 
-    type: WindInterpolator 
+  tau_uv_calculation: disk
+  wind_interpolator:
     vacuum_density: 1e2
-    n_timesteps: 10000
+    n_integrator_interpolation: 10000
     nz: 500 
-    nr: "auto"
+    nr: auto 
 
 grid:
   # units of Rg

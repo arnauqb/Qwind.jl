@@ -41,17 +41,17 @@ using Test
         end
         @testset "Test disc radiated power" begin
             bh = BlackHole(1e8 * M_SUN, 0.5, 0)
-            @test disk_flux(bh, 10) ≈ 6839115834162428.0 rtol = 1e-6
-            @test disk_flux(bh, 100) ≈ 3.924336168219069e13 rtol = 1e-6
+            @test disk_flux(bh, 10) / 1.17 ≈ 6839115834162428.0 rtol = 1e-6
+            @test disk_flux(bh, 100) / 1.17 ≈ 3.924336168219069e13 rtol = 1e-6
             bh = BlackHole(1e9 * M_SUN, 0.5, 0.9)
-            @test disk_flux(bh, 10) ≈ 889138044477300.2 rtol = 1e-6
-            @test disk_flux(bh, 100) ≈ 1662600341587.0435 rtol = 1e-6
+            @test disk_flux(bh, 10) / 1.17 ≈ 889138044477300.2 rtol = 1e-6
+            @test disk_flux(bh, 100) / 1.17 ≈ 1662600341587.0435 rtol = 1e-6
         end
         @testset "UV fraction" begin
             bh = BlackHole(1e8 * M_SUN, 0.5, 0)
             uvf1 = uv_fraction(bh, 6.01)
-            uvf2 = uv_fraction(bh, 10)
-            uvf3 = uv_fraction(bh, 100)
+            uvf2 = uv_fraction(bh, 30)
+            uvf3 = uv_fraction(bh, 200)
             @test uvf1 < uvf2
             @test uvf3 < uvf2
         end

@@ -2,13 +2,13 @@ using HDF5, Printf
 import ConcaveHull
 export DensityGrid, get_density, update_density_grid, interpolate_density
 
-struct DensityGrid{T} <: InterpolationGrid{T}
+struct DensityGrid{T, U, V} <: InterpolationGrid
     r_range::Vector{T}
     z_range::Vector{T}
     grid::Array{T,2}
-    nr::Union{Int,String}
-    nz::Int
-    iterator::CellIterator{T}
+    nr::Union{U, String}
+    nz::U
+    iterator::GridIterator{T, U, V}
     interpolator::Any
     function DensityGrid(r_range, z_range, grid, nr = nothing, nz = nothing)
         if nr === nothing
@@ -21,7 +21,7 @@ struct DensityGrid{T} <: InterpolationGrid{T}
         interpolator =
             Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
         interpolator = Interpolations.extrapolate(interpolator, 1e2)
-        return new{typeof(r_range[1])}(
+        return new{typeof(r_range[1]), Int, Bool}(
             r_range,
             z_range,
             grid,
@@ -178,6 +178,7 @@ end
 
 function update_density_grid(
     old_grid::DensityGrid,
+    update_method::AverageGrid,
     hull::ConcaveHull.Hull,
     r::Vector{Float64},
     z::Vector{Float64},
@@ -218,6 +219,40 @@ end
 
 function update_density_grid(
     old_grid::DensityGrid,
+    update_method::ReplaceGrid,
+    hull::ConcaveHull.Hull,
+    r::Vector{Float64},
+    z::Vector{Float64},
+    n::Vector{Float64},
+    r0::Vector{Float64},
+)
+    r_range, z_range = get_spatial_grid(r, z, r0, old_grid.nr, old_grid.nz)
+    interpolator = get_density_interpolator(r, z, n)
+    density_grid = 1e2 .* ones((length(r_range), length(z_range)))
+    @info "Replacing grids..."
+    flush()
+    r_grid = log10.(r_range)' .* ones(length(z_range))
+    z_grid = log10.(z_range) .* ones(length(r_range))'
+    density_grid = interpolator(r_grid, z_grid)
+    density_grid = 10 .^ reshape(density_grid, length(z_range), length(r_range))'
+    for (i, r) in enumerate(r_range)
+        for (j, z) in enumerate(z_range)
+            point = [r, z]
+            if !is_point_in_wind(hull, point)
+                density_grid[i, j] = 1e2
+            end
+        end
+    end
+    # add z = 0 line
+    density_grid = [density_grid[:, 1] density_grid]
+    pushfirst!(z_range, 0.0)
+    grid = DensityGrid(r_range, z_range, density_grid, old_grid.nr, old_grid.nz)
+    return grid
+end
+
+function update_density_grid(
+    old_grid::DensityGrid,
+    update_method::UpdateGridFlag,
     integrators::Vector{<:Sundials.IDAIntegrator},
     max_times,
     hull,
@@ -230,6 +265,5 @@ function update_density_grid(
         log = true,
     )
     r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
-    return update_density_grid(old_grid, hull, r, z, n, r0)
+    return update_density_grid(old_grid, update_method, hull, r, z, n, r0)
 end
-

@@ -1,8 +1,6 @@
 export BlackHole,
     compute_eddington_luminosity,
     compute_bolometric_luminosity,
-    compute_isco,
-    compute_efficiency,
     compute_mass_accretion_rate,
     compute_gravitational_acceleration,
     compute_escape_velocity,
@@ -35,7 +33,7 @@ end
 Computes the Eddington luminosity for the given black hole mass.
 """
 function compute_eddington_luminosity(bh_mass; mu_e = 1.17)
-    return 4π * G * bh_mass * C / SIGMA_E * mu_e
+    return 4π * G * bh_mass * C * mu_e / SIGMA_E
 end
 compute_eddington_luminosity(bh::BlackHole) = compute_eddington_luminosity(bh.M)
 
@@ -73,8 +71,6 @@ function compute_isco(spin)
     return rms
 end
 
-compute_isco(bh::BlackHole) = bh.isco
-
 """
 Computes the black hole accretion efficiency parameter from the isco.
 
@@ -85,8 +81,6 @@ function compute_efficiency(spin)
     isco = compute_isco(spin)
     return 1 - sqrt(1 - 2 / (3 * isco))
 end
-
-compute_efficiency(bh::BlackHole) = compute_efficiency(bh.spin)
 
 """
 Computes the mass accretion rate to the black hole,

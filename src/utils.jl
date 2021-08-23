@@ -84,26 +84,6 @@ function countsignchanges(array::Vector{Float64}, reference = 0)
     return counter
 end
 
-#function remove_close_elements(args...; digits = 4)
-#    ret = [[array[1] for array in args]]
-#    ret = hcat(ret...)
-#    for i = 2:length(args[1])
-#        noinsert = 0
-#        toinsert = zeros(length(args))
-#        for (j, array) in enumerate(args)
-#            element = trunc(array[i], digits = digits)
-#            if element in ret[j, :]
-#                noinsert += 1
-#            end
-#            toinsert[j] = element
-#        end
-#        if noinsert < length(args)
-#            ret = hcat(ret, toinsert)
-#        end
-#    end
-#    return [ret[i, :] for i = 1:length(args)]
-#end
-
 function iter_paths(dict)
     function iter(d, path)
         paths = []

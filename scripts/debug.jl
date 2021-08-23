@@ -18,34 +18,54 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
-compute_disc_radiation_field(model.rt, 100.0, 1, 0.0, 0.0)
+run!(model, iterations_dict)
 
-run_iteration!(model, iterations_dict, it_num = 1, parallel = true);
+fig, ax = plt.subplots()
+rr = range(6, 1000, length=50)
+ax.loglog(rr, getn0.(Ref(model), rr))
+#ax.set_xlim(0,50)
 
-run_iteration!(model, iterations_dict, it_num = 2, parallel = true);
+lr, lw = Qwind.compute_lines_range(model);
+length(lr)
 
-
-function profile_integ(model)
-    rr = range(20.0, 1000.0, length=10)
-    zz = 10 .^ range(-6, 3.0, length=10)
-    for r in rr
-        for z in zz
-            compute_disc_radiation_field(model.rt, r, z, 0.0, 0.0)
-        end
-    end
+fig, ax = plt.subplots()
+for l in lr
+    ax.axvline(l)
 end
-
-disable_timer!(timer)
-            
-enable_timer!(timer)
-
-reset_timer!(timer); compute_disc_radiation_field(model.rad, r=100.0, z=1.0, vr=0.0, vz=0.0); timer
+#ax.set_xlim(6, 10)
 
 
-@time compute_disc_radiation_field(model.rt, 100.0, 10.0, 0.0, 0.0)
+iterations_dict[1] = Dict()
+integrators = run_integrators!(model, iterations_dict, it_num=1, parallel=true);
 
-@btime profile_integ(model)
 
-Profile.clear()
-@profile profile_integ(model.rad)
-pprof()
+
+integrators = iterations_dict[2]["integrators"];
+fig, ax = plt.subplots()
+QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25, color="black")
+ax.set_xlim(0,2000)
+ax.set_ylim(0,2000)
+
+max_times = get_intersection_times(integrators);
+
+r0 = [integ.p.r0 for integ in integrators];
+integrators_interpolated_linear = interpolate_integrators(
+    integrators,
+    max_times = max_times,
+    n_timesteps = 100,
+    log = true,
+);
+#QwindPlotting.plot_streamlines(integrators_interpolated_linear)
+r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear);
+plt.scatter(r, z)
+
+
+hull = Hull(r, z, r0, sigdigits = 6);
+
+hull = iterations_dict[1]["rad"].wi.wind_hull;
+
+integrators = iterations_dict[1]["integrators"];
+whull = iterations_dict[2]["rad"].wi.wind_hull;
+
+fig, ax = QwindPlotting.plot_wind_hull(whull, rmin=1, rmax=2000, zmax=100, nr =500, nz=500);
+QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25)
