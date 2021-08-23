@@ -18,6 +18,7 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
+
 run!(model, iterations_dict)
 
 integrators = iterations_dict[10]["integrators"];
