@@ -47,3 +47,8 @@ abstract type TauUVCalculationFlag end
 struct TauUVCenter <: TauUVCalculationFlag end
 struct TauUVDisk <: TauUVCalculationFlag end
 struct NoTauUV <: TauUVCalculationFlag end
+
+# Method to update grids
+abstract type UpdateGridFlag end
+struct AverageGrid <: UpdateGridFlag end
+struct ReplaceGrid <: UpdateGridFlag end

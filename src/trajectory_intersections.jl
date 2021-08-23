@@ -1,7 +1,7 @@
 using LinearAlgebra, ProgressMeter, DataStructures
 export Segment,
+    Intersection,
     reduce_integrators,
-    self_intersects,
     interpolate_integrator,
     interpolate_integrators,
     get_intersection_times,
@@ -135,7 +135,7 @@ function Base.intersect!(
     end
 end
 
-function intersect(
+function Base.intersect(
     r1::Array{T},
     z1::Array{T},
     r2::Array{T},

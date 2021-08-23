@@ -8,21 +8,33 @@ struct WindInterpolator{T, U, V}
     velocity_grid::VelocityGrid{T, U, V}
     vacuum_density::T
     n_timesteps::Int
+    update_grid_flag::UpdateGridFlag
 end
 
-WindInterpolator(nr, nz; vacuum_density = 1e2, n_timesteps = 1000) = WindInterpolator(
+WindInterpolator(nr, nz; vacuum_density = 1e2, n_timesteps = 1000, update_grid_flag = AverageGrid()) = WindInterpolator(
     Hull(),
     DensityGrid(nr, nz, vacuum_density),
     VelocityGrid(nr, nz, 0.0),
     vacuum_density,
     n_timesteps,
+    update_grid_flag
 )
-WindInterpolator(config::Dict) = WindInterpolator(
-    config[:nr],
-    config[:nz],
-    vacuum_density = config[:vacuum_density],
-    n_timesteps = config[:n_integrator_interpolation],
-)
+function WindInterpolator(config::Dict)
+    if config[:update_grid_method] == "average"
+        update_method = AverageGrid()
+    elseif config[:update_grid_method] == "replace"
+        update_method = ReplaceGrid()
+    else
+        error("Grid update method $(config[:update_grid_method]) not recoginsed")
+    end
+    return WindInterpolator(
+        config[:nr],
+        config[:nz],
+        vacuum_density = config[:vacuum_density],
+        n_timesteps = config[:n_integrator_interpolation],
+        update_grid_flag = update_method
+    )
+end
 
 function WindInterpolator(
     integrators;
@@ -30,6 +42,7 @@ function WindInterpolator(
     nz = 50,
     vacuum_density = 1e2,
     n_timesteps = 1000,
+    update_grid_flag = Average(),
 )
     if nr != "auto"
         nr = Int(nr)
@@ -46,7 +59,7 @@ function WindInterpolator(
         density_grid = DensityGrid(integrators, max_times, hull, nr = nr, nz = nz)
         velocity_grid = VelocityGrid(integrators, max_times, hull, nr = nr, nz = nz)
     end
-    return WindInterpolator(hull, density_grid, velocity_grid, vacuum_density, n_timesteps)
+    return WindInterpolator(hull, density_grid, velocity_grid, vacuum_density, n_timesteps, update_grid_flag)
 end
 
 
@@ -59,19 +72,21 @@ function update_wind_interpolator(wi::WindInterpolator, integrators::Vector{<:Su
             nz = wi.density_grid.nz,
             vacuum_density = wi.vacuum_density,
             n_timesteps = wi.n_timesteps,
+            update_grid_flag = wi.update_grid_flag,
         )
     end
     r0 = [integ.p.r0 for integ in integrators]
     max_times = get_intersection_times(integrators)
     hull = Hull(integrators, max_times)
-    density_grid = update_density_grid(wi.density_grid, integrators, max_times, hull)
-    velocity_grid = update_velocity_grid(wi.velocity_grid, integrators, max_times, hull)
+    density_grid = update_density_grid(wi.density_grid, wi.update_grid_flag, integrators, max_times, hull)
+    velocity_grid = update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, integrators, max_times, hull)
     return WindInterpolator(
         hull,
         density_grid,
         velocity_grid,
         wi.vacuum_density,
         wi.n_timesteps,
+        wi.update_grid_flag,
     )
 end
 
@@ -82,16 +97,18 @@ function update_wind_interpolator(wi::WindInterpolator, dgrid::DensityGrid)
         wi.velocity_grid,
         wi.vacuum_density,
         wi.n_timesteps,
+        wi.update_grid_flag
     )
 end
 
 function update_wind_interpolator(wi::WindInterpolator, vgrid::VelocityGrid)
     return WindInterpolator(
         wi.wind_hull,
+        wi.density_grid,
         vgrid,
-        wi.velocity_grid,
         wi.vacuum_density,
         wi.n_timesteps,
+        wi.update_grid_flag
     )
 end
 

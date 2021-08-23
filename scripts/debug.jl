@@ -25,7 +25,7 @@ rr = range(6, 1000, length=50)
 ax.loglog(rr, getn0.(Ref(model), rr))
 #ax.set_xlim(0,50)
 
-lr, lw = Qwind.compute_lines_range(model, 60, 1500);
+lr, lw = Qwind.compute_lines_range(model);
 length(lr)
 
 fig, ax = plt.subplots()
@@ -40,7 +40,7 @@ integrators = run_integrators!(model, iterations_dict, it_num=1, parallel=true);
 
 
 
-integrators = iterations_dict[1]["integrators"];
+integrators = iterations_dict[2]["integrators"];
 fig, ax = plt.subplots()
 QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25, color="black")
 ax.set_xlim(0,2000)

@@ -220,6 +220,7 @@ end
 
 function update_velocity_grid(
     old_grid::VelocityGrid,
+    update_method::UpdateGridFlag,
     integrators::Vector{<:Sundials.IDAIntegrator},
     max_times,
     hull,

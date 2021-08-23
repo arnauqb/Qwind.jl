@@ -40,7 +40,7 @@ include("initial_conditions/initial_conditions.jl")
 
 # integrator
 include("integrator.jl")
-include("intersections.jl")
+include("trajectory_intersections.jl")
 include("initial_conditions/cak_formalism.jl")
 
 # saver
