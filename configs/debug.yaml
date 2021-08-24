@@ -38,7 +38,7 @@ grid:
 
 initial_conditions:
   mode: CAKIC
-  r_in: 10.0
+  r_in: 12.0
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
@@ -46,6 +46,7 @@ initial_conditions:
   K: 0.03
   alpha: 0.6
   mu: 0.61
+  interpolation_mode: interpolation
   use_precalculated: true
 
 integrator:

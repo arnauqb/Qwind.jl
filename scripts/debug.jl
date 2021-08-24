@@ -20,6 +20,7 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
+
 run!(model, iterations_dict)
 
 rr = 10 .^ range(log10(6.1), log10(50), length=100);
@@ -31,9 +32,12 @@ for (i, r) in enumerate(rr)
     end
 end
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(1,1))
 cm = ax.contourf(rr, zz, r_force', norm=SymLogNorm(linthresh=1e-5),  cmap="RdBu_r")
-plt.colorbar(cm, ax=ax)
+cbar = plt.colorbar(cm, ax=ax)
+cbar.set_label("Radial radiation force", rotation=270, labelpad=20, fontsize=15)
+ax.set_ylabel("z [ Rg ]", fontsize=15)
+ax.set_xlabel("R [ Rg ]", fontsize=15)
 
 
 integrators = iterations_dict[2]["integrators"];
@@ -80,3 +84,9 @@ r0s = [integ.p.r0 for integ in integrators];
 n0s = [integ.p.n0 for integ in integrators];
 plt.loglog(r0s, n0s)
 
+bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
+r_range = 10 .^ range(log10(6), 3, length=500);
+nts = disk_nt_rel_factors.(Ref(bh), r_range);
+uvf = uv_fractions(bh, r_range) .* disk_flux.(Ref(bh), r_range) .* r_range;
+#uvf = disk_flux.(Ref(bh), r_range);
+plt.loglog(r_range, uvf)

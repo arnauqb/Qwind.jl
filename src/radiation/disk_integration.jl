@@ -128,7 +128,6 @@ function integrate_radiation_force_integrand(
 end
 
 function compute_disc_radiation_field_small_heights(radiation::Radiation; r, z, vr, vz)
-    Rg = radiation.bh.Rg
     constant = 3 / (2 * radiation.bh.efficiency)
     fuv, mdot = get_fuv_mdot(radiation, r)
     tau_uv = compute_tau_uv(radiation, rd = r, phid = 0.0, r = r, z = z)

@@ -82,14 +82,20 @@ function CAKIC(radiation, config)
     end
     rs = critical_points_df[!, :r]
     mdots = critical_points_df[!, :mdot]
-    n0s = [get_initial_density(radiation, r=r, mdot=mdot, K=0.03, alpha=icc[:alpha]) for (r, mdot) in zip(rs, mdots)]
     zc_interpolator = LinearInterpolation(critical_points_df[!, :r], critical_points_df[!, :zc], extrapolation_bc=Line())
-    @. tofit(x,p) = p[1] / x^2 + p[2] / x + p[3] + p[4] * x + p[5] * x^2
-    p0 = ones(5)
-    fit = curve_fit(tofit, log10.(rs), log10.(n0s), p0)
-    fitted(x) = tofit(x, fit.param)
-    #log_density_interpolator = LinearInterpolation(log10.(rs), log10.(n0s), extrapolation_bc=Line())
-    log_density_interpolator = fitted
+    inter_mode = get(icc, :interapolation_mode, "interpolation")
+    n0s = [get_initial_density(radiation, r=r, mdot=mdot, K=0.03, alpha=icc[:alpha]) for (r, mdot) in zip(rs, mdots)]
+    if inter_mode == "fit"
+        @. tofit(x,p) = p[1] / x^2 + p[2] / x + p[3] + p[4] * x + p[5] * x^2
+        p0 = ones(5)
+        fit = curve_fit(tofit, log10.(rs), log10.(n0s), p0)
+        fitted(x) = tofit(x, fit.param)
+        log_density_interpolator = fitted
+    elseif inter_mode == "interpolation"
+        log_density_interpolator = LinearInterpolation(log10.(rs), log10.(n0s), extrapolation_bc=Line())
+    else
+        error("inter mode not recognized")
+    end
     rin = max(rin, minimum(critical_points_df[!, :r]))
     rfi = min(rfi, maximum(critical_points_df[!, :r]))
     nlines = icc[:n_lines]
