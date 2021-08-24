@@ -20,6 +20,8 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
+lr, lw = Qwind.compute_lines_range(model);
+length(lr)
 
 run!(model, iterations_dict)
 
