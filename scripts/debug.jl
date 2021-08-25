@@ -22,17 +22,46 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
+QwindPlotting.plot_streamlines(iterations_dict[20]["integrators"])
+
 model2, iterations_dict2 = get_model("./configs/debug.yaml");
 run!(model2, iterations_dict2)
 
+for integ in reverse(iterations_dict[20]["integrators"])
+    if escaped(integ)
+        println("last escape at $(integ.p.data[:r][1])")
+    end
+end
+
+for integ in reverse(iterations_dict2[10]["integrators"])
+    if escaped(integ)
+        println("last escape at $(integ.p.data[:r][1])")
+    end
+end
+
+
+integs = iterations_dict2[10]["integrators"];
+max_times = Qwind.get_intersection_times(integs);
+
+integs_interp = Qwind.interpolate_integrators(integs, max_times=max_times, log=false);
 
 fig, ax = plt.subplots()
-it_num = 5
-integs1 = iterations_dict[it_num]["integrators"];
-integs2 = iterations_dict2[it_num]["integrators"];
-for integ in integs1
-    ax.plot(integ.p.data[:r], integ.p.data[:z], color = "C0")
+for integ in integs_interp
+    ax.plot(integ.r, integ.z)
 end
+for integ in integs
+    ax.plot(integ.p.data[:r], integ.p.data[:z], color = "C1")
+end
+
+
+
+fig, ax = plt.subplots()
+it_num = 9
+integs1 = iterations_dict[it_num]["integrators"];
+for integ in integs1
+    #ax.plot(integ.p.data[:r], integ.p.data[:z], color = "C0")
+end
+integs2 = iterations_dict2[it_num]["integrators"];
 for integ in integs2
     ax.plot(integ.p.data[:r], integ.p.data[:z], color = "C1")
 end
@@ -84,26 +113,38 @@ for l in lr
 end
 #ax.set_xlim(6, 10)
 
-rad = iterations_dict[2]["rad"];
-QwindPlotting.plot_xray_grid(rad.wi.density_grid, rad.xray_luminosity, rad.bh.Rg, vmin=1e-2, vmax=1e2)
 
-integrators = iterations_dict[1]["integrators"];
-fig, ax = plt.subplots()
-QwindPlotting.plot_streamlines(integrators, ax=ax, alpha=0.25, color="black")
-#ax.set_xlim(0,5000)
-#ax.set_ylim(0,5000)
+
+
+it_num = 2
+rad1 = iterations_dict[it_num]["rad"];
+rad2 = iterations_dict2[it_num]["rad"];
+
+QwindPlotting.plot_density_grid(rad1.wi.density_grid, nr=100, nz=100, zmax=100, rmax=1000)
+
+QwindPlotting.plot_density_grid(rad2.wi.density_grid, nr=100, nz=100, zmax=100, rmax=1000)
+
+QwindPlotting.plot_xray_grid(rad1.wi.density_grid, rad1.xray_luminosity, rad1.bh.Rg, nr=100, nz=100, vmin=1e-2, vmax=1e2, rmax=100, zmax=10)
+
+QwindPlotting.plot_xray_grid(rad2.wi.density_grid, rad2.xray_luminosity, rad2.bh.Rg, nr=100, nz=100, vmin=1e-2, vmax=1e2, rmax=100, zmax=10)
+
+#QwindPlotting.plot_xray_grid(rad2.wi.density_grid, rad1.xray_luminosity, rad1.bh.Rg, ax=ax, nr=100, nz=100, vmin=1e-2, vmax=1e2)
 #
 
-rad = iterations_dict[6]["rad"];
-QwindPlotting.plot_density_grid(rad.wi.density_grid);
+QwindPlotting.plot_streamlines(iterations_dict[9]["integrators"]);
 
-r0s = [integ.p.r0 for integ in integrators];
-n0s = [integ.p.n0 for integ in integrators];
-plt.loglog(r0s, n0s)
+integs = iterations_dict[9]["integrators"];
+max_times = Qwind.get_intersection_times(integs);
 
-bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
-r_range = 10 .^ range(log10(6), 3, length=500);
-nts = disk_nt_rel_factors.(Ref(bh), r_range);
-uvf = uv_fractions(bh, r_range) .* disk_flux.(Ref(bh), r_range) .* r_range;
-#uvf = disk_flux.(Ref(bh), r_range);
-plt.loglog(r_range, uvf)
+integs_interp = Qwind.interpolate_integrators(
+    integs,
+    max_times = max_times,
+    n_timesteps = 100,
+    log = true,
+);
+r, z, _, _, _ = reduce_integrators(integs_interp);
+@info "Constructing wind hull"
+
+plt.scatter(r, z)
+
+hull = Hull(r, z)
