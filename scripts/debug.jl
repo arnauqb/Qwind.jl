@@ -20,10 +20,25 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
-lr, lw = Qwind.compute_lines_range(model);
-length(lr)
-
 run!(model, iterations_dict)
+
+model2, iterations_dict2 = get_model("./configs/debug.yaml");
+run!(model2, iterations_dict2)
+
+
+fig, ax = plt.subplots()
+it_num = 5
+integs1 = iterations_dict[it_num]["integrators"];
+integs2 = iterations_dict2[it_num]["integrators"];
+for integ in integs1
+    ax.plot(integ.p.data[:r], integ.p.data[:z], color = "C0")
+end
+for integ in integs2
+    ax.plot(integ.p.data[:r], integ.p.data[:z], color = "C1")
+end
+
+
+
 
 rr = 10 .^ range(log10(6.1), log10(50), length=100);
 zz = 10 .^ range(log10(1e-2), log10(10), length=100);
@@ -61,7 +76,7 @@ ax.loglog(rr, getn0.(Ref(model), rr), "o-")
 #ax.set_xlim(0,50)
 
 lr, lw = Qwind.compute_lines_range(model);
-length(lr)
+println(length(lr))
 
 fig, ax = plt.subplots()
 for l in lr
