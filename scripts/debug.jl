@@ -22,7 +22,33 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
-QwindPlotting.plot_streamlines(iterations_dict[20]["integrators"])
+
+r_range = 10 .^ range(log10(6), log10(1500), length=50);
+fluxes = disk_flux.(Ref(model.bh), r_range);
+maxv, maxi = findmax(fluxes)
+
+fig, ax = plt.subplots()
+ax.loglog(r_range, fluxes)
+ax.axvline(r_range[maxi])
+
+n0s = [integ.p.n0 for integ in iterations_dict["integrators"]];
+r0s = [integ.p.r0 for integ in iterations_dict["integrators"]];
+plt.loglog(r0s, n0s)
+
+
+
+integs = iterations_dict[20]["integrators"];
+max_times = Qwind.get_intersection_times(integs);
+
+integs_interp = Qwind.interpolate_integrators(integs, n_timesteps=1000, max_times=max_times, log=false);
+fig, ax = plt.subplots()
+for integ in integs_interp
+    ax.plot(integ.r, integ.z)
+end
+ax.set_xlim(0,2000)
+ax.set_ylim(0,2000)
+
+QwindPlotting.plot_streamlines()
 
 model2, iterations_dict2 = get_model("./configs/debug.yaml");
 run!(model2, iterations_dict2)
