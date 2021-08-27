@@ -20,7 +20,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost 
-  tau_uv_calculation: no_tau_uv
+  tau_uv_calculation: disk
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"

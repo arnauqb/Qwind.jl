@@ -173,7 +173,7 @@ end
 # Optical depths
 
 # UV
-function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z)
+function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z, mu_electron = 1.17)
     return compute_tau_uv(
         radiation.wi.density_grid,
         ri = 0.0,
@@ -186,7 +186,7 @@ function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z)
         mu_electron = 1.17
     )
 end
-function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z)
+function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z, mu_electron = 1.17)
     return compute_tau_uv(
         radiation.wi.density_grid,
         ri = rd,
