@@ -149,7 +149,7 @@ function get_intersection_with_grid(
     return r, z
 end
 
-mutable struct GridIterator{T, U, V} 
+mutable struct GridIterator{T,U,V}
     r_range::Vector{T}
     z_range::Vector{T}
     ri::T
@@ -176,7 +176,7 @@ mutable struct GridIterator{T, U, V}
     function GridIterator(r_range, z_range)
         r_range = round.(r_range, digits = 6)
         z_range = round.(z_range, digits = 6)
-        new{typeof(r_range[1]), Int, Bool}(
+        new{typeof(r_range[1]),Int,Bool}(
             r_range,
             z_range,
             0.0,
@@ -436,20 +436,24 @@ function next_intersection!(iterator::GridIterator)
     step_ray!(iterator, lambda_r, lambda_z, r_index)
 end
 
-function ionization_cell_xi_kernel(
+function ionization_cell_xi_kernel(;
     xray_luminosity,
     cell_density,
     distance_from_source,
     taux0,
     dx,
+    mu_nucleon,
+    mu_electron,
     target_ionization_parameter = 1e5,
 )
     if dx < distance_from_source
         error()
     else
         ret =
-            log(xray_luminosity / (target_ionization_parameter * cell_density * dx^2)) -
-            cell_density * SIGMA_T * (dx - distance_from_source) - taux0
+            log(
+                xray_luminosity /
+                (target_ionization_parameter * cell_density / mu_nucleon * dx^2),
+            ) - cell_density * mu_electron * SIGMA_T * (dx - distance_from_source) - taux0
         return ret
     end
 end
@@ -461,29 +465,34 @@ function compute_tau_xray_cell(
     cell_density::T,
     taux0::T,
     xray_luminosity::T,
-    Rg::T;
+    Rg::T,
+    mu_nucleon::T,
+    mu_electron::T;
     atol = 0,
     rtol = 1e-2,
 ) where {T<:AbstractFloat}
     f(t) = ionization_cell_xi_kernel(
-        xray_luminosity,
-        cell_density,
-        distance_from_source,
-        taux0,
-        t,
+        xray_luminosity = xray_luminosity,
+        cell_density = cell_density,
+        distance_from_source = distance_from_source,
+        taux0 = taux0,
+        mu_nucleon = mu_nucleon,
+        mu_electron = mu_electron,
+        dx = t,
     )
     x1 = distance_from_source
     x2 = distance_from_source + intersection_size
     f1 = f(x1)
     f2 = f(x2)
     if f1 > 0 && f2 > 0
-        return taux0 + cell_density * SIGMA_T * intersection_size
+        return taux0 + cell_density * SIGMA_T * mu_electron * intersection_size
     elseif f1 < 0 && f2 < 0
-        return taux0 + cell_density * SIGMA_T * intersection_size * 100
+        return taux0 + cell_density * SIGMA_T * mu_electron * intersection_size * 100
     else
         dx0 = find_zero(f, (x1, x2), Bisection())
         return taux0 +
                cell_density *
+               mu_electron *
                SIGMA_T *
                (
                    (dx0 - distance_from_source) +
@@ -499,11 +508,13 @@ function compute_tau_xray_cell(
     cell_density::T,
     taux0::T,
     xray_luminosity::T,
-    Rg::T;
+    Rg::T,
+    mu_nucleon::T,
+    mu_electron::T;
     atol = 0,
     rtol = 1e-2,
 ) where {T<:AbstractFloat}
-    return taux0 + intersection_size * cell_density * SIGMA_T
+    return taux0 + intersection_size * mu_electron * cell_density * SIGMA_T
 end
 
 function get_density(grid::InterpolationGrid, iterator::GridIterator)
@@ -517,7 +528,7 @@ end
 
 function dist_to_intersection(iterator, point)
     r0, phi0, z0 = iterator.intersection
-    r1, phi1, z1 = point 
+    r1, phi1, z1 = point
     # max rquired here because of roundoff errors
     return sqrt(max(0.0, r0^2 + r1^2 + (z1 - z0)^2 - 2.0 * r0 * r1 * cos(phi0 - phi1)))
 end
@@ -532,6 +543,8 @@ function compute_tau_xray(
     zf::T,
     xray_luminosity::T,
     Rg::T,
+    mu_nucleon::T,
+    mu_electron::T,
 ) where {T<:AbstractFloat}
     if grid.grid === nothing
         return 0.0
@@ -553,6 +566,8 @@ function compute_tau_xray(
             ret,
             xray_luminosity,
             Rg,
+            mu_nucleon,
+            mu_electron,
         )
     end
     return ret
@@ -567,6 +582,8 @@ function compute_tau_xray(
     zf,
     xray_luminosity,
     Rg,
+    mu_nucleon,
+    mu_electron,
 )
     compute_tau_xray(
         grid::InterpolationGrid,
@@ -578,11 +595,12 @@ function compute_tau_xray(
         zf,
         xray_luminosity,
         Rg,
+        mu_nucleon,
+        mu_electron,
     )
 end
 
-compute_tau_uv_cell(intersection_size::Float64, cell_density::Float64)::Float64 =
-    intersection_size * cell_density
+compute_tau_uv_cell(intersection_size, cell_density, mu_electron) = intersection_size * cell_density * mu_electron
 
 function compute_tau_uv(
     grid::InterpolationGrid,
@@ -593,8 +611,9 @@ function compute_tau_uv(
     rf,
     phif,
     zf,
-    Rg;
-    max_tau = 20.0,
+    Rg,
+    mu_electron;
+    max_tau = 50.0,
 )
     if grid.grid === nothing
         return 0.0
@@ -609,7 +628,7 @@ function compute_tau_uv(
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, iterator.previous_point)
         dist += intersection_size
-        ret += compute_tau_uv_cell(intersection_size, cell_density)
+        ret += compute_tau_uv_cell(intersection_size, cell_density, mu_electron)
         if ret * sigmarg > max_tau
             return max_tau
         end
@@ -617,7 +636,7 @@ function compute_tau_uv(
     return ret * sigmarg
 end
 
-compute_tau_uv(grid::InterpolationGrid; ri, phii, zi, rf, phif, zf, Rg, max_tau = 20.0) =
+compute_tau_uv(grid::InterpolationGrid; ri, phii, zi, rf, phif, zf, Rg, mu_electron, max_tau = 50.0) =
     compute_tau_uv(
         grid::InterpolationGrid,
         grid.iterator,
@@ -628,6 +647,7 @@ compute_tau_uv(grid::InterpolationGrid; ri, phii, zi, rf, phif, zf, Rg, max_tau 
         phif,
         zf,
         Rg,
+        mu_electron,
         max_tau = max_tau,
     )
 

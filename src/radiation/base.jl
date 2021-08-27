@@ -137,7 +137,10 @@ end
 
 get_density(radiation::Radiation, r, z) = get_density(radiation.wi, r, z)
 
-function update_radiation(radiation::Radiation, integrators::Vector{<:Sundials.IDAIntegrator})
+function update_radiation(
+    radiation::Radiation,
+    integrators::Vector{<:Sundials.IDAIntegrator},
+)
     @info "Updating radiation... "
     flush()
     new_interp = update_wind_interpolator(radiation.wi, integrators)
@@ -179,7 +182,8 @@ function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z)
         rf = r,
         zf = z,
         phif = 0.0,
-        Rg = radiation.bh.Rg
+        Rg = radiation.bh.Rg,
+        mu_electron = 1.17
     )
 end
 function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z)
@@ -192,9 +196,10 @@ function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z)
         zf = z,
         phif = 0.0,
         Rg = radiation.bh.Rg,
+        mu_electron = 1.17
     )
 end
-compute_tau_uv(radiation::Radiation, ::NoTauUV; rd, phid, r, z) = 0.0
+compute_tau_uv(radiation::Radiation, ::NoTauUV; rd, phid, r, z, mu_electron) = 0.0
 
 compute_tau_uv(radiation::Radiation; rd, phid, r, z) = compute_tau_uv(
     radiation,
@@ -203,6 +208,7 @@ compute_tau_uv(radiation::Radiation; rd, phid, r, z) = compute_tau_uv(
     phid = phid,
     r = r,
     z = z,
+    mu_electron = 1.17,
 )
 
 # X-ray
@@ -215,4 +221,6 @@ compute_tau_xray(radiation::Radiation; r, z) = compute_tau_xray(
     zf = z,
     xray_luminosity = radiation.xray_luminosity,
     Rg = radiation.bh.Rg,
+    mu_nucleon = 0.61,
+    mu_electron = 1.17,
 )

@@ -198,7 +198,13 @@ function update_density_grid(
         for (j, z) in enumerate(z_range)
             point = [r, z]
             if !is_point_in_wind(hull, point)
-                density_grid[i, j] = 1e2
+                density_grid[i, j] = 
+                    10 .^ (
+                        (
+                            log10(1e2) +
+                            log10(get_density(old_grid, r, z))
+                        ) / 2.0
+                    )
             else
                 density_grid[i, j] = 
                     10 .^ (
