@@ -22,6 +22,42 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
+it_num = 20
+itdict = iterations_dict[it_num];
+integs=  itdict["integrators"];
+radiation =  iterations_dict[it_num-1]["rad"];
+
+fig, ax = plt.subplots()
+for integ in integs
+    if integ.p.r0 < 100
+        continue
+    end
+    ax.loglog(integ.p.data[:z], integ.p.data[:taux])
+end
+
+integ = integs[1];
+#plt.loglog(integ.p.data[:n])
+
+d = integ.p.data
+ns1 = Qwind.compute_density.(d[:r], d[:z], d[:vr], d[:vz], d[:r][1], d[:z][1], d[:vz][1], d[:n][1])
+
+ns2 = Qwind.compute_density.(d[:r], d[:z], d[:vr], d[:vz], d[:r][1], d[:z][1], d[:vz][1], d[:n][1])
+
+plt.loglog(ns1)
+plt.loglog(ns2)
+
+#ax.set_xlim(1e-1, 100)
+
+QwindPlotting.plot_streamlines(integs);
+
+QwindPlotting.plot_density_grid(radiation.wi.density_grid, rmax=500, zmax=50, nr=500, nz=500, vmin=1e6, vmax=1e13)
+
+fig, ax = QwindPlotting.plot_xray_grid(radiation.wi.density_grid, radiation.xray_luminosity, radiation.bh.Rg, rmax=100, zmax=100, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+#QwindPlotting.plot_streamlines(integs, ax=ax, color = "black", alpha=0.5);
+#ax.set_xlim(0,500)
+#ax.set_ylim(0,500)
+
+
 
 r_range = 10 .^ range(log10(6), log10(1500), length=50);
 fluxes = disk_flux.(Ref(model.bh), r_range);
@@ -31,9 +67,9 @@ fig, ax = plt.subplots()
 ax.loglog(r_range, fluxes)
 ax.axvline(r_range[maxi])
 
-n0s = [integ.p.n0 for integ in iterations_dict["integrators"]];
-r0s = [integ.p.r0 for integ in iterations_dict["integrators"]];
-plt.loglog(r0s, n0s)
+n0s = [integ.p.n0 for integ in iterations_dict[20]["integrators"]];
+r0s = [integ.p.r0 for integ in iterations_dict[20]["integrators"]];
+plt.loglog(r0s, n0s, "o-")
 
 
 
