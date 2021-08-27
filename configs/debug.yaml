@@ -19,15 +19,15 @@ radiation:
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
-  xray_opacity: boost
-  tau_uv_calculation: disk #no_tau_uv
+  xray_opacity: boost 
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nz: 250
-    nr: 250
+    nz: 500
+    nr: auto 
 
 grid:
   # units of Rg
@@ -38,7 +38,7 @@ grid:
 
 initial_conditions:
   mode: CAKIC
-  r_in: 18.5463487344428
+  r_in: 10.0
     #r_in: 34.0
   r_fi: 1500.0
   n_lines: auto
@@ -47,7 +47,7 @@ initial_conditions:
   K: 0.03
   alpha: 0.6
   mu: 0.61
-  interpolation_mode: fit
+  interpolation_mode: interpolation
   use_precalculated: true
 
 integrator:
