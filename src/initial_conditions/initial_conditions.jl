@@ -121,14 +121,16 @@ getz0(ic::CAKIC, r0) = ic.z0
 function getn0(ic::CAKIC, radiation::Radiation, r0)
     n_k003 = 10 ^ ic.log_density_interpolator(log10(r0))
     zc = ic.zc_interpolator(r0)
-    K = ic.K
-    if K == "auto"
-        taux = compute_tau_xray(radiation, r=r0, z=zc)
-        density = get_density(radiation.wi.density_grid, r0, zc)
-        ξ = compute_ionization_parameter(radiation, r0, zc, 0.0, 0.0, density, taux)
-        K = compute_force_multiplier_k(ξ, FMNoInterp())
-    end
-    return n_k003 * (K / 0.03)^(1 / ic.alpha)
+    mdot = nozzle_function(radiation, zc, r=r0)
+    return get_initial_density(radiation, r=r0, mdot=mdot, K=ic.K)
+    #K = ic.K
+    #if K == "auto"
+    #    taux = compute_tau_xray(radiation, r=r0, z=zc)
+    #    density = get_density(radiation.wi.density_grid, r0, zc)
+    #    ξ = compute_ionization_parameter(radiation, r0, zc, 0.0, 0.0, density, taux)
+    #    K = compute_force_multiplier_k(ξ, FMNoInterp())
+    #end
+    #return n_k003 * (K / 0.03)^(1 / ic.alpha)
 end
 getn0(model, r0) = getn0(model.ic, model.rad, r0)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0))

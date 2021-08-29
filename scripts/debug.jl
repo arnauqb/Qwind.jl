@@ -20,6 +20,7 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
+
 run!(model, iterations_dict)
 
 it_num = 20
@@ -162,7 +163,7 @@ end
 
 
 fig, ax = plt.subplots()
-rr = range(6, 1500, length=5000)
+rr = range(6, 1500, length=500)
 ax.loglog(rr, getn0.(Ref(model), rr), "o-")
 #ax.set_xlim(0,50)
 

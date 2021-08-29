@@ -34,7 +34,7 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-2)
     return cc * frad / f0
 end
 
-function g(radiation::Radiation, z; r, zmax = 5e-1)
+function g(radiation::Radiation, z; r, zmax = 1e-2)
     grav = compute_gravitational_acceleration(r, z + disk_height(radiation.bh, r))[2]
     # Hack to set UV fractions to 1 for this calculation, and no attenuation
     fuv_copy = copy(radiation.fuv_grid)
@@ -58,7 +58,7 @@ function g(radiation::Radiation, z; r, zmax = 5e-1)
     return -(grav + fr) / B0
 end
 
-function nozzle_function(radiation::Radiation, z; r, alpha = 0.6, zmax = 5e-1)
+function nozzle_function(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-2)
     c = alpha * (1 - alpha)^((1 - alpha) / alpha)
     if g(radiation, z, r = r, zmax = zmax) <= 0
         return Inf
@@ -71,7 +71,7 @@ function find_nozzle_function_minimum(
     radiation::Radiation,
     r;
     alpha = 0.6,
-    zmax = 5e-1,
+    zmax = 1e-2,
     n_z = 150,
 )
     z_range = 10 .^ range(-2, 3, length = n_z)
@@ -94,6 +94,7 @@ function find_nozzle_function_minimum(
     z_range = z_range[mask]
     minima_arg, minima_values = findminima(n_range)
     if length(minima_values) == 0
+        # return inflexion point instead.
         return Inf, NaN
     end
     minn = 1 #argmin(minima_values)
