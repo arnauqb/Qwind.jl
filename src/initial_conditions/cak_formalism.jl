@@ -18,7 +18,7 @@ function gamma0(radiation, r)
     return ret
 end
 
-function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-2)
+function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     frad = compute_disc_radiation_field(
         radiation,
@@ -34,7 +34,7 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-2)
     return cc * frad / f0
 end
 
-function g(radiation::Radiation, z; r, zmax = 1e-2)
+function g(radiation::Radiation, z; r, zmax = 1e-1)
     grav = compute_gravitational_acceleration(r, z + disk_height(radiation.bh, r))[2]
     # Hack to set UV fractions to 1 for this calculation, and no attenuation
     fuv_copy = copy(radiation.fuv_grid)
@@ -58,7 +58,7 @@ function g(radiation::Radiation, z; r, zmax = 1e-2)
     return -(grav + fr) / B0
 end
 
-function nozzle_function(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-2)
+function nozzle_function(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
     c = alpha * (1 - alpha)^((1 - alpha) / alpha)
     if g(radiation, z, r = r, zmax = zmax) <= 0
         return Inf
@@ -71,7 +71,7 @@ function find_nozzle_function_minimum(
     radiation::Radiation,
     r;
     alpha = 0.6,
-    zmax = 1e-2,
+    zmax = 1e-1,
     n_z = 150,
 )
     z_range = 10 .^ range(-2, 3, length = n_z)
@@ -121,7 +121,7 @@ function calculate_wind_mdots(radiation::Radiation; rmin=6.1, rmax=1500.0, nr=10
     rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
-    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-2)
+    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 5e-1)
     results = pmap(f, rr)
     zcs = [res[1] for res in results]
     mdots = [res[2] for res in results]
