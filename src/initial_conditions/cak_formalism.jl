@@ -4,8 +4,9 @@ export calculate_wind_mdots
 get_B0(r) = 1.0 / r^2
 
 function gamma0(radiation, r)
+    radiation_no_tau_uv = set_tau_uv_calculation(radiation, NoTauUV())
     ret = compute_disc_radiation_field_small_heights(
-        radiation,
+        radiation_no_tau_uv,
         r = r,
         z = 1.0,
         vr = 0.0,
@@ -20,8 +21,9 @@ end
 
 function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
+    radiation_no_tau_uv = set_tau_uv_calculation(radiation, NoTauUV())
     frad = compute_disc_radiation_field(
-        radiation,
+        radiation_no_tau_uv,
         r = r,
         z = z,
         vr = 0.0,
@@ -36,13 +38,11 @@ end
 
 function g(radiation::Radiation, z; r, zmax = 1e-1)
     grav = compute_gravitational_acceleration(r, z + disk_height(radiation.bh, r))[2]
-    # Hack to set UV fractions to 1 for this calculation, and no attenuation
     fuv_copy = copy(radiation.fuv_grid)
-    dgrid_copy = copy(radiation.wi.density_grid.grid)
-    radiation.fuv_grid .= 1.0
-    radiation.wi.density_grid.grid .= 0.0
+    radiation_no_tau_uv = set_tau_uv_calculation(radiation, NoTauUV())
+    radiation_no_tau_uv.fuv_grid .= 1.0
     fr = compute_disc_radiation_field(
-        radiation,
+        radiation_no_tau_uv,
         r = r,
         z = z,
         vr = 0.0,
@@ -51,9 +51,6 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
         rtol = 1e-4,
         maxevals = 100000,
     )[2]
-    # Restore
-    radiation.fuv_grid .= fuv_copy
-    radiation.wi.density_grid.grid .= dgrid_copy
     B0 = get_B0(r)
     return -(grav + fr) / B0
 end

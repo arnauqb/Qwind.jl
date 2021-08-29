@@ -170,6 +170,24 @@ function update_radiation(radiation::Radiation, wind_interpolator::WindInterpola
     )
 end
 
+function set_tau_uv_calculation(radiation, tau_uv_calculation)
+    return Radiation(
+        radiation.bh,
+        radiation.wi,
+        radiation.disk_grid,
+        radiation.fuv_grid,
+        radiation.mdot_grid,
+        radiation.xray_luminosity,
+        radiation.disk_r_in,
+        radiation.z_xray,
+        radiation.z_disk,
+        radiation.relativistic,
+        radiation.xray_opacity,
+        tau_uv_calculation,
+        radiation.disk_integral_rtol,
+    )
+end
+
 # Optical depths
 
 # UV
