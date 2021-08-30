@@ -52,6 +52,7 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
         maxevals = 100000,
     )[2]
     B0 = get_B0(r)
+    radiation_no_tau_uv.fuv_grid .= fuv_copy
     return -(grav + fr) / B0
 end
 

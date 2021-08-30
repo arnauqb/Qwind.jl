@@ -2,6 +2,7 @@ using Qwind, Test
 
 
 @testset "Test Nozzle functions" begin
+
     model = Model(String(@__DIR__) * "/config_test.yaml")
     alpha = 0.6
     rr = range(6, 1000, length = 50)
@@ -13,6 +14,7 @@ using Qwind, Test
     fuv = 0.85
     rad = model.rad
     bh = model.bh
+
     @testset "Test B0" begin
         @test Qwind.get_B0(2) == 1 / 4
         @test Qwind.get_B0(8) == 1 / 64
@@ -36,7 +38,7 @@ using Qwind, Test
         # close to the disc f should be equal to f0
         # so the return value is just cc and constant.
         for r in range(6.1, 1000.0, length = 50)
-            @test Qwind.f(rad, 1e-2, r = r, alpha = 0.6) ≈ cc * fuv rtol = 1e-1
+            @test Qwind.f(rad, 1e-2, r = r, alpha = 0.6) ≈ cc * fuv rtol = 5e-1
         end
     end
 
@@ -59,6 +61,15 @@ using Qwind, Test
         @test Qwind.g(rad, z, r = r) ≈ -(disk_grav + low_rad / fuv) / Qwind.get_B0(100)
         model.rad.wi.density_grid.grid .= 1e10
     end
+
 end
 
-
+@testset "Test analytical result" begin
+    model = Model(String(@__DIR__) * "/config_test.yaml")
+    r_range = range(6.1, 1000, length=50);
+    for r in r_range
+        calculated = disk_height(model.bh, r) + Qwind.find_nozzle_function_minimum.(Ref(model.rad), r, zmax=Inf)[1]
+        expected = r / sqrt(2)
+        @test calculated ≈ expected rtol = 1e-1
+    end
+end
