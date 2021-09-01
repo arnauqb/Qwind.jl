@@ -20,6 +20,7 @@ function get_model(config)
 end
 
 model, iterations_dict = get_model("./configs/debug.yaml");
+
 run!(model, iterations_dict)
 
 it_num = 20
