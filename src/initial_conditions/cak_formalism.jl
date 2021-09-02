@@ -82,10 +82,10 @@ function find_nozzle_function_minimum(
     r;
     alpha = 0.6,
     zmax = 1e-1,
-    n_z = 250,
+    nz = 250,
     include_a = true,
 )
-    z_range = 10 .^ range(log10(zmax), 3, length = n_z)
+    z_range = 10 .^ range(log10(zmax), 3, length = nz)
     n_range =
         nozzle_function.(
             Ref(radiation),
@@ -103,17 +103,6 @@ function find_nozzle_function_minimum(
     end
     minv, mina = findmin(n_range)
     return z_range[mina], minv
-    #mask = n_range .!= Inf
-    #n_range = n_range[mask]
-    #z_range = z_range[mask]
-    #minima_arg, minima_values = findminima(n_range)
-    #if length(minima_values) == 0
-    #    # return inflexion point instead.
-    #    return Inf, NaN
-    #end
-    #minn = 1 #argmin(minima_values)
-    #minnarg = minima_arg[minn]
-    #return z_range[minnarg], minima_values[minn]
 end
 
 function CAK_Σ(radiation::Radiation, r; K = 0.03, alpha = 0.6, mu_e = 1.17)
@@ -142,8 +131,7 @@ function calculate_wind_mdots(radiation::Radiation; rmin = 6.1, rmax = 1500.0, n
     rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
-    #f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-1, n_z=nz)
-    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6)
+    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-1, nz=nz)
     results = pmap(f, rr)
     zcs = [res[1] for res in results]
     mdots = [res[2] for res in results]
