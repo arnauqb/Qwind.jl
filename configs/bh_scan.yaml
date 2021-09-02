@@ -45,9 +45,10 @@ initial_conditions:
   alpha: 0.6
   mu: 0.61
   use_precalculated: true
+  interapolation_mode: interpolation
 
 integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rework/bh_scan_rin50"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rework/critical_points/bh_scan_rin50_fixed"

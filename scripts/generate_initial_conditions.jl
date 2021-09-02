@@ -1,3 +1,4 @@
+ENV["JULIA_WORKER_TIMEOUT"] = 250
 using Distributed, ClusterManagers
 pids = addprocs_slurm(100,
                       topology=:master_worker,
@@ -34,7 +35,7 @@ end
     model = generate_model(M, mdot, 0.0)
     rr, mdots, zcs = calculate_wind_mdots(model.rad, rmin=6.1, rmax=1500, nr=100)
     df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
-    output_file = "/cosma6/data/dp004/dc-quer1/critical_points_all/M_$(M)_mdot_$(mdot).csv"
+    output_file = "/cosma6/data/dp004/dc-quer1/critical_points/M_$(M)_mdot_$(mdot).csv"
     CSV.write(output_file, df)
 end
 
