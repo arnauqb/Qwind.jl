@@ -51,4 +51,4 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/rework/critical_points/bh_scan_rin50_fixed"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/highres/bh_scan_rin50"

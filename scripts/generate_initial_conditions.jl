@@ -16,7 +16,7 @@ println("Running on $(nprocs()) cores.")
 @info "Compiling Qwind..."
 flush(stdout)
 flush(stderr)
-using Qwind, Printf
+@everyhwere using Qwind
 @info "Done"
 flush(stdout)
 flush(stderr)
@@ -33,7 +33,7 @@ end
 
 @everywhere function generate_and_save_df(M, mdot)
     model = generate_model(M, mdot, 0.0)
-    rr, mdots, zcs = calculate_wind_mdots(model.rad, rmin=6.1, rmax=1500, nr=100)
+    rr, mdots, zcs = calculate_wind_mdots(model.rad, rmin=6.1, rmax=1500, nr=100, nz=250)
     df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
     output_file = "/cosma6/data/dp004/dc-quer1/critical_points/M_$(M)_mdot_$(mdot).csv"
     CSV.write(output_file, df)

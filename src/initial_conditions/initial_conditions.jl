@@ -60,7 +60,7 @@ struct CAKIC{T} <: InitialConditions{T}
     logspaced::Bool
     critical_points_df::DataFrame
     zc_interpolator::Any
-    log_density_interpolator::Any
+    mdot_interpolator::Any
 end
 
 function CAKIC(radiation, config)
@@ -80,22 +80,16 @@ function CAKIC(radiation, config)
         rin = icc[:r_in]
         rfi = icc[:r_fi]
     end
-    rs = critical_points_df[!, :r]
-    mdots = critical_points_df[!, :mdot]
-    zc_interpolator = LinearInterpolation(critical_points_df[!, :r], critical_points_df[!, :zc], extrapolation_bc=Line())
-    inter_mode = get(icc, :interapolation_mode, "interpolation")
-    n0s = [get_initial_density(radiation, r=r, mdot=mdot, K=0.03, alpha=icc[:alpha]) for (r, mdot) in zip(rs, mdots)]
-    if inter_mode == "fit"
-        @. tofit(x,p) = p[1] / x^2 + p[2] / x + p[3] + p[4] * x + p[5] * x^2
-        p0 = ones(5)
-        fit = curve_fit(tofit, log10.(rs), log10.(n0s), p0)
-        fitted(x) = tofit(x, fit.param)
-        log_density_interpolator = fitted
-    elseif inter_mode == "interpolation"
-        log_density_interpolator = LinearInterpolation(log10.(rs), log10.(n0s), extrapolation_bc=Line())
-    else
-        error("inter mode not recognized")
-    end
+    zc_interpolator = LinearInterpolation(
+        critical_points_df[!, :r],
+        critical_points_df[!, :zc],
+        extrapolation_bc = Line(),
+    )
+    mdot_interpolator = LinearInterpolation(
+        critical_points_df[!, :r],
+        critical_points_df[!, :mdot],
+        extrapolation_bc = Line(),
+    )
     rin = max(rin, minimum(critical_points_df[!, :r]))
     rfi = min(rfi, maximum(critical_points_df[!, :r]))
     nlines = icc[:n_lines]
@@ -113,24 +107,14 @@ function CAKIC(radiation, config)
         icc[:log_spaced],
         critical_points_df,
         zc_interpolator,
-        log_density_interpolator,
+        mdot_interpolator,
     )
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
 function getn0(ic::CAKIC, radiation::Radiation, r0)
-    n_k003 = 10 ^ ic.log_density_interpolator(log10(r0))
-    zc = ic.zc_interpolator(r0)
-    mdot = nozzle_function(radiation, zc, r=r0)
-    return get_initial_density(radiation, r=r0, mdot=mdot, K=ic.K)
-    #K = ic.K
-    #if K == "auto"
-    #    taux = compute_tau_xray(radiation, r=r0, z=zc)
-    #    density = get_density(radiation.wi.density_grid, r0, zc)
-    #    ξ = compute_ionization_parameter(radiation, r0, zc, 0.0, 0.0, density, taux)
-    #    K = compute_force_multiplier_k(ξ, FMNoInterp())
-    #end
-    #return n_k003 * (K / 0.03)^(1 / ic.alpha)
+    mdot = ic.mdot_interpolator(r0)
+    return get_initial_density(radiation, r = r0, mdot = mdot, K = ic.K)
 end
 getn0(model, r0) = getn0(model.ic, model.rad, r0)
 getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0))
