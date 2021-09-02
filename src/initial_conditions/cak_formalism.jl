@@ -56,13 +56,25 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
     return -(grav + fr) / B0
 end
 
-function nozzle_function(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
+function nozzle_function(
+    radiation::Radiation,
+    z;
+    r,
+    alpha = 0.6,
+    zmax = 1e-1,
+    include_a = true,
+)
     c = alpha * (1 - alpha)^((1 - alpha) / alpha)
+    if include_a
+        a = 1 + (z / r)^2
+    else
+        a = 1.0
+    end
     if g(radiation, z, r = r, zmax = zmax) <= 0
         return Inf
     end
-    return c * f(radiation, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
-           (g(radiation, z, r = r, zmax = zmax))^((1 - alpha) / alpha)
+    return c * a * f(radiation, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
+           (g(radiation, z, r = r, zmax = zmax)^((1 - alpha) / alpha))
 end
 
 function find_nozzle_function_minimum(
@@ -71,8 +83,9 @@ function find_nozzle_function_minimum(
     alpha = 0.6,
     zmax = 1e-1,
     n_z = 150,
+    include_a = true,
 )
-    z_range = 10 .^ range(-2, 3, length = n_z)
+    z_range = 10 .^ range(log10(r / 1000), 3, length = n_z)
     n_range =
         nozzle_function.(
             Ref(radiation),
@@ -80,6 +93,7 @@ function find_nozzle_function_minimum(
             r = r,
             alpha = alpha,
             zmax = zmax,
+            include_a = include_a,
         )
     # check if it's monotonic
     mon_increasing = reduce(*, accumulate(max, n_range) .== n_range)
@@ -109,13 +123,20 @@ function CAK_Σ(radiation::Radiation, r; K = 0.03, alpha = 0.6, mu_e = 1.17)
     return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 
-function get_initial_density(radiation::Radiation; r, mdot, K = 0.03, alpha = 0.6, mu = 0.61)
+function get_initial_density(
+    radiation::Radiation;
+    r,
+    mdot,
+    K = 0.03,
+    alpha = 0.6,
+    mu = 0.61,
+)
     sigmadot = mdot * CAK_Σ(radiation, r, K = K, alpha = alpha)
     return sigmadot / (compute_thermal_velocity(disk_temperature(radiation.bh, r)) * C) /
            (mu * M_P)
 end
 
-function calculate_wind_mdots(radiation::Radiation; rmin=6.1, rmax=1500.0, nr=100)
+function calculate_wind_mdots(radiation::Radiation; rmin = 6.1, rmax = 1500.0, nr = 100)
     rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
