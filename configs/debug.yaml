@@ -20,7 +20,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost 
-  tau_uv_calculation: no_tau_uv
+  tau_uv_calculation: disk 
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
@@ -38,7 +38,7 @@ grid:
 
 initial_conditions:
   mode: CAKIC
-  r_in: 10.0
+  r_in: 20.0
     #r_in: 14.299691483087283
     #r_in: 34.0
   r_fi: 1500.0
@@ -52,7 +52,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 10
+  n_iterations: 2
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"

@@ -12,10 +12,9 @@ function gamma0(radiation, r)
         vr = 0.0,
         vz = 0.0,
     )[2]
-    # remove attenuation and fuv
     fuv, mdot = get_fuv_mdot(radiation, r)
-    tau_uv = compute_tau_uv(radiation, rd = r, phid = 0.0, r = r, z = 1.0)
-    ret = ret / fuv / exp(-tau_uv)
+    # remove fuv
+    ret = ret / fuv
     return ret
 end
 
