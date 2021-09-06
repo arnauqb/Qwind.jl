@@ -1,6 +1,6 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
-  n_cpus: 32
+  n_cpus: 64
   partition: cosma
   account: durham
   max_time: 72:00:00
@@ -36,12 +36,12 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  #r_in: "@vary grid 20,25,30,40,50,75,100,125,150,175,200,225,250,275,300,400,500"
-  r_in: "@vary log 10.0 250 10"
+  r_in: "@vary grid 12,14,16,18"
+  #r_in: "@vary log 10.0 250 10"
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
-  z_0: 0.0 # Rg
+  z0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.61
@@ -53,4 +53,4 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/highres/rin_scan"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/rin_scan_ext"

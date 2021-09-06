@@ -9,14 +9,14 @@ pids = addprocs_slurm(100,
 
 @everywhere using Pkg
 @everywhere Pkg.activate("/cosma/home/dp004/dc-quer1/Qwind.jl")
-@everywhere pushfirst!(Base.DEPOT_PATH, "/tmp/julia.cache")
+#@everywhere pushfirst!(Base.DEPOT_PATH, "/tmp/julia.cache")
 println("Running on $(nprocs()) cores.")
 @everywhere using LinearAlgebra, YAML, CSV, DataFrames
 @everywhere BLAS.set_num_threads(1)
 @info "Compiling Qwind..."
 flush(stdout)
 flush(stderr)
-@everyhwere using Qwind
+@everywhere using Qwind, YAML
 @info "Done"
 flush(stdout)
 flush(stderr)
@@ -40,8 +40,9 @@ end
 end
 
 M_range = [1e6, 1e7, 1e8, 1e9, 1e10]
-mdot_range = 10 .^ range(log10(0.025), log10(0.5), length=5) 
-mdot_range = vcat(mdot_range, [0.01, 0.1, 0.05, 0.25])
+#mdot_range = 10 .^ range(log10(0.025), log10(0.5), length=5) 
+#mdot_range = vcat(mdot_range, [0.01, 0.1, 0.05, 0.25])
+mdot_range = [0.075, 0.2, 0.3, 0.4]
 
 for M in M_range
     for mdot in mdot_range
