@@ -35,9 +35,9 @@ function UniformIC(radiation, config)
         rin,
         rfi,
         nlines,
-        icc[:z_0],
-        icc[:n_0],
-        icc[:v_0] / C,
+        icc[:z0],
+        icc[:n0],
+        icc[:v0] / C,
         icc[:log_spaced],
     )
 end
@@ -101,7 +101,7 @@ function CAKIC(radiation, config)
         rin,
         rfi,
         nlines,
-        icc[:z_0],
+        icc[:z0],
         icc[:K],
         icc[:alpha],
         icc[:log_spaced],

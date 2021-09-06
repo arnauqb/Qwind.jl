@@ -44,7 +44,7 @@ initial_conditions:
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
-  z_0: 0.0 # Rg
+  z0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.61

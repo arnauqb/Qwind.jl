@@ -84,7 +84,12 @@ function find_nozzle_function_minimum(
     nz = 250,
     include_a = true,
 )
-    z_range = 10 .^ range(log10(zmax), 3, length = nz)
+    if zmax == Inf
+        z0 = 1e-2
+    else
+        z0 = log10(zmax)
+    end
+    z_range = 10 .^ range(z0, 3, length = nz)
     n_range =
         nozzle_function.(
             Ref(radiation),
