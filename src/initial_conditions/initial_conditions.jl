@@ -1,5 +1,4 @@
 using Roots, CSV, DataFrames, Interpolations
-using LsqFit: curve_fit
 using Optim: optimize, Brent
 export InitialConditions,
     UniformIC, CAKIC, getz0, getrin, getrfi, getn0, getv0, getnlines, getl0
