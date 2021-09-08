@@ -85,3 +85,25 @@ integrator:
 
 
 
+To run a model, it is as simple as:
+
+```julia
+using Qwind
+
+model = Model("configs/config_example.yaml")
+
+run!(model)
+```
+
+The results are stored in HDF5 format, in this case in the folder ```tests/results.hdf5``` . Qwind provides a nice interface to read the results as well
+
+```julia
+density_grid = DensityGrid("tests/results.hdf5")
+density_grid["r_range"] # this is the radial range of the grid
+density_grid["z_range"] # this is the z range of the grid
+density_grid["density"] # 2D matrix with the values.
+
+trajectories = load_trajectories("tests/results.hdf5")
+# dictionary with the trajectories
+```
+

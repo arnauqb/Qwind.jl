@@ -66,9 +66,15 @@ end
 
 @testset "Test analytical result" begin
     model = Model(String(@__DIR__) * "/config_test.yaml")
-    r_range = range(6.1, 1000, length=50);
+    r_range = range(6.1, 1000, length = 50)
     for r in r_range
-        calculated = disk_height(model.bh, r) + Qwind.find_nozzle_function_minimum.(Ref(model.rad), r, zmax=Inf)[1]
+        calculated =
+            disk_height(model.bh, r) + Qwind.find_nozzle_function_minimum.(
+                Ref(model.rad),
+                r,
+                zmax = Inf,
+                include_a = false,
+            )[1]
         expected = r / sqrt(2)
         @test calculated ≈ expected rtol = 1e-1
     end

@@ -34,9 +34,9 @@ initial_conditions:
   r_fi: 800.0
   n_lines: 10
   log_spaced: true
-  z_0: 0.0 # Rg
-  n_0: 1e8
-  v_0: 2e6
+  z0: 0.0 # Rg
+  n0: 1e8
+  v0: 2e6
   mu: 0.5
 
 integrator:

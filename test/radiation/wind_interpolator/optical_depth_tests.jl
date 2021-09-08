@@ -35,7 +35,9 @@ end
         phid_range_test = range(0, π, length = 10)
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
-        f_anl(rd, phid, r, z) = compute_delta(rd, phid, r, z) * 2e8 * SIGMA_T * Rg
+        mu_electron = 2
+        f_anl(rd, phid, r, z) =
+            compute_delta(rd, phid, r, z) * 2e8 * SIGMA_T * Rg * mu_electron
         for rdp in rp_range_test
             for rp in r_range_test
                 for zp in z_range_test
@@ -52,6 +54,7 @@ end
                             zf = zp,
                             Rg = Rg,
                             max_tau = Inf,
+                            mu_electron = mu_electron,
                         )
                         @test qwsol ≈ truesol rtol = 1e-6
                     end
@@ -68,6 +71,7 @@ end
         z_range_test = range(10, 90, length = 10)
         phid_range_test = range(0, π - 0.1, length = 10)
         density_grid = zeros((length(r_range), length(z_range)))
+        mu_electron = 2
         dens_func(r, z) = 1e8 * (2 * r + z)
         for (i, rp) in enumerate(r_range)
             for (j, zp) in enumerate(z_range)
@@ -91,7 +95,7 @@ end
                 rtol = 1e-2,
                 atol = 1e-8,
             )[1]
-            return dens_line * compute_delta(rd, phid, r, z) * SIGMA_T * Rg
+            return dens_line * mu_electron * compute_delta(rd, phid, r, z) * SIGMA_T * Rg
         end
         for rdp in rp_range_test
             for rp in r_range_test
@@ -111,6 +115,7 @@ end
                             zf = zp,
                             Rg = Rg,
                             max_tau = Inf,
+                            mu_electron = mu_electron,
                         )
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
@@ -127,6 +132,7 @@ end
         z_range_test = range(10, 90, length = 10)
         phid_range_test = range(0, π - 0.1, length = 10)
         density_grid = zeros((length(r_range), length(z_range)))
+        mu_electron = 2
         dens_func(r, z) = 1e8 * exp(-r - z^2)
         for (i, rp) in enumerate(r_range)
             for (j, zp) in enumerate(z_range)
@@ -145,7 +151,7 @@ end
         function f_anl(rd, phid, r, z)
             dens_line =
                 quadgk(t -> f_anl_kernel(t, rd, phid, r, z), 0, 1, rtol = 1e-4, atol = 0)[1]
-            return dens_line * compute_delta(rd, phid, r, z) * SIGMA_T * Rg
+            return dens_line * mu_electron * compute_delta(rd, phid, r, z) * SIGMA_T * Rg
         end
         for rdp in rp_range_test
             for rp in r_range_test
@@ -162,6 +168,7 @@ end
                             zf = zp,
                             Rg = Rg,
                             max_tau = Inf,
+                            mu_electron = mu_electron,
                         )
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
                     end
@@ -179,14 +186,17 @@ end
     xl = 1e45
 
     @testset "Constant density" begin
+
         r_range = range(0, 1000.0, length = 50)
         z_range = range(0, 1000.0, length = 50)
         r_range_test = range(0.0, 1000, length = 50)
         z_range_test = range(0.0, 1000, length = 50)
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
+        mu_electron = 2
+        mu_nucleon = 5
         @testset "Thomson only" begin
-            f_anl(r, z) = sqrt(r^2 + z^2) * 2e8 * SIGMA_T * Rg
+            f_anl(r, z) = sqrt(r^2 + z^2) * 2e8 * SIGMA_T * Rg * mu_electron
             for rp in r_range_test
                 for zp in z_range_test
                     truesol = f_anl(rp, zp)
@@ -199,20 +209,26 @@ end
                         zf = zp,
                         xray_luminosity = xl,
                         Rg = Rg,
+                        mu_nucleon = mu_nucleon,
+                        mu_electron = mu_electron,
                     )
                     @test truesol ≈ qwsol rtol = 1e-3
                 end
             end
         end
+
         @testset "Boost" begin
             function get_ion_radius(density)
-                f(r) = 10^5 - xl / (density * (r * Rg)^2) * exp(-r * density * SIGMA_T * Rg)
+                f(r) =
+                    10^5 -
+                    xl / (density / mu_nucleon * (r * Rg)^2) *
+                    exp(-r * density * mu_electron * SIGMA_T * Rg)
                 zero = find_zero(f, (10, 1000))
                 return zero
             end
             function f_anl(r, z, rx)
                 d = sqrt(r^2 + z^2)
-                srg = SIGMA_T * Rg * 2e8
+                srg = SIGMA_T * Rg * 2e8 * mu_electron
                 if d <= rx
                     return d * srg
                 else
@@ -232,11 +248,14 @@ end
                         zf = zp,
                         xray_luminosity = xl,
                         Rg = Rg,
+                        mu_electron = mu_electron,
+                        mu_nucleon = mu_nucleon,
                     )
                     @test truesol ≈ qwsol rtol = 1e-3
                 end
             end
         end
+
     end
 
 end

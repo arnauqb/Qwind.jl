@@ -460,14 +460,14 @@ end
 
 function compute_tau_xray_cell(
     xray_opacity::Boost,
-    intersection_size::T,
-    distance_from_source::T,
-    cell_density::T,
-    taux0::T,
-    xray_luminosity::T,
-    Rg::T,
-    mu_nucleon::T,
-    mu_electron::T;
+    intersection_size,
+    distance_from_source,
+    cell_density,
+    taux0,
+    xray_luminosity,
+    Rg,
+    mu_nucleon,
+    mu_electron;
     atol = 0,
     rtol = 1e-2,
 ) where {T<:AbstractFloat}
@@ -503,14 +503,14 @@ end
 
 function compute_tau_xray_cell(
     xray_opacity::Thomson,
-    intersection_size::T,
-    distance_from_source::T,
-    cell_density::T,
-    taux0::T,
-    xray_luminosity::T,
-    Rg::T,
-    mu_nucleon::T,
-    mu_electron::T;
+    intersection_size,
+    distance_from_source,
+    cell_density,
+    taux0,
+    xray_luminosity,
+    Rg,
+    mu_nucleon,
+    mu_electron;
     atol = 0,
     rtol = 1e-2,
 ) where {T<:AbstractFloat}
@@ -537,15 +537,15 @@ function compute_tau_xray(
     grid::InterpolationGrid,
     iterator::GridIterator,
     xray_opacity::XRayOpacityFlag,
-    ri::T,
-    zi::T,
-    rf::T,
-    zf::T,
-    xray_luminosity::T,
-    Rg::T,
-    mu_nucleon::T,
-    mu_electron::T,
-) where {T<:AbstractFloat}
+    ri,
+    zi,
+    rf,
+    zf,
+    xray_luminosity,
+    Rg,
+    mu_nucleon,
+    mu_electron,
+)
     if grid.grid === nothing
         return 0.0
     end
@@ -600,7 +600,8 @@ function compute_tau_xray(
     )
 end
 
-compute_tau_uv_cell(intersection_size, cell_density, mu_electron) = intersection_size * cell_density * mu_electron
+compute_tau_uv_cell(intersection_size, cell_density, mu_electron) =
+    intersection_size * cell_density * mu_electron
 
 function compute_tau_uv(
     grid::InterpolationGrid,
@@ -636,18 +637,28 @@ function compute_tau_uv(
     return ret * sigmarg
 end
 
-compute_tau_uv(grid::InterpolationGrid; ri, phii, zi, rf, phif, zf, Rg, mu_electron, max_tau = 50.0) =
-    compute_tau_uv(
-        grid::InterpolationGrid,
-        grid.iterator,
-        ri,
-        phii,
-        zi,
-        rf,
-        phif,
-        zf,
-        Rg,
-        mu_electron,
-        max_tau = max_tau,
-    )
+compute_tau_uv(
+    grid::InterpolationGrid;
+    ri,
+    phii,
+    zi,
+    rf,
+    phif,
+    zf,
+    Rg,
+    mu_electron,
+    max_tau = 50.0,
+) = compute_tau_uv(
+    grid::InterpolationGrid,
+    grid.iterator,
+    ri,
+    phii,
+    zi,
+    rf,
+    phif,
+    zf,
+    Rg,
+    mu_electron,
+    max_tau = max_tau,
+)
 
