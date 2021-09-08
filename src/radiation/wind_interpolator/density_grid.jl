@@ -259,7 +259,7 @@ end
 function update_density_grid(
     old_grid::DensityGrid,
     update_method::UpdateGridFlag,
-    integrators::Vector{<:Sundials.IDAIntegrator},
+    streamlines::Streamlines,
     max_times,
     hull,
 )

@@ -1,9 +1,9 @@
 using LinearAlgebra, ProgressMeter, DataStructures
 export Segment,
     Intersection,
-    reduce_integrators,
-    interpolate_integrator,
-    interpolate_integrators,
+    reduce_trajectories,
+    interpolate_trajectory,
+    interpolate_trajectories,
     get_intersection_times,
     load_trajectories
 
@@ -35,7 +35,7 @@ function is_singular(s::Segment)
     end
 end
 
-struct Intersection{S<:String, I<:Int, T<:Float64}
+struct Intersection{S<:String,I<:Int,T<:Float64}
     type::S
     id1::I
     id2::I
@@ -43,7 +43,10 @@ struct Intersection{S<:String, I<:Int, T<:Float64}
     t2::T
 end
 
-function Base.isless(i1::Intersection{S, I, T}, i2::Intersection{S, I, T}) where {S<:String, I<:Int, T<:Float64}
+function Base.isless(
+    i1::Intersection{S,I,T},
+    i2::Intersection{S,I,T},
+) where {S<:String,I<:Int,T<:Float64}
     if (i1.t1 < i2.t1)
         return true
     elseif i1.t1 == i2.t1
@@ -156,7 +159,7 @@ function Base.intersect(
     return length(r1)
 end
 
-struct DenseIntegrator{T<:Vector{<:AbstractFloat}}
+struct Trajectory{T<:Vector{<:AbstractFloat}}
     id::Int
     t::T
     r::T
@@ -169,30 +172,30 @@ end
 
 function Base.intersect!(
     intersections_dict::Dict{Int,SortedSet{Intersection}},
-    integrator1::DenseIntegrator,
-    integrator2::DenseIntegrator,
+    trajectory1::Trajectory,
+    trajectory2::Trajectory,
 )
-    v1 = sign.(integrator1.vz) .* sqrt.(integrator1.vr .^ 2 + integrator1.vz .^ 2)
-    v2 = sign.(integrator2.vz) .* sqrt.(integrator2.vr .^ 2 + integrator2.vz .^ 2)
+    v1 = sign.(trajectory1.vz) .* sqrt.(trajectory1.vr .^ 2 + trajectory1.vz .^ 2)
+    v2 = sign.(trajectory2.vz) .* sqrt.(trajectory2.vr .^ 2 + trajectory2.vz .^ 2)
     intersect!(
         intersections_dict,
-        integrator1.id,
-        integrator1.t,
-        integrator1.r,
-        integrator1.z,
-        integrator1.n,
+        trajectory1.id,
+        trajectory1.t,
+        trajectory1.r,
+        trajectory1.z,
+        trajectory1.n,
         v1,
-        integrator2.id,
-        integrator2.t,
-        integrator2.r,
-        integrator2.z,
-        integrator2.n,
+        trajectory2.id,
+        trajectory2.t,
+        trajectory2.r,
+        trajectory2.z,
+        trajectory2.n,
         v2,
     )
 end
 
-function DenseIntegrator(integrator::Sundials.IDAIntegrator)
-    return DenseIntegrator(
+function Trajectory(integrator::Sundials.IDAIntegrator)
+    return Trajectory(
         integrator.p.id,
         integrator.sol.t[1:(end - 2)],
         integrator.p.data[:r],
@@ -205,7 +208,7 @@ function DenseIntegrator(integrator::Sundials.IDAIntegrator)
 end
 
 function load_trajectory(tdata::Dict)
-    return DenseIntegrator(
+    return Trajectory(
         tdata["id"],
         tdata["t"],
         tdata["r"],
@@ -220,7 +223,7 @@ end
 function load_trajectories(tsdata::Dict)
     t_ids = sort(parse.(Int, keys(tsdata)))
     t_ids = string.(t_ids)
-    ret = DenseIntegrator[]
+    ret = Trajectory[]
     for i in t_ids
         tdata = tsdata[i]
         trajectory = load_trajectory(tdata)
@@ -251,8 +254,8 @@ function self_intersects(integrator::Sundials.IDAIntegrator, r, z)
     end
     r1 = integrator.p.data[:r][1:(end - 1)]
     z1 = integrator.p.data[:z][1:(end - 1)]
-    r2 = [integrator.p.data[:r][end], r] 
-    z2 = [integrator.p.data[:z][end], z] 
+    r2 = [integrator.p.data[:r][end], r]
+    z2 = [integrator.p.data[:z][end], z]
     index = intersect(r1, z1, r2, z2)
     if index < length(r1)
         return true
@@ -261,37 +264,37 @@ function self_intersects(integrator::Sundials.IDAIntegrator, r, z)
     end
 end
 
-function slice_integrator(integrator::DenseIntegrator; in = 1, fi = nothing)
-    (fi === nothing) && (fi = length(integrator.t))
-    return DenseIntegrator(
-        integrator.id,
-        integrator.t[in:fi],
-        integrator.r[in:fi],
-        integrator.z[in:fi],
-        integrator.vr[in:fi],
-        integrator.vphi[in:fi],
-        integrator.vz[in:fi],
-        integrator.n[in:fi],
+function slice_trajectory(trajectory::Trajectory; in = 1, fi = nothing)
+    (fi === nothing) && (fi = length(trajectory.t))
+    return Trajectory(
+        trajectory.id,
+        trajectory.t[in:fi],
+        trajectory.r[in:fi],
+        trajectory.z[in:fi],
+        trajectory.vr[in:fi],
+        trajectory.vphi[in:fi],
+        trajectory.vz[in:fi],
+        trajectory.n[in:fi],
     )
 end
 
-function get_intersections(integrators::Vector{<:DenseIntegrator})
+function get_intersections(trajectoriess::Vector{<:Trajectory})
     intersections_dict = Dict{Int,SortedSet{Intersection}}()
-    for i = 1:length(integrators)
+    for i = 1:length(trajectories)
         intersections = SortedSet{Intersection}()
-        for j = (i+1):length(integrators)
-            intersect!(intersections_dict, integrators[i], integrators[j])
+        for j = (i + 1):length(trajectories)
+            intersect!(intersections_dict, trajectories[i], trajectories[j])
         end
     end
     # Turn Sets to vectors
-    ret = Dict{Int, Vector{Intersection{String, Int, Float64}}}()
+    ret = Dict{Int,Vector{Intersection{String,Int,Float64}}}()
     for (key, intersections) in intersections_dict
         ret[key] = collect(intersections)
     end
     return ret
 end
 
-function insert_intersection!(dict::Dict{Int, SortedSet{Intersection}}, key, intersection)
+function insert_intersection!(dict::Dict{Int,SortedSet{Intersection}}, key, intersection)
     if !haskey(dict, key)
         dict[key] = SortedSet([intersection])
     else
@@ -320,7 +323,7 @@ end
 
 function clear_remaining_trajectory_intersections!(intersections_dict, traj_id, max_time)
     intersections = intersections_dict[traj_id]
-    todelete_dict = DefaultDict{Int, Set{Int}}(() -> Set{Int}())
+    todelete_dict = DefaultDict{Int,Set{Int}}(() -> Set{Int}())
     for (i, intersection) in enumerate(intersections)
         if intersection.t1 >= max_time
             push!(todelete_dict[traj_id], i)
@@ -383,7 +386,7 @@ function resolve_intersections!(intersection_times, intersections_dict)
     return intersection_times
 end
 
-function get_intersection_times(integrators::Vector{<:DenseIntegrator})
+function get_intersection_times(integrators::Vector{<:Trajectory})
     intersection_times =
         Dict(integrator.id => integrator.t[end] for integrator in integrators)
     intersections_dict = get_intersections(integrators)
@@ -392,7 +395,7 @@ function get_intersection_times(integrators::Vector{<:DenseIntegrator})
 end
 
 get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator}) =
-    get_intersection_times(DenseIntegrator.(integrators))
+    get_intersection_times(Trajectory.(integrators))
 
 function interpolate_integrator(
     integrator::Sundials.IDAIntegrator;
@@ -430,7 +433,7 @@ function interpolate_integrator(
     vphi_dense = integrator.p.l0 ./ r_dense
     density_dense =
         compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
-    return DenseIntegrator(
+    return Trajectory(
         integrator.p.id,
         t_range,
         r_dense,
@@ -448,7 +451,7 @@ function interpolate_integrators(
     max_times = nothing,
     log = true,
 )
-    ret = DenseIntegrator[]
+    ret = Trajectory[]
     for integrator in integrators
         max_time = max_times[integrator.p.id]
         push!(
@@ -516,7 +519,7 @@ function reduce_integrators(
     return r, z, vr, vphi, vz, n
 end
 
-function reduce_integrators(integrators::Vector{<:DenseIntegrator})
+function reduce_trajectories(integrators::Vector{<:Trajectory})
     r = reduce(vcat, [integrator.r for integrator in integrators])
     z = reduce(vcat, [integrator.z for integrator in integrators])
     vr = reduce(vcat, [integrator.vr for integrator in integrators])

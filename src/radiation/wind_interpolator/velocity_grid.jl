@@ -1,14 +1,15 @@
+using ConcaveHull
 export VelocityGrid, get_velocity, interpolate_velocity, update_velocity_grid
 
-struct VelocityGrid{T, U, V} <: InterpolationGrid
+struct VelocityGrid{T,U,V} <: InterpolationGrid
     r_range::Vector{T}
     z_range::Vector{T}
     vr_grid::Array{T,2}
     vphi_grid::Array{T,2}
     vz_grid::Array{T,2}
-    nr::Union{U, String}
+    nr::Union{U,String}
     nz::U
-    iterator::GridIterator{T, U, V}
+    iterator::GridIterator{T,U,V}
     vr_interpolator::Any
     vphi_interpolator::Any
     vz_interpolator::Any
@@ -37,7 +38,7 @@ struct VelocityGrid{T, U, V} <: InterpolationGrid
         vr_interpolator = Interpolations.extrapolate(vr_interpolator, 0.0)
         vphi_interpolator = Interpolations.extrapolate(vphi_interpolator, 0.0)
         vz_interpolator = Interpolations.extrapolate(vz_interpolator, 0.0)
-        return new{typeof(r_range[1]), Int, Bool}(
+        return new{typeof(r_range[1]),Int,Bool}(
             r_range,
             z_range,
             vr_grid,
@@ -61,7 +62,7 @@ VelocityGrid(grid_data::Dict) = VelocityGrid(
     grid_data["vz_grid"],
 )
 
-function VelocityGrid(h5_path::String, it_num)
+function VelocityGrid(h5_path, it_num)
     it_name = @sprintf "iteration_%03d" it_num
     grid_data = h5open(h5_path, "r") do file
         read(file, it_name * "/velocity_grid")
@@ -69,7 +70,7 @@ function VelocityGrid(h5_path::String, it_num)
     return VelocityGrid(grid_data)
 end
 
-function VelocityGrid(h5_path::String)
+function VelocityGrid(h5_path)
     it_keys = h5open(h5_path, "r") do file
         keys(read(file))
     end
@@ -77,7 +78,7 @@ function VelocityGrid(h5_path::String)
     return VelocityGrid(h5_path, maximum(it_nums))
 end
 
-function VelocityGrid(nr::Union{String,Int}, nz::Int, fill::Float64)
+function VelocityGrid(nr, nz, fill)
     r_range = [-1.0, 0.0]
     z_range = [-1.0, 0.0]
     vr_grid = zeros((2, 2))
@@ -87,13 +88,13 @@ function VelocityGrid(nr::Union{String,Int}, nz::Int, fill::Float64)
 end
 
 function VelocityGrid(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    vr::Vector{Float64},
-    vphi::Vector{Float64},
-    vz::Vector{Float64},
-    r0::Vector{Float64},
-    hull::ConcaveHull.Hull;
+    hull::ConcaveHull.Hull,
+    r,
+    z,
+    vr,
+    vphi,
+    vz,
+    r0;
     nr = "auto",
     nz = 50,
     log = true,
@@ -186,14 +187,7 @@ function interpolate_velocity(grid::VelocityGrid, r, z)
     ]
 end
 
-function get_velocity_interpolators(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    vr::Vector{Float64},
-    vphi::Vector{Float64},
-    vz::Vector{Float64};
-    type = "linear",
-)
+function get_velocity_interpolators(r, z, vr, vphi, vz; type = "linear")
     mask = (r .> 0) .& (z .> 0)
     r = r[mask]
     z = z[mask]

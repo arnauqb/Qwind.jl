@@ -2,22 +2,28 @@ using PyCall
 import ConcaveHull, Interpolations, Sundials
 export WindInterpolator, get_density
 
-struct WindInterpolator{T, U, V}
+struct WindInterpolator{T,U,V}
     wind_hull::ConcaveHull.Hull
-    density_grid::DensityGrid{T, U, V}
-    velocity_grid::VelocityGrid{T, U, V}
+    density_grid::DensityGrid{T,U,V}
+    velocity_grid::VelocityGrid{T,U,V}
     vacuum_density::T
     n_timesteps::Int
     update_grid_flag::UpdateGridFlag
 end
 
-WindInterpolator(nr, nz; vacuum_density = 1e2, n_timesteps = 1000, update_grid_flag = AverageGrid()) = WindInterpolator(
+WindInterpolator(
+    nr,
+    nz;
+    vacuum_density = 1e2,
+    n_timesteps = 1000,
+    update_grid_flag = AverageGrid(),
+) = WindInterpolator(
     Hull(),
     DensityGrid(nr, nz, vacuum_density),
     VelocityGrid(nr, nz, 0.0),
     vacuum_density,
     n_timesteps,
-    update_grid_flag
+    update_grid_flag,
 )
 function WindInterpolator(config::Dict)
     update_method = get(config, :update_grid_method, "average")
@@ -33,12 +39,12 @@ function WindInterpolator(config::Dict)
         config[:nz],
         vacuum_density = config[:vacuum_density],
         n_timesteps = config[:n_integrator_interpolation],
-        update_grid_flag = update_method
+        update_grid_flag = update_method,
     )
 end
 
 function WindInterpolator(
-    integrators;
+    streamlines::Streamlines;
     nr = "auto",
     nz = 50,
     vacuum_density = 1e2,
@@ -54,17 +60,27 @@ function WindInterpolator(
         density_grid = DensityGrid(nr, nz, vacuum_density)
         velocity_grid = VelocityGrid(nr, nz, 0.0)
     else
-        r0 = [integ.p.r0 for integ in integrators]
-        max_times = get_intersection_times(integrators)
+        r0 = [line.r[1] for line in streamlines]
+        #max_times = get_intersection_times(integrators)
         hull = Hull(integrators, max_times)
-        density_grid = DensityGrid(integrators, max_times, hull, nr = nr, nz = nz)
-        velocity_grid = VelocityGrid(integrators, max_times, hull, nr = nr, nz = nz)
+        #density_grid = DensityGrid(integrators, max_times, hull, nr = nr, nz = nz)
+        #velocity_grid = VelocityGrid(integrators, max_times, hull, nr = nr, nz = nz)
     end
-    return WindInterpolator(hull, density_grid, velocity_grid, vacuum_density, n_timesteps, update_grid_flag)
+    return WindInterpolator(
+        hull,
+        density_grid,
+        velocity_grid,
+        vacuum_density,
+        n_timesteps,
+        update_grid_flag,
+    )
 end
 
 
-function update_wind_interpolator(wi::WindInterpolator, integrators::Vector{<:Sundials.IDAIntegrator})
+function update_wind_interpolator(
+    wi::WindInterpolator,
+    integrators::Vector{<:Sundials.IDAIntegrator},
+)
     if maximum(wi.density_grid.grid) == wi.vacuum_density
         # first iteration, do not average
         return WindInterpolator(
@@ -79,8 +95,20 @@ function update_wind_interpolator(wi::WindInterpolator, integrators::Vector{<:Su
     r0 = [integ.p.r0 for integ in integrators]
     max_times = get_intersection_times(integrators)
     hull = Hull(integrators, max_times)
-    density_grid = update_density_grid(wi.density_grid, wi.update_grid_flag, integrators, max_times, hull)
-    velocity_grid = update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, integrators, max_times, hull)
+    density_grid = update_density_grid(
+        wi.density_grid,
+        wi.update_grid_flag,
+        integrators,
+        max_times,
+        hull,
+    )
+    velocity_grid = update_velocity_grid(
+        wi.velocity_grid,
+        wi.update_grid_flag,
+        integrators,
+        max_times,
+        hull,
+    )
     return WindInterpolator(
         hull,
         density_grid,
@@ -98,7 +126,7 @@ function update_wind_interpolator(wi::WindInterpolator, dgrid::DensityGrid)
         wi.velocity_grid,
         wi.vacuum_density,
         wi.n_timesteps,
-        wi.update_grid_flag
+        wi.update_grid_flag,
     )
 end
 
@@ -109,7 +137,7 @@ function update_wind_interpolator(wi::WindInterpolator, vgrid::VelocityGrid)
         vgrid,
         wi.vacuum_density,
         wi.n_timesteps,
-        wi.update_grid_flag
+        wi.update_grid_flag,
     )
 end
 

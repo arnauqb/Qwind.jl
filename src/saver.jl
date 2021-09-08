@@ -1,153 +1,85 @@
 using CSV, DataFrames, YAML, HDF5, Printf, JLD2
-export save_trajectories, save_wind
+export save_wind
 
-function escaped(integrator::DenseIntegrator)
-    vt = sqrt.(integrator.vr .^2 + integrator.vz .^2 )
-    d = sqrt.(integrator.r .^2 + integrator.z .^ 2)
-    return maximum(vt .> compute_escape_velocity.(d))
-end
 
-function create_integrators_df(integrators, Rg)
-    df = DataFrame()
-    for integrator in integrators
-        df2 = DataFrame()
-        data = integrator.p.data
-        line_id = pop!(data, :line_id)
-        df2[!, :line_id] = line_id * ones(Int64, length(data[:r]))
-        for key in keys(data)
-            df2[!, key] = data[key]
-        end
-        # add integrator momentum
-        integrator_momentum = compute_integrator_momentum(integrator, Rg)
-        df2[!, "momentum"] = integrator_momentum
-        append!(df, df2)
-    end
-    return df
-end
-
-function save_trajectories(integrators, save_path)
+function save_integrators(integrators, save_path)
     @save save_path integrators
-    #if save_path === nothing
-    #    return
-    #end
-    #df = create_integrators_df(integrators, Rg)
-    #CSV.write(save_path, df)
 end
 
-function compute_integrator_mdot(integrator::DenseIntegrator, Rg, lw)
-    if escaped(integrator)
-        n0 = integrator.n[1]
-        v0 = integrator.vz[1]
-        mw = 2π * integrator.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
+function compute_streamline_mdot(streamline::Streamline, Rg)
+    if escaped(streamline)
+        n0 = streamline.n[1]
+        v0 = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
+        lw = streamline.width
+        mw = 2π * streamline.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
         return mw
     else
         return 0.
     end
 end
 
-function compute_integrator_mdot(integrator, Rg)
-    if escaped(integrator)
-        n0 = integrator.p.n0
-        v0 = integrator.p.v0
-        lw = integrator.p.lwnorm * integrator.p.r0
-        mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
-        return mw
-    else
-        return 0.
-    end
-end
-
-function compute_integrator_momentum(integrator, Rg)
-    n0 = integrator.p.n0
-    v0 = integrator.p.v0
-    lw = integrator.p.lwnorm * integrator.p.r0
-    mw = 2π * integrator.p.r0 * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
-    vt = sqrt.(integrator.p.data[:vr] .^ 2 + integrator.p.data[:vz] .^ 2) * C
+function compute_streamline_momentum(streamline::Streamline, Rg)
+    n0 = streamline.n[1]
+    v0 = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
+    lw = streamline.width
+    mw = 2π * streamline.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * 0.61
+    vt = sqrt.(streamline.vr .^ 2 + streamline.vz .^ 2) * C
     return mw * vt
 end
 
 
-function compute_kinetic_luminosity(integrator, Rg)
-    if !escaped(integrator)
+function compute_kinetic_luminosity(streamline::Streamline, Rg)
+    if !escaped(streamline)
         return 0.0
     end
-    vrf = integrator.p.data[:vr][end]
-    vzf = integrator.p.data[:vz][end]
+    vrf = streamline.vr[end]
+    vzf = streamline.vz[end]
     vf = sqrt(vrf^2 + vzf^2) * C
-    kin_lumin = 0.5 * compute_integrator_mdot(integrator, Rg) * vf^2
+    kin_lumin = 0.5 * compute_integrator_mdot(streamline, Rg) * vf^2
     return kin_lumin
 end
 
-function compute_wind_mdot(integrators::Vector, Rg)
+function compute_wind_mdot(streamlines::Streamlines, Rg)
     mdot_wind = 0.0
-    for i in 1:length(integrators)
-        isassigned(integrators, i) || continue
-        integrator = integrators[i]
-        mdot_wind += compute_integrator_mdot(integrator, Rg)
+    for streamline in streamlines
+        mdot_wind += compute_integrator_mdot(streamline, Rg)
     end
     return mdot_wind
 end
 
-function compute_kinetic_luminosity(integrators::Vector, Rg)
+function compute_kinetic_luminosity(streamlines::Streamlines, Rg)
     kin_lumin = 0.0
-    for i in 1:length(integrators)
-        isassigned(integrators, i) || continue
-        integrator = integrators[i]
-        kin_lumin += compute_kinetic_luminosity(integrator, Rg)
+    for streamline in streamlines
+        kin_lumin += compute_kinetic_luminosity(streamline, Rg)
     end
     return kin_lumin
 end
 
-function compute_momentum_density(integrator::DenseIntegrator, Rg, lw)
-    if !escaped(integrator)
+function compute_momentum_density(streamline::Streamline, Rg)
+    if !escaped(streamline)
         return 0.0
     end
-    vrf = integrator.vr[end]
-    vzf = integrator.vz[end]
+    vrf = streamline.vr[end]
+    vzf = streamline.vz[end]
     vf = sqrt(vrf^2 + vzf^2) * C
-    ret = compute_integrator_mdot(integrator, Rg, lw) * vf
+    ret = compute_streamline_mdot(streamline, Rg) * vf
     return ret
 end
 
-function compute_momentum_density(integrator, Rg)
-    if !escaped(integrator)
-        return 0.0
-    end
-    vrf = integrator.p.data[:vr][end]
-    vzf = integrator.p.data[:vz][end]
-    vf = sqrt(vrf^2 + vzf^2) * C
-    ret = compute_integrator_mdot(integrator, Rg) * vf
-    return ret
-end
-
-function compute_momentum_density(integrators::Vector{DenseIntegrator}, Rg)
+function compute_momentum_density(streamlines::Streamlines, Rg)
     ret = 0.0
-    for i in 1:length(integrators)-1
-        lw = (integrators[i+1].r[1] - integrators[i].r[1])
-        integrator = integrators[i]
-        ret += compute_momentum_density(integrator, Rg, lw)
+    for streamline in streamlines
+        ret += compute_momentum_density(streamline, Rg)
     end
     return ret 
 end
 
-function compute_momentum_density(integrators::Vector, Rg)
-    ret = 0.0
-    for i in 1:length(integrators)
-        isassigned(integrators, i) || continue
-        integrator = integrators[i]
-        ret += compute_momentum_density(integrator, Rg)
-    end
-    return ret 
-end
-
-function compute_maximum_velocity(integrators)
+function compute_maximum_velocity(streamlines::Streamlines)
     maxv = 0.
-    for i in 1:length(integrators)
-        isassigned(integrators, i) || continue
-        integrator = integrators[i]
-        escaped(integrator) || continue
-        vrf = integrator.p.data[:vr][end]
-        vzf = integrator.p.data[:vz][end]
+    for streamline in streamlines
+        escaped(streamline) || continue
+        vrf = streamline.vr[end]
+        vzf = streamline.vz[end]
         vf = sqrt(vrf^2 + vzf^2)
         if vf > maxv
             maxv = vf
@@ -175,15 +107,15 @@ function save_wind_properties(integrators, save_path, bh::BlackHole)
     return ret
 end
 
-function save_wind(integrators, model, save_path, it_num)
+function save_wind(integrators, streamlines, model, save_path, it_num)
     mkpath(save_path)
     iteration_save_path = save_path * "/iteration_$(@sprintf "%03d" it_num)"
     mkpath(iteration_save_path)
     hdf5_save_path = save_path * "/results.hdf5"
     save_hdf5(integrators, model, hdf5_save_path, it_num)
-    lines_save_path = iteration_save_path * "/trajectories.jld2"
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
-    save_trajectories(integrators, lines_save_path)
+    integrators_save_path = iteration_save_path * "/trajectories.jld2"
+    save_integrators(integrators, integrators_save_path)
     properties = save_wind_properties(integrators, properties_save_path, model.bh)
     return properties
 end
@@ -211,10 +143,10 @@ function save_velocity_grid!(velocity_grid::VelocityGrid, group)
     return
 end
 
-function save_trajectories!(integrators::Vector{<:Sundials.IDAIntegrator}, group)
+function save_streamlines!(integrators::Vector{<:Sundials.IDAIntegrator}, group)
     g = create_group(group, "trajectories")
     for (i, integrator) in enumerate(integrators)
-        integ = DenseIntegrator(integrator)
+        integ = Streamline(integrator)
         tgroup = create_group(g, "$i")
         tgroup["id"] = integ.id
         tgroup["t"] = integ.t
@@ -238,7 +170,7 @@ end
 save_wind_hull!(hull::Nothing, group) = nothing
 
 
-function save_hdf5(integrators, model, hdf5_save_path, it_num)
+function save_hdf5(streamlines, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
     density_grid = model.rad.wi.density_grid
     velocity_grid = model.rad.wi.velocity_grid
@@ -248,17 +180,17 @@ function save_hdf5(integrators, model, hdf5_save_path, it_num)
         g = create_group(file, iteration)
         save_density_grid!(density_grid, g)
         save_velocity_grid!(velocity_grid, g)
-        save_trajectories!(integrators, g)
+        save_streamlines!(streamlines, g)
         save_wind_hull!(wind_hull, g)
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)
         g["bolometric_luminosity"] = compute_bolometric_luminosity(bh)
         macc = compute_mass_accretion_rate(bh)
         g["mass_accretion_rate"] = macc
-        g["kinetic_luminosity"] = compute_kinetic_luminosity(integrators, bh.Rg)
-        g["momentum"] = compute_momentum_density(integrators, bh.Rg)
-        mloss = compute_wind_mdot(integrators, bh.Rg)
+        g["kinetic_luminosity"] = compute_kinetic_luminosity(streamlines, bh.Rg)
+        g["momentum"] = compute_momentum_density(streamlines, bh.Rg)
+        mloss = compute_wind_mdot(streamlines, bh.Rg)
         g["mass_loss"] = mloss
-        g["max_velocity"] = compute_maximum_velocity(integrators)
+        g["max_velocity"] = compute_maximum_velocity(streamlines)
         g["mass_loss_fraction"] = mloss / macc
     end
 end

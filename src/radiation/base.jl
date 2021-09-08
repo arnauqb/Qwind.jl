@@ -139,11 +139,11 @@ get_density(radiation::Radiation, r, z) = get_density(radiation.wi, r, z)
 
 function update_radiation(
     radiation::Radiation,
-    integrators::Vector{<:Sundials.IDAIntegrator},
+    streamlines::Streamlines,
 )
     @info "Updating radiation... "
     flush()
-    new_interp = update_wind_interpolator(radiation.wi, integrators)
+    new_interp = update_wind_interpolator(radiation.wi, streamlines)
     return update_radiation(radiation, new_interp)
 end
 

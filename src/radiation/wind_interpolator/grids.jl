@@ -10,14 +10,7 @@ function point_outside_grid(grid::InterpolationGrid, r, z)
     return false
 end
 
-function get_spatial_grid(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    r0s::Vector{Float64},
-    nr = "auto",
-    nz = 50;
-    log=true,
-)
+function get_spatial_grid(r, z, r0s, nr = "auto", nz = 50; log = true)
     r_min = max(6.0, minimum(r))
     z_min = max(minimum(z), 1e-3)
     r_max = min(1e4, maximum(r))
@@ -33,7 +26,7 @@ function get_spatial_grid(
             r_range = range(r_min, r_max, length = nr)
         end
     end
-    if log 
+    if log
         z_range = 10 .^ range(log10(z_min), log10(z_max), length = nz - 1)
     else
         z_range = range(z_min, z_max, length = nz - 1)
