@@ -40,7 +40,7 @@ initialize_integrators(model::Model) = initialize_integrators(
     rtol = model.config[:integrator][:rtol],
 )
 
-function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=true)
+function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel = true)
     @info "Computing initial conditions for iteration $it_num..."
     lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
@@ -49,7 +49,7 @@ function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=
         r0 = lines_range[i],
         atol = model.config[:integrator][:atol],
         rtol = model.config[:integrator][:rtol],
-        trajectory_id= i,
+        trajectory_id = i,
     )
     @info "Starting iteration $it_num ..."
     @info "Integrating $(length(lines_range)) trajectories ..."
@@ -64,20 +64,30 @@ function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel=
     else
         integrators = f.(1:length(lines_range))
     end
+    # Resolve intersections.
+    max_times = get_intersection_times(integrators)
+    streamlines = interpolate_integrators(
+        integrators,
+        max_times = max_times,
+        n_timesteps = 1000,
+        log = true,
+    )
     iterations_dict[it_num]["integrators"] = integrators
-    return integrators
+    iterations_dict[it_num]["streamlines"] = streamlines
+    return integrators, streamlines
 end
 
-function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=true)
+function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel = true)
     if it_num ∉ keys(iterations_dict)
         iterations_dict[1] = Dict()
     end
     save_path = model.config[:integrator][:save_path]
-    integrators = run_integrators!(model, iterations_dict, it_num=it_num, parallel=parallel)
+    integrators, streamlines =
+        run_integrators!(model, iterations_dict, it_num = it_num, parallel = parallel)
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush()
-    wind_properties = save_wind(integrators, model, save_path, it_num)
+    wind_properties = save_wind(integrators, streamlines, model, save_path, it_num)
     @info "Done"
     flush()
     @info "Wind properties"
@@ -93,7 +103,13 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel=tr
     return
 end
 
-function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=nothing, parallel=true)
+function run!(
+    model::Model,
+    iterations_dict = nothing;
+    start_it = 1,
+    n_iterations = nothing,
+    parallel = true,
+)
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
@@ -106,8 +122,8 @@ function run!(model::Model, iterations_dict = nothing; start_it=1, n_iterations=
     end
     iterations_dict[1] = Dict()
     iterations_dict[1]["rad"] = model.rad
-    for it = start_it:(start_it+n_iterations-1)
-        run_iteration!(model, iterations_dict, it_num = it, parallel=parallel)
+    for it = start_it:(start_it + n_iterations - 1)
+        run_iteration!(model, iterations_dict, it_num = it, parallel = parallel)
     end
     return
 end

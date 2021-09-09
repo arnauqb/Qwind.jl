@@ -100,21 +100,14 @@ function DensityGrid(
 end
 
 function DensityGrid(
-    integrators::Vector{<:Sundials.IDAIntegrator},
-    max_times,
+    streamlines,
     hull;
     nr = "auto",
     nz = 50,
     interpolation_type = "linear",
 )
-    r0 = [integ.p.r0 for integ in integrators]
-    integrators_interpolated = interpolate_integrators(
-        integrators,
-        max_times = max_times,
-        n_timesteps = 1000,
-        log = true,
-    )
-    r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
+    r0 = [line.r[1] for line in streamlines]
+    r, z, vr, vphi, vz, n = reduce_streamlines(streamlines)
     return DensityGrid(
         r,
         z,
@@ -260,16 +253,9 @@ function update_density_grid(
     old_grid::DensityGrid,
     update_method::UpdateGridFlag,
     streamlines::Streamlines,
-    max_times,
     hull,
 )
-    r0 = [integ.p.r0 for integ in integrators]
-    integrators_interpolated = interpolate_integrators(
-        integrators,
-        max_times = max_times,
-        n_timesteps = 1000,
-        log = true,
-    )
-    r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
+    r, z, _, _, _, n = reduce_streamlines(streamlines)
+    r0 = [line.r[1] for line in streamlines]
     return update_density_grid(old_grid, update_method, hull, r, z, n, r0)
 end

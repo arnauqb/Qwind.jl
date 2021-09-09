@@ -2,8 +2,6 @@ using LinearAlgebra, ProgressMeter, DataStructures
 export Segment,
     Intersection,
     reduce_trajectories,
-    interpolate_trajectory,
-    interpolate_trajectories,
     get_intersection_times,
     load_trajectories
 
@@ -278,7 +276,7 @@ function slice_trajectory(trajectory::Trajectory; in = 1, fi = nothing)
     )
 end
 
-function get_intersections(trajectoriess::Vector{<:Trajectory})
+function get_intersections(trajectories::Vector{<:Trajectory})
     intersections_dict = Dict{Int,SortedSet{Intersection}}()
     for i = 1:length(trajectories)
         intersections = SortedSet{Intersection}()
@@ -397,135 +395,135 @@ end
 get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator}) =
     get_intersection_times(Trajectory.(integrators))
 
-function interpolate_integrator(
-    integrator::Sundials.IDAIntegrator;
-    n_timesteps::Int = 1000,
-    max_time = nothing,
-    log = true,
-)
-    integration_time = unique(integrator.sol.t)
-    tmin = integration_time[2]
-    if max_time == nothing
-        max_time = integration_time[end - 1]
-    end
-    if max_time <= tmin
-        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-    end
-    if log
-        t_range = 10 .^ range(log10(tmin), log10(max_time), length = n_timesteps)
-    else
-        t_range = collect(range(tmin, max_time, length = n_timesteps))
-    end
-    i = 1
-    while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
-        t_range = t_range[1:(end - i)]
-        i += 1
-    end
-    if length(t_range) == 0
-        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
-    end
-    dense_solution = integrator.sol(t_range)
-    r_dense = dense_solution[1, :]
-    z_dense = dense_solution[2, :]
-    vr_dense = dense_solution[3, :]
-    vz_dense = dense_solution[4, :]
-    line_width_dense = r_dense .* integrator.p.lwnorm
-    vphi_dense = integrator.p.l0 ./ r_dense
-    density_dense =
-        compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
-    return Trajectory(
-        integrator.p.id,
-        t_range,
-        r_dense,
-        z_dense,
-        vr_dense,
-        vphi_dense,
-        vz_dense,
-        density_dense,
-    )
-end
+#function interpolate_integrator(
+#    integrator::Sundials.IDAIntegrator;
+#    n_timesteps::Int = 1000,
+#    max_time = nothing,
+#    log = true,
+#)
+#    integration_time = unique(integrator.sol.t)
+#    tmin = integration_time[2]
+#    if max_time == nothing
+#        max_time = integration_time[end - 1]
+#    end
+#    if max_time <= tmin
+#        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
+#    end
+#    if log
+#        t_range = 10 .^ range(log10(tmin), log10(max_time), length = n_timesteps)
+#    else
+#        t_range = collect(range(tmin, max_time, length = n_timesteps))
+#    end
+#    i = 1
+#    while (t_range[end] > integrator.sol.t[end]) && length(t_range) > 0
+#        t_range = t_range[1:(end - i)]
+#        i += 1
+#    end
+#    if length(t_range) == 0
+#        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
+#    end
+#    dense_solution = integrator.sol(t_range)
+#    r_dense = dense_solution[1, :]
+#    z_dense = dense_solution[2, :]
+#    vr_dense = dense_solution[3, :]
+#    vz_dense = dense_solution[4, :]
+#    line_width_dense = r_dense .* integrator.p.lwnorm
+#    vphi_dense = integrator.p.l0 ./ r_dense
+#    density_dense =
+#        compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
+#    return Trajectory(
+#        integrator.p.id,
+#        t_range,
+#        r_dense,
+#        z_dense,
+#        vr_dense,
+#        vphi_dense,
+#        vz_dense,
+#        density_dense,
+#    )
+#end
 
-function interpolate_integrators(
-    integrators::Vector{<:Sundials.IDAIntegrator};
-    n_timesteps::Int = 1000,
-    max_times = nothing,
-    log = true,
-)
-    ret = Trajectory[]
-    for integrator in integrators
-        max_time = max_times[integrator.p.id]
-        push!(
-            ret,
-            interpolate_integrator(
-                integrator,
-                n_timesteps = n_timesteps,
-                max_time = max_time,
-                log = log,
-            ),
-        )
-    end
-    return ret
-end
+#function interpolate_integrators(
+#    integrators::Vector{<:Sundials.IDAIntegrator};
+#    n_timesteps::Int = 1000,
+#    max_times = nothing,
+#    log = true,
+#)
+#    ret = Trajectory[]
+#    for integrator in integrators
+#        max_time = max_times[integrator.p.id]
+#        push!(
+#            ret,
+#            interpolate_integrator(
+#                integrator,
+#                n_timesteps = n_timesteps,
+#                max_time = max_time,
+#                log = log,
+#            ),
+#        )
+#    end
+#    return ret
+#end
 
-function reduce_integrators(
-    integrators::Vector{<:Sundials.IDAIntegrator};
-    max_times = nothing,
-)
-    max_times = [max_times[integrator.id] for integrator in integrators]
-    time_indices =
-        searchsorted_nearest.([integrator.sol.t for integrator in integrators], max_times)
-    r = reduce(
-        vcat,
-        [
-            integrator.p.data[:r][1:index]
-            for (index, integrator) in zip(time_indices, integrators)
-        ],
-    )
-    z = reduce(
-        vcat,
-        [
-            integrator.p.data[:z][1:index]
-            for (index, integrator) in zip(time_indices, integrators)
-        ],
-    )
-    vr = reduce(
-        vcat,
-        [
-            integrator.p.data[:vr][1:index]
-            for (index, integrator) in zip(time_indices, integrators)
-        ],
-    )
-    vphi = reduce(
-        vcat,
-        [
-            integrator.p.data[:vphi][1:index]
-            for (index, integrator) in zip(time_indices, integrators)
-        ],
-    )
-    vz = reduce(
-        vcat,
-        [
-            integrator.p.data[:vz][1:index]
-            for (index, integrator) in zip(time_indices, integrators)
-        ],
-    )
-    n = reduce(
-        vcat,
-        [
-            integrator.p.data[:n][1:index]
-            for (index, integrator) in zip(time_indices, integrators)
-        ],
-    )
-    return r, z, vr, vphi, vz, n
-end
-
-function reduce_trajectories(integrators::Vector{<:Trajectory})
-    r = reduce(vcat, [integrator.r for integrator in integrators])
-    z = reduce(vcat, [integrator.z for integrator in integrators])
-    vr = reduce(vcat, [integrator.vr for integrator in integrators])
-    vphi = reduce(vcat, [integrator.vphi for integrator in integrators])
-    vz = reduce(vcat, [integrator.vz for integrator in integrators])
-    n = reduce(vcat, [integrator.n for integrator in integrators])
-    return r, z, vr, vphi, vz, n
-end
-
+#function reduce_integrators(
+#    integrators::Vector{<:Sundials.IDAIntegrator};
+#    max_times = nothing,
+#)
+#    max_times = [max_times[integrator.id] for integrator in integrators]
+#    time_indices =
+#        searchsorted_nearest.([integrator.sol.t for integrator in integrators], max_times)
+#    r = reduce(
+#        vcat,
+#        [
+#            integrator.p.data[:r][1:index]
+#            for (index, integrator) in zip(time_indices, integrators)
+#        ],
+#    )
+#    z = reduce(
+#        vcat,
+#        [
+#            integrator.p.data[:z][1:index]
+#            for (index, integrator) in zip(time_indices, integrators)
+#        ],
+#    )
+#    vr = reduce(
+#        vcat,
+#        [
+#            integrator.p.data[:vr][1:index]
+#            for (index, integrator) in zip(time_indices, integrators)
+#        ],
+#    )
+#    vphi = reduce(
+#        vcat,
+#        [
+#            integrator.p.data[:vphi][1:index]
+#            for (index, integrator) in zip(time_indices, integrators)
+#        ],
+#    )
+#    vz = reduce(
+#        vcat,
+#        [
+#            integrator.p.data[:vz][1:index]
+#            for (index, integrator) in zip(time_indices, integrators)
+#        ],
+#    )
+#    n = reduce(
+#        vcat,
+#        [
+#            integrator.p.data[:n][1:index]
+#            for (index, integrator) in zip(time_indices, integrators)
+#        ],
+#    )
+#    return r, z, vr, vphi, vz, n
+#end
+#
+#function reduce_trajectories(integrators::Vector{<:Trajectory})
+#    r = reduce(vcat, [integrator.r for integrator in integrators])
+#    z = reduce(vcat, [integrator.z for integrator in integrators])
+#    vr = reduce(vcat, [integrator.vr for integrator in integrators])
+#    vphi = reduce(vcat, [integrator.vphi for integrator in integrators])
+#    vz = reduce(vcat, [integrator.vz for integrator in integrators])
+#    n = reduce(vcat, [integrator.n for integrator in integrators])
+#    return r, z, vr, vphi, vz, n
+#end
+#

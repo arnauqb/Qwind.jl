@@ -44,7 +44,7 @@ function WindInterpolator(config::Dict)
 end
 
 function WindInterpolator(
-    streamlines::Streamlines;
+    streamlines::Union{Streamlines, Nothing};
     nr = "auto",
     nz = 50,
     vacuum_density = 1e2,
@@ -55,16 +55,14 @@ function WindInterpolator(
         nr = Int(nr)
     end
     nz = Int(nz)
-    if integrators === nothing
+    if streamlines === nothing
         hull = Hull()
         density_grid = DensityGrid(nr, nz, vacuum_density)
         velocity_grid = VelocityGrid(nr, nz, 0.0)
     else
-        r0 = [line.r[1] for line in streamlines]
-        #max_times = get_intersection_times(integrators)
-        hull = Hull(integrators, max_times)
-        #density_grid = DensityGrid(integrators, max_times, hull, nr = nr, nz = nz)
-        #velocity_grid = VelocityGrid(integrators, max_times, hull, nr = nr, nz = nz)
+        hull = Hull(streamlines)
+        density_grid = DensityGrid(streamlines, hull, nr = nr, nz = nz)
+        velocity_grid = VelocityGrid(streamlines, hull, nr = nr, nz = nz)
     end
     return WindInterpolator(
         hull,
@@ -79,12 +77,12 @@ end
 
 function update_wind_interpolator(
     wi::WindInterpolator,
-    integrators::Vector{<:Sundials.IDAIntegrator},
+    streamlines::Streamlines,
 )
     if maximum(wi.density_grid.grid) == wi.vacuum_density
         # first iteration, do not average
         return WindInterpolator(
-            integrators,
+            streamlines,
             nr = wi.density_grid.nr,
             nz = wi.density_grid.nz,
             vacuum_density = wi.vacuum_density,
@@ -92,21 +90,17 @@ function update_wind_interpolator(
             update_grid_flag = wi.update_grid_flag,
         )
     end
-    r0 = [integ.p.r0 for integ in integrators]
-    max_times = get_intersection_times(integrators)
-    hull = Hull(integrators, max_times)
+    hull = Hull(streamlines)
     density_grid = update_density_grid(
         wi.density_grid,
         wi.update_grid_flag,
-        integrators,
-        max_times,
+        streamlines,
         hull,
     )
     velocity_grid = update_velocity_grid(
         wi.velocity_grid,
         wi.update_grid_flag,
-        integrators,
-        max_times,
+        streamlines,
         hull,
     )
     return WindInterpolator(

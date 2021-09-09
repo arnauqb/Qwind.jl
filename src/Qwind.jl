@@ -16,6 +16,8 @@ include("tables.jl")
 include("thermodynamics.jl")
 
 
+# Streamline struct
+include("streamlines.jl")
 
 # wind interpolator
 include("radiation/wind_interpolator/grids.jl")

@@ -98,13 +98,11 @@ function VelocityGrid(
     nr = "auto",
     nz = 50,
     log = true,
-    interpolation_type = "linear",
 )
     r_range, z_range = get_spatial_grid(r, z, r0, nr, nz, log = log)
     @info "Constructing velocity interpolators..."
     flush()
-    vr_interp, vphi_interp, vz_interp =
-        get_velocity_interpolators(r, z, vr, vphi, vz, type = interpolation_type)
+    vr_interp, vphi_interp, vz_interp = get_velocity_interpolators(r, z, vr, vphi, vz)
     @info "Done"
     @info "Filling velocity grids..."
     flush()
@@ -137,33 +135,24 @@ function VelocityGrid(
 end
 
 function VelocityGrid(
-    integrators::Vector{<:Sundials.IDAIntegrator},
-    max_times,
-    hull;
+    streamlines::Streamlines,
+    hull::ConcaveHull.Hull;
     nr = "auto",
     nz = 50,
-    interpolation_type = "linear",
 )
-    r0 = [integ.p.r0 for integ in integrators]
-    integrators_interpolated = interpolate_integrators(
-        integrators,
-        max_times = max_times,
-        n_timesteps = 1000,
-        log = false,
-    )
-    r, z, vr, vphi, vz, n = reduce_integrators(integrators_interpolated)
+    r0 = [line.r[1] for line in streamlines]
+    r, z, vr, vphi, vz, n = reduce_streamlines(streamlines)
     return VelocityGrid(
+        hull,
         r,
         z,
         vr,
         vphi,
         vz,
         r0,
-        hull,
         nr = nr,
         nz = nz,
         log = false,
-        interpolation_type = "linear",
     )
 end
 
@@ -197,17 +186,9 @@ function get_velocity_interpolators(r, z, vr, vphi, vz; type = "linear")
     r_log = log10.(r)
     z_log = log10.(z)
     points = hcat(r_log, z_log)
-    if type == "linear"
-        vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
-        vphi_int = scipy_interpolate.LinearNDInterpolator(points, vphi, fill_value = 0)
-        vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
-    elseif type == "nn"
-        vr_int = scipy_interpolate.NearestNDInterpolator(points, vr)
-        vphi_int = scipy_interpolate.NearestNDInterpolator(points, vphi)
-        vz_int = scipy_interpolate.NearestNDInterpolator(points, vz)
-    else
-        error("interpolation type $type not supported")
-    end
+    vr_int = scipy_interpolate.LinearNDInterpolator(points, vr, fill_value = 0)
+    vphi_int = scipy_interpolate.LinearNDInterpolator(points, vphi, fill_value = 0)
+    vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
     return vr_int, vphi_int, vz_int
 end
 
@@ -215,9 +196,8 @@ end
 function update_velocity_grid(
     old_grid::VelocityGrid,
     update_method::UpdateGridFlag,
-    integrators::Vector{<:Sundials.IDAIntegrator},
-    max_times,
+    streamlines::Streamlines,
     hull,
 )
-    return VelocityGrid(integrators, max_times, hull, nr = old_grid.nr, nz = old_grid.nz)
+    return VelocityGrid(streamlines, hull, nr = old_grid.nr, nz = old_grid.nz)
 end
