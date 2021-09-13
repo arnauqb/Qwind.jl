@@ -1,7 +1,7 @@
 import ConcaveHull
 import ConcaveHull: Hull
 import Sundials
-export DenseIntegrator, DenseIntegrators, Hull
+export Hull
 
 function Hull(r::Vector{Float64}, z::Vector{Float64})
     points = [[r[i], z[i]] for i = 1:length(r)]
@@ -10,14 +10,9 @@ function Hull(r::Vector{Float64}, z::Vector{Float64})
 end
 
 
-function Hull(integrators::Vector{<:Sundials.IDAIntegrator}, max_times)
-    integrators_interpolated_linear = interpolate_integrators(
-        integrators,
-        max_times = max_times,
-        n_timesteps = 100,
-        log = true,
-    )
-    r, z, _, _, _ = reduce_integrators(integrators_interpolated_linear)
+function Hull(streamlines)
+    r = reduce(vcat, [streamline.r[1:10:end] for streamline in streamlines])
+    z = reduce(vcat, [streamline.z[1:10:end] for streamline in streamlines])
     @info "Constructing wind hull"
     hull = Hull(r, z)
     if !hull.converged

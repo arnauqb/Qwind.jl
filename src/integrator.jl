@@ -70,7 +70,7 @@ function initialize_integrator(
     z0 = getz0(ic, r0)
     n0 = getn0(ic, rad, r0)
     v0 = getv0(ic, r0)
-    lwnorm = linewidth / r0
+    lwnorm = linewidth / sqrt(r0^2 + z0^2)
     termination_callback = DiscreteCallback(
         termination_condition,
         integrator -> affect!(integrator),
