@@ -51,8 +51,13 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
         maxevals = 100000,
     )[2]
     B0 = get_B0(r)
+    T = disk_temperature(radiation.bh, r)
+    vth = compute_thermal_velocity(T)
+    s = vth^2 / (2 * B0 * r)
+    a = 1 + (z/r)^2
+    gas_pressure_term = 4 * s * z / r / a
     radiation_no_tau_uv.fuv_grid .= fuv_copy
-    return -(grav + fr) / B0
+    return -(grav + fr) / B0 + gas_pressure_term
 end
 
 function nozzle_function(

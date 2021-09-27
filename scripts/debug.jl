@@ -19,6 +19,19 @@ function get_model(config)
     return model, iterations_dict
 end
 
+bh = BlackHole(1e8 * M_SUN, 0.5, 0.0);
+r_range = 10 .^ range(log10(6), log10(1500), length=1000);
+T_range = disk_temperature.(Ref(bh), r_range);
+
+h5open("./sed.hdf5", "w") do file
+    g = create_group(file, "temperature_profile")
+    g["r_range"] = r_range
+    g["T_range"] = T_range
+    attributes(g)["Description"] = "Temperature profile for M=10^8, mdot = 0.5"
+end
+
+plt.loglog(r_range, T_range);
+
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
