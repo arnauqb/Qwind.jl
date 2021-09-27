@@ -12,49 +12,46 @@ black_hole:
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
-  mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
-  relativistic: true
-  f_uv: "auto"
+  relativistic: true 
+  f_uv: auto
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
-  xray_opacity: boost
-  tau_uv_calculation: disk
+  xray_opacity: boost 
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
-
-radiative_transfer:
-  mode: RegularGrid
-  interpolator: 
-    type: WindInterpolator 
+  wind_interpolator:
+    update_grid_method: "average"
     vacuum_density: 1e2
-    n_timesteps: 10000
-    nz: 500 
+    n_integrator_interpolation: 10000
+    nz: 500
     nr: auto 
 
 grid:
   # units of Rg
   r_min: 6.0
-  r_max: 10000.0
+  r_max: 50000.0
   z_min: 0.0
-  z_max: 10000.0
+  z_max: 50000.0
 
 initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: 10 #"@vary grid 50,100,500,1000,5000,10000" #2000
+  n_lines: 10
   log_spaced: true
-  z_0: 0.0 # Rg
+  z0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.61
-  use_precalculated: false
+  interpolation_mode: interpolation
+  use_precalculated: true
 
 integrator:
-  n_iterations: 50
+  n_iterations: 2
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
-  save_path: "./qwind_original"
+  save_path: "./debugging"

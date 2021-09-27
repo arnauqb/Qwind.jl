@@ -1,0 +1,46 @@
+black_hole:
+  M: 1e8 # solar masses
+  mdot: 0.5 # Eddington units
+  spin: 0.0 # spin parameter (-1,1)
+
+radiation:
+  mode: QsosedRadiation # RERadiation: Risaliti & Elvis, QsosedRadiation: Done
+  relativistic: true
+  f_uv: 0.85 
+  f_x: 0.15
+  n_r: 1000
+  disk_r_in: 6.0
+  z_xray: 0.0
+  disk_height: 0.0
+  xray_opacity: boost
+  tau_uv_calculation: disk
+  disk_integral_rtol: 1e-3
+  wind_interpolator:
+    vacuum_density: 1e2
+    n_integrator_interpolation: 10000
+    nz: 500 
+    nr: auto 
+
+grid:
+  # units of Rg
+  r_min: 6.0
+  r_max: 10000.0
+  z_min: 0.0
+  z_max: 10000.0
+
+initial_conditions:
+  mode: UniformIC
+  r_in: 20.0
+  r_fi: 800.0
+  n_lines: 10
+  log_spaced: true
+  z0: 0.0 # Rg
+  n0: 1e8
+  v0: 2e6
+  mu: 0.5
+
+integrator:
+  n_iterations: 50
+  atol: 1e-8
+  rtol: 1e-3
+  save_path: "/home/arnau/code/Qwind.jl/runs/tests"

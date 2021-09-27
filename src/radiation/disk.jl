@@ -1,5 +1,6 @@
 using QuadGK
 export BlackBody,
+    disk_height,
     spectral_radiance,
     spectral_radiance_frequency,
     spectral_band_radiance,
@@ -21,7 +22,6 @@ struct BlackBody
 end
 
 kev_to_hz(energy) = energy / ERG_TO_KEV / H_PLANCK
-
 lambda_peak(T) = 0.2897771955 / T
 nu_peak(T) = C / lambda_peak(T)
 nu_peak(bb::BlackBody) = nu_peak(bb.T)
@@ -194,4 +194,27 @@ function xray_fraction(bh::BlackHole; low = UV_HIGH_KEV, high = 1e7)
     total_lumin = compute_bolometric_luminosity(bh)
     xray_lumin = disk_spectral_band_radiance(bh, low, high)
     xray_lumin / total_lumin
+end
+
+
+"""
+Disk height
+"""
+function disk_height(bh::BlackHole, r; mu_e = 1.17)
+    return SIGMA_E * mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 /
+           (G * bh.M * C) / bh.Rg
+end
+
+function characteristic_disk_height(bh::BlackHole, r, mu_e = 1.17)
+    return SIGMA_E / mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 /
+           (G * bh.M * C) / bh.Rg
+end
+
+#function disk_height(bh::BlackHole, r; mu_e=1.17)
+#    return SIGMA_E / mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 / (G * bh.M * C) /
+#           bh.Rg
+#end
+
+function pressure_scale_height(bh::BlackHole; r)
+    return 3/2 * 1/bh.efficiency * bh.mdot * disk_nt_rel_factors(bh, r)
 end

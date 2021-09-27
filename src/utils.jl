@@ -12,11 +12,15 @@ export searchsorted_nearest,
     d_euclidean,
     get_time,
     flush,
-    setup_logging
+    setup_logging,
+    is_logging
 
 get_time() = Dates.format(now(), "HH:MM:SS")
 d_euclidean(r0, r1, z0, z1) = sqrt((r0-r1)^2 + (z0-z1)^2)
 const date_format = "yyyy-mm-dd HH:MM:SS"
+
+# checks for HPC use
+is_logging(io) = isa(io, Base.TTY) == false || (get(ENV, "CI", nothing) == "true")
 
 function setup_logging()
     timestamp_logger(logger) = TransformerLogger(logger) do log
@@ -79,26 +83,6 @@ function countsignchanges(array::Vector{Float64}, reference = 0)
     end
     return counter
 end
-
-#function remove_close_elements(args...; digits = 4)
-#    ret = [[array[1] for array in args]]
-#    ret = hcat(ret...)
-#    for i = 2:length(args[1])
-#        noinsert = 0
-#        toinsert = zeros(length(args))
-#        for (j, array) in enumerate(args)
-#            element = trunc(array[i], digits = digits)
-#            if element in ret[j, :]
-#                noinsert += 1
-#            end
-#            toinsert[j] = element
-#        end
-#        if noinsert < length(args)
-#            ret = hcat(ret, toinsert)
-#        end
-#    end
-#    return [ret[i, :] for i = 1:length(args)]
-#end
 
 function iter_paths(dict)
     function iter(d, path)

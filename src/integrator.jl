@@ -2,6 +2,7 @@ using DiffEqBase, DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
 using Roots: find_zero, Bisection
 using Distributed
+using QuadGK
 import Qwind.out_of_grid, Qwind.compute_density
 import Base.push!
 export initialize_integrator,
@@ -16,26 +17,11 @@ export initialize_integrator,
     Parameters,
     escaped
 
-function make_save_data(line_id = -1)
-    ret = Dict{Symbol,Any}(:line_id => line_id)
-    keys = [
-        :r,
-        :z,
-        :vr,
-        :vz,
-        :n,
-        #    :ar,
-        #    :az,
-        :fm,
-        :xi,
-        :dvdr,
-        #    :disc_radiation_field_r,
-        #    :disc_radiation_field_z,
-        :xi,
-        :taueff,
-        :taux,
-        :tauuv,
-    ]
+Base.length(integrator::Sundials.IDAIntegrator) = length(integrator.p.data[:r])
+
+function make_save_data(trajectory_id = -1)
+    ret = Dict{Symbol,Any}(:trajectory_id => trajectory_id)
+    keys = [:r, :z, :vr, :vphi, :vz, :n, :fm, :xi, :dvdr, :xi, :taueff, :taux, :tauuv]
     for key in keys
         ret[key] = Float64[]
     end
@@ -43,7 +29,7 @@ function make_save_data(line_id = -1)
 end
 
 struct Parameters
-    line_id::Int
+    id::Int
     r0::Float64
     z0::Float64
     v0::Float64
@@ -56,54 +42,84 @@ struct Parameters
 end
 
 function compute_density(r, z, vr, vz, parameters::Parameters)
-    return compute_density(r, z, vr, vz, parameters.r0, parameters.v0, parameters.n0)
+    return compute_density(
+        r,
+        z,
+        vr,
+        vz,
+        parameters.r0,
+        parameters.z0,
+        parameters.v0,
+        parameters.n0,
+    )
 end
 
 function initialize_integrator(
-    radiative_transfer::RadiativeTransfer,
-    grid::Grid,
-    initial_conditions::InitialConditions,
+    rad,
+    grid,
+    ic,
     r0,
     linewidth;
     atol = 1e-8,
     rtol = 1e-3,
     tmax = 1e8,
-    line_id = -1,
+    trajectory_id = -1,
     save_results = true,
-    #save_path = nothing,
 )
-    l0 = getl0(initial_conditions, r0)
-    z0 = getz0(initial_conditions, r0)
-    n0 = getn0(initial_conditions, r0)
-    v0 = getv0(initial_conditions, r0)
-    lwnorm = linewidth / r0
+    l0 = getl0(ic, r0)
+    z0 = getz0(ic, r0)
+    n0 = getn0(ic, rad, r0)
+    v0 = getv0(ic, r0)
+    lwnorm = linewidth / sqrt(r0^2 + z0^2)
     termination_callback = DiscreteCallback(
         termination_condition,
         integrator -> affect!(integrator),
         save_positions = (false, false),
     )
-    data = make_save_data(line_id)
-    params = Parameters(line_id, r0, z0, v0, n0, l0, lwnorm, grid, data, [false])
+    data = make_save_data(trajectory_id)
+    params = Parameters(trajectory_id, r0, z0, v0, n0, l0, lwnorm, grid, data, [false])
     if save_results
         saved_data = SavedValues(Float64, Float64)
         saving_callback = SavingCallback(
-            (u, t, integrator) -> save(u, t, integrator, radiative_transfer, line_id),
+            (u, t, integrator) -> save(u, t, integrator, rad, trajectory_id),
             saved_data,
         )
         callback_set = CallbackSet(termination_callback, saving_callback)
     else
         callback_set = CallbackSet(termination_callback)
     end
-    a₀ = compute_initial_acceleration(radiative_transfer, r0, z0, 0, v0, params)
+    a₀ = compute_initial_acceleration(rad, r0, z0, 0, v0, params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
-    dae_problem = create_dae_problem(radiative_transfer, residual!, du₀, u₀, tspan, params)
+    dae_problem = create_dae_problem(rad, residual!, du₀, u₀, tspan, params)
     integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
     integrator.opts.abstol = atol
     integrator.opts.reltol = rtol
     return integrator
 end
+
+initialize_integrator(
+    model,
+    r0,
+    linewidth;
+    atol = 1e-8,
+    rtol = 1e-3,
+    tmax = 1e8,
+    trajectory_id = -1,
+    save_results = true,
+) = initialize_integrator(
+    model.rad,
+    model.wind_grid,
+    model.ic,
+    r0,
+    linewidth,
+    atol = atol,
+    rtol = rtol,
+    tmax = tmax,
+    trajectory_id = trajectory_id,
+    save_results = save_results,
+)
 
 function get_initial_radii_and_linewidths(
     initial_conditions::InitialConditions,
@@ -143,26 +159,14 @@ function get_initial_radii_and_linewidths(model)
     return lines_range, lines_widths
 end
 
-function create_and_run_integrator(
-    radiative_transfer::RadiativeTransfer,
-    grid::Grid,
-    initial_conditions::InitialConditions;
-    r0,
-    linewidth,
-    line_id,
-    atol,
-    rtol,
-)
+function create_and_run_integrator(model; r0, linewidth, trajectory_id, atol, rtol)
     integrator = initialize_integrator(
-        radiative_transfer,
-        grid,
-        initial_conditions,
+        model,
         r0,
         linewidth,
         atol = atol,
         rtol = rtol,
-        line_id = line_id,
-        #save_path = save_path,
+        trajectory_id = trajectory_id,
     )
     solve!(integrator)
     return integrator
@@ -190,7 +194,11 @@ end
 
 function failed(integrator::Sundials.IDAIntegrator, r, z)
     intersects = self_intersects(integrator, r, z)
-    integrator.u[1] < 0.0 || integrator.u[2] < integrator.p.grid.z_min || intersects
+    too_long = length(integrator.p.data[:r]) > 500
+    integrator.u[1] < 0.0 ||
+        integrator.u[2] < max(integrator.p.grid.z_min, integrator.p.z0) ||
+        intersects ||
+        too_long
 end
 
 compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
@@ -216,7 +224,7 @@ function affect!(integrator)
     terminate!(integrator)
 end
 
-function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
+function save(u, t, integrator, radiation::Radiation, trajectory_id)
     if integrator.p.finished[1]
         return 0.0
     end
@@ -225,15 +233,17 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     _, _, ar, az = integrator.du
     vt = sqrt(vr^2 + vz^2)
     at = sqrt(ar^2 + az^2)
+    vphi = integrator.p.l0 / sqrt(r^2 + z^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
-    taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    taux = compute_tau_xray(radiation, r = r, z = z)
+    ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
+    push!(data[:vphi], vphi)
     push!(data[:vz], vz)
     push!(data[:n], density)
     push!(data[:dvdr], dvdr)
@@ -245,43 +255,7 @@ function save(u, t, integrator, radiative_transfer::RadiativeTransfer, line_id)
     return 0.0
 end
 
-function save(u, t, integrator, radiative_transfer::RERadiativeTransfer, line_id)
-    if integrator.p.finished[1]
-        return 0.0
-    end
-    data = integrator.p.data
-    r, z, vr, vz = u
-    _, _, ar, az = integrator.du
-    vt = sqrt(vr^2 + vz^2)
-    at = sqrt(ar^2 + az^2)
-    dvdr = at / vt
-    Rg = radiative_transfer.radiation.Rg
-    density = compute_density(r, z, vr, vz, integrator.p)
-    taux = compute_xray_tau(radiative_transfer, r, z, density, integrator.p.r0)
-    tauuv = compute_uv_tau(radiative_transfer, r, z, density, integrator.p.r0)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
-    taueff = compute_tau_eff(density, dvdr)
-    forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
-    push!(data[:r], r)
-    push!(data[:z], z)
-    push!(data[:vr], vr)
-    push!(data[:vz], vz)
-    push!(data[:ar], ar)
-    push!(data[:az], az)
-    push!(data[:n], density)
-    push!(data[:dvdr], dvdr)
-    push!(data[:taux], taux)
-    push!(data[:tauuv], tauuv)
-    push!(data[:xi], ξ)
-    push!(data[:taueff], taueff)
-    push!(data[:fm], forcemultiplier)
-    push!(data[:disc_radiation_field_r], disc_radiation_field[1])
-    push!(data[:disc_radiation_field_z], disc_radiation_field[2])
-    return 0.0
-end
-
-function residual!(radiative_transfer::RadiativeTransfer, out, du, u, p, t)
+function residual!(radiation::Radiation, out, du, u, p, t)
     r, z, vr, vz = u
     r_dot, z_dot, vr_dot, vz_dot = du
     if r <= 0 || z < 0 # we force it to fail
@@ -289,8 +263,7 @@ function residual!(radiative_transfer::RadiativeTransfer, out, du, u, p, t)
         centrifugal_term = 0.0
         gravitational_acceleration = compute_gravitational_acceleration(abs(r), abs(z))
     else
-        radiation_acceleration =
-            compute_radiation_acceleration(radiative_transfer, du, u, p)
+        radiation_acceleration = compute_radiation_acceleration(radiation, du, u, p)
         centrifugal_term = p.l0^2 / r^3
         gravitational_acceleration = compute_gravitational_acceleration(r, z)
     end
@@ -302,15 +275,8 @@ function residual!(radiative_transfer::RadiativeTransfer, out, du, u, p, t)
     out[4] = vz_dot - az
 end
 
-function create_dae_problem(
-    radiative_transfer::RadiativeTransfer,
-    residual!,
-    du₀,
-    u₀,
-    tspan,
-    params,
-)
-    func!(out, du, u, p, t) = residual!(radiative_transfer, out, du, u, p, t)
+function create_dae_problem(radiation, residual!, du₀, u₀, tspan, params)
+    func!(out, du, u, p, t) = residual!(radiation, out, du, u, p, t)
     return DAEProblem(
         func!,
         du₀,
@@ -321,52 +287,31 @@ function create_dae_problem(
     )
 end
 
-
-function compute_radiation_acceleration(
-    radiative_transfer::RERadiativeTransfer,
-    du,
-    u,
-    p::Parameters,
-)
+function compute_radiation_acceleration(radiation::Radiation, du, u, p::Parameters)
     r, z, vr, vz = u
     _, _, ar, az = du
     vt = sqrt(vr^2 + vz^2)
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, p)
-    taux = compute_xray_tau(radiative_transfer, r, z, density, p.r0)
-    tauuv = compute_uv_tau(radiative_transfer, r, z, density, p.r0)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
+    taux = compute_tau_xray(radiation, r = r, z = z)
+    ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z)
-    force_radiation = (1 + forcemultiplier) * exp(-tauuv) * disc_radiation_field
-    return force_radiation
-end
-
-function compute_radiation_acceleration(
-    radiative_transfer::RadiativeTransfer,
-    du,
-    u,
-    p::Parameters,
-)
-    r, z, vr, vz = u
-    _, _, ar, az = du
-    vt = sqrt(vr^2 + vz^2)
-    at = sqrt(ar^2 + az^2)
-    dvdr = at / vt
-    density = compute_density(r, z, vr, vz, p)
-    taux = compute_xray_tau(radiative_transfer, radiative_transfer.radiation.z_xray, r, z)
-    ξ = compute_ionization_parameter(radiative_transfer.radiation, r, z, density, taux)
-    taueff = compute_tau_eff(density, dvdr)
-    forcemultiplier = compute_force_multiplier(taueff, ξ)
-    disc_radiation_field = compute_disc_radiation_field(radiative_transfer, r, z, vr, vz)
+    disc_radiation_field = compute_disc_radiation_field(
+        radiation,
+        r = r,
+        z = z,
+        vr = vr,
+        vz = vz,
+        rtol = radiation.disk_integral_rtol,
+    )
     force_radiation = (1 + forcemultiplier) * disc_radiation_field
     return force_radiation
 end
 
 function compute_initial_acceleration(
-    radiative_transfer::RadiativeTransfer,
+    radiation::Radiation,
     r,
     z,
     vr,
@@ -376,103 +321,99 @@ function compute_initial_acceleration(
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
     gravitational_acceleration = compute_gravitational_acceleration(r, z)
-    radiation_acceleration =
-        compute_radiation_acceleration(radiative_transfer, du, u, params)
+    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
     centrifugal_term = params.l0^2 / r^3
+    if r == 0
+        centrifugal_term = 0.0
+    end
     ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     # second estimation
     du = [vr, vz, ar, az]
-    radiation_acceleration =
-        compute_radiation_acceleration(radiative_transfer, du, u, params)
+    radiation_acceleration = compute_radiation_acceleration(radiation, du, u, params)
     ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     return [ar, az]
 end
 
-
-function compute_lines_range(ic::InitialConditions, rin, rfi, Rg, xray_luminosity)
-    lines_range = [rin]
+function compute_lines_range(
+    model,
+    rin,
+    rfi;
+    delta_mdot = 0.01,
+    fill_delta = 20,
+    max_tau = 25,
+)
+    lines_range = []
     lines_widths = []
-    r_range = 10 .^ range(log10(rin), log10(rfi), length = 100000)
-    z_range = [0.0, 1.0]
-    density_grid = zeros((length(r_range), length(z_range)))
-    density_grid[:, 1] .= getn0.(Ref(ic), r_range) 
-    interp_grid = DensityGrid(r_range, z_range, density_grid)
-    tau_x = 0.0
-    tau_uv = 0.0
-    fx(delta_r, rc, delta_tau, tau_x) =
-        delta_tau - (
-            compute_xray_tau(
-                interp_grid,
-                0.0,
-                0.0,
-                rc + delta_r,
-                0.0,
-                xray_luminosity,
-                Rg,
-            ) - tau_x
-        )
-    fuv(delta_r, rc, delta_tau, tau_uv) =
-        delta_tau - (compute_uv_tau(interp_grid, 0.0, 0.0, rc + delta_r, 0.0, Rg) - tau_uv)
-    rc = rin
-    while rc < rfi
-        if tau_x < 50
-            tau_x = compute_xray_tau(interp_grid, 0.0, 0.0, rc, 0.0, xray_luminosity, Rg)
-            if tau_x < 1
-                delta_tau = 0.1
-            elseif tau_x < 20
-                delta_tau = 0.5
-            else
-                delta_tau = 1
-            end
-            delta_r = find_zero(
-                delta_r -> fx(delta_r, rc, delta_tau, tau_x),
-                0.1,
-                atol = 1e-7,
-                rtol = 1e-3,
-            )
-        elseif tau_uv < 50
-            tau_uv = compute_uv_tau(interp_grid, 0.0, 0.0, rc, 0.0, Rg)
-            if tau_uv < 1
-                delta_tau = 0.1
-            elseif tau_uv < 20
-                delta_tau = 0.5
-            else
-                delta_tau = 1
-            end
-            try
-                delta_r = find_zero(
-                    delta_r -> fuv(delta_r, rc, delta_tau, tau_uv),
-                    10,
-                    atol = 1e-6,
-                    rtol = 1e-3,
-                )
-            catch
-                break
-            end
-        else
-            break
-        end
-        push!(lines_range, rc + delta_r / 2)
-        push!(lines_widths, delta_r)
-        rc += delta_r
+    r_range = range(rin, rfi, length=250);
+    density_range = getn0.(Ref(model), r_range);
+    r = rin
+    function mass_loss_kernel(model; r)
+        ridx = min(searchsortedfirst(r_range, r), length(r_range));
+        n0 = density_range[ridx]
+        v0 = getv0(model, r)
+        return n0 * M_P * v0 * C * 2π * r * model.bh.Rg^2
     end
-    # distribute remaining ones logarithmically
-    additional_range = range(rc, rfi, step=5)
-    additional_widths = diff(additional_range)
-    pushfirst!(additional_widths, additional_range[1] - lines_range[end])
-    lines_range = vcat(lines_range, additional_range)
-    lines_widths = vcat(lines_widths, additional_widths)
-    # discard last radius
-    lines_range = lines_range[1:(end - 1)]
+    function tau_kernel(model; r)
+        ridx = min(searchsortedfirst(r_range, r), length(r_range));
+        n0 = density_range[ridx]
+        return n0 * SIGMA_T * model.bh.Rg
+    end
+    get_tau(delta_r) =
+        quadgk(r -> tau_kernel(model, r = r), r, r + delta_r, rtol = 1e-4, atol = 0)[1]
+    mass_loss(delta_r) =
+        quadgk(r -> mass_loss_kernel(model, r = r), r, r + delta_r, rtol = 1e-4, atol = 0)[1]
+    target_mdot = delta_mdot * compute_mass_accretion_rate(model.bh)
+    function find_delta_r(model, r; delta_mdot, tau_total)
+        if mass_loss(1000) < target_mdot
+            delta_r_mdot = fill_delta
+        else
+            delta_r_mdot = find_zero(
+                delta_r -> mass_loss(delta_r) - target_mdot,
+                (1e-5, 1000),
+                atol = 0,
+                rtol = 1e-6,
+            )
+        end
+        if tau_total < 1
+            max_delta_tau = 0.05
+        elseif tau_total < 10
+            max_delta_tau = 0.5
+        elseif tau_total < 100
+            max_delta_tau = 5
+        else
+            max_delta_tau = 20
+        end
+        if get_tau(1000) < max_delta_tau
+            delta_r_tau = fill_delta
+        else
+            delta_r_tau = find_zero(
+                delta_r -> get_tau(delta_r) - max_delta_tau,
+                (1e-5, 1000),
+                atol = 0,
+                rtol = 1e-6,
+            )
+        end
+        delta_r = min(delta_r_tau, delta_r_mdot)
+        return min(delta_r, fill_delta)
+    end
+    tau_total = 0.0
+    while r < rfi
+        delta_r = find_delta_r(model, r, delta_mdot = delta_mdot, tau_total = tau_total)
+        tau_total += get_tau(delta_r)
+        push!(lines_range, r + delta_r / 2)
+        push!(lines_widths, delta_r)
+        r += delta_r
+    end
     return lines_range, lines_widths
 end
 
 compute_lines_range(model) = compute_lines_range(
-    model.ic,
+    model,
     model.ic.rin,
     model.ic.rfi,
-    model.bh.Rg,
-    model.rad.xray_luminosity,
+    delta_mdot = 0.01,
+    fill_delta = 20,
+    max_tau = 25,
 )

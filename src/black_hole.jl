@@ -1,8 +1,6 @@
 export BlackHole,
     compute_eddington_luminosity,
     compute_bolometric_luminosity,
-    compute_isco,
-    compute_efficiency,
     compute_mass_accretion_rate,
     compute_gravitational_acceleration,
     compute_escape_velocity,
@@ -34,8 +32,8 @@ end
 """
 Computes the Eddington luminosity for the given black hole mass.
 """
-function compute_eddington_luminosity(bh_mass)
-    return 4π * G * bh_mass * M_P * C / SIGMA_T
+function compute_eddington_luminosity(bh_mass; mu_e = 1.17)
+    return 4π * G * bh_mass * C * mu_e / SIGMA_E
 end
 compute_eddington_luminosity(bh::BlackHole) = compute_eddington_luminosity(bh.M)
 
@@ -43,10 +41,10 @@ compute_eddington_luminosity(bh::BlackHole) = compute_eddington_luminosity(bh.M)
 Computes the bolometric luminosity of the AGN given the black
 hole mass and the normalized eddington rate.
 """
-compute_bolometric_luminosity(bh_mass, eddington_rate) =
-    eddington_rate * compute_eddington_luminosity(bh_mass)
-compute_bolometric_luminosity(bh::BlackHole) =
-    compute_bolometric_luminosity(bh.M, bh.mdot)
+compute_bolometric_luminosity(bh_mass, eddington_rate; mu_e=1.17) =
+    eddington_rate * compute_eddington_luminosity(bh_mass; mu_e=mu_e)
+compute_bolometric_luminosity(bh::BlackHole; mu_e=1.17) =
+    compute_bolometric_luminosity(bh.M, bh.mdot, mu_e=1.17)
 
 """
 Computes the escape velocity for the given distance in units of C.
@@ -73,8 +71,6 @@ function compute_isco(spin)
     return rms
 end
 
-compute_isco(bh::BlackHole) = bh.isco
-
 """
 Computes the black hole accretion efficiency parameter from the isco.
 
@@ -86,8 +82,6 @@ function compute_efficiency(spin)
     return 1 - sqrt(1 - 2 / (3 * isco))
 end
 
-compute_efficiency(bh::BlackHole) = compute_efficiency(bh.spin)
-
 """
 Computes the mass accretion rate to the black hole,
 assuming no wind losses.
@@ -97,13 +91,13 @@ assuming no wind losses.
 - mdot : normalized eddington rate ∈ [0,1]
 - spin : black hole spin parameter ∈ (-1, 1)
 """
-function compute_mass_accretion_rate(M, mdot, spin)
+function compute_mass_accretion_rate(M, mdot, spin; mu_e=1.17)
     efficiency = compute_efficiency(spin)
-    return compute_bolometric_luminosity(M, mdot) / (efficiency * C^2)
+    return compute_bolometric_luminosity(M, mdot, mu_e=mu_e) / (efficiency * C^2)
 end
 
-function compute_mass_accretion_rate(bh::BlackHole)
-    return compute_mass_accretion_rate(bh.M, bh.mdot, bh.spin)
+function compute_mass_accretion_rate(bh::BlackHole; mu_e=1.17)
+    return compute_mass_accretion_rate(bh.M, bh.mdot, bh.spin, mu_e=mu_e)
 end
 
 """

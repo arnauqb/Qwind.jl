@@ -1,138 +1,244 @@
-using Interpolations, Cubature
-export disk_nt_rel_factors,
-    compute_force_multiplier,
-    compute_ionization_parameter,
-    compute_xray_opacity,
-    integrate_radiation_force_integrand
+export Radiation, update_radiation
 
-
-
-function disk_nt_rel_factors(radiation::Radiation, radius)
-    return disk_nt_rel_factors(radius, radiation.spin, radiation.isco)
+struct Radiation{T<:AbstractFloat}
+    bh::BlackHole{T}
+    wi::WindInterpolator{T}
+    disk_grid::Vector{T}
+    fuv_grid::Vector{T}
+    mdot_grid::Vector{T}
+    xray_luminosity::T
+    disk_r_in::T
+    z_xray::T
+    z_disk::T
+    relativistic::RelativisticFlag
+    xray_opacity::XRayOpacityFlag
+    tau_uv_calculation::TauUVCalculationFlag
+    disk_integral_rtol::T
 end
 
-function compute_eddington_luminosity(radiation::Radiation)
-    return 4 * π * radiation.Rg * C^3 * M_P / SIGMA_T
-end
-
-"""
-Ionization parameter ξ
-"""
-function compute_ionization_parameter(r, z, number_density, tau_x, xray_luminosity, Rg)
-    d = sqrt(r^2 + z^2) * Rg
-    return max(xray_luminosity * exp(-tau_x) / (number_density * d^2), 1e-20)
-end
-
-compute_ionization_parameter(radiation::Radiation, r, z, number_density, tau_x) =
-    compute_ionization_parameter(
-        r,
-        z,
-        number_density,
-        tau_x,
-        radiation.xray_luminosity,
-        radiation.Rg,
+function Radiation(
+    bh::BlackHole,
+    wi::WindInterpolator;
+    nr::Int,
+    fx::Float64,
+    fuv::Union{String,Number},
+    disk_r_in::Float64,
+    z_xray::Float64,
+    disk_height::Float64,
+    relativistic::RelativisticFlag,
+    xray_opacity::XRayOpacityFlag,
+    tau_uv_calculation::TauUVCalculationFlag,
+    disk_integral_rtol = 1e-3,
+)
+    rmin = bh.isco
+    rmax = 1400.0
+    disk_grid = 10 .^ range(log10(rmin), log10(rmax), length = nr)
+    if fuv == "auto"
+        uvf = uv_fractions(bh, disk_grid)
+    else
+        uvf = fuv .* ones(length(disk_grid))
+    end
+    if any(isnan.(uvf))
+        error("UV fractions contain NaN, check radiation and boundaries")
+    end
+    mdot_grid = bh.mdot .* ones(length(disk_grid))
+    xray_luminosity = fx * compute_bolometric_luminosity(bh)
+    return Radiation(
+        bh,
+        wi,
+        disk_grid,
+        uvf,
+        mdot_grid,
+        xray_luminosity,
+        disk_r_in,
+        z_xray,
+        disk_height,
+        relativistic,
+        xray_opacity,
+        tau_uv_calculation,
+        disk_integral_rtol,
     )
-
-"""
-X-Ray opacity as a function of ionization parameter.
-"""
-function compute_xray_opacity(ionization_parameter)
-    if ionization_parameter < 1e5
-        return 100 * SIGMA_T
-    else
-        return 1 * SIGMA_T
-    end
 end
 
+# read from config
+function Radiation(bh::BlackHole, config::Dict)
+    rc = config[:radiation]
+    if rc[:relativistic]
+        rel = Relativistic()
+    else
+        rel = NoRelativistic()
+    end
+    disk_r_in = rc[:disk_r_in]
+    if disk_r_in == "isco"
+        disk_r_in = bh.isco
+    elseif disk_r_in == "r_in"
+        disk_r_in = config[:initial_conditions][:r_in]
+    end
+    tau_uv_calc = rc[:tau_uv_calculation]
+    if tau_uv_calc == "center"
+        tau_uv_calc = TauUVCenter()
+    elseif tau_uv_calc == "disk"
+        tau_uv_calc = TauUVDisk()
+    elseif tau_uv_calc == "no_tau_uv"
+        tau_uv_calc = NoTauUV()
+    else
+        error("tau uv calc not recognised")
+    end
+    if rc[:xray_opacity] == "thomson"
+        xray_opacity = Thomson()
+    else
+        xray_opacity = Boost()
+    end
+    disk_rtol = get(rc, :disk_integral_rtol, 1e-3)
+    wi = WindInterpolator(rc[:wind_interpolator])
+    return Radiation(
+        bh,
+        wi,
+        nr = rc[:n_r],
+        fx = rc[:f_x],
+        fuv = rc[:f_uv],
+        disk_r_in = disk_r_in,
+        z_xray = rc[:z_xray],
+        disk_height = rc[:disk_height],
+        relativistic = rel,
+        xray_opacity = xray_opacity,
+        tau_uv_calculation = tau_uv_calc,
+        disk_integral_rtol = disk_rtol,
+    )
+end
 
-"UV opacity for optical depths calculations is assumed to just be σ"
-compute_uv_opacity() = SIGMA_T
+# quick access to BH functions
+disk_nt_rel_factors(radiation::Radiation, r) = disk_nt_rel_factors(radiation.bh, r)
+compute_eddington_luminosity(radiation::Radiation) =
+    compute_eddington_luminosity(radiation.bh)
+compute_bolometric_luminosity(radiation::Radiation) =
+    compute_bolometric_luminosity(radiation.bh)
+get_Rg(radiation::Radiation) = radiation.bh.Rg
+get_efficiency(radiation::Radiation) = radiation.bh.efficiency
+get_spin(radiation::Radiation) = radiation.bh.spin
+get_isco(radiation::Radiation) = radiation.bh.isco
 
-# Force multiplier
+
+
+# Disk functions
 
 """
-Calculates the fitting parameter k for the force multiplier calculation
-in Steven & Kallman 1990
+Returns the fraction of UV emitted at disk anuli at position r,
+and the local accretion rate.
 """
-force_multiplier_k_log_interpolator = extrapolate(
-    interpolate(
-        (fm_interpolation_data["k_interp_x"],),
-        fm_interpolation_data["k_interp_y"],
-        Gridded(Linear()),
-    ),
-    Flat(),
+function get_fuv_mdot(radiation::Radiation, r)
+    r_index = searchsorted_nearest(radiation.disk_grid, r)
+    f_uv = radiation.fuv_grid[r_index]
+    mdot = radiation.mdot_grid[r_index]
+    return f_uv, mdot
+end
+
+# Quick access to wind interpolator functions
+
+get_density(radiation::Radiation, r, z) = get_density(radiation.wi, r, z)
+
+function update_radiation(
+    radiation::Radiation,
+    streamlines::Streamlines,
 )
-compute_force_multiplier_k(ionization_parameter, mode::FMInterp) =
-    force_multiplier_k_log_interpolator(log10(ionization_parameter))
-compute_force_multiplier_k(ionization_parameter) =
-    compute_force_multiplier_k(ionization_parameter, FMInterp())
-function compute_force_multiplier_k(ionization_parameter, mode::FMNoInterp)
-    k = 0.03 + 0.385 * exp(-1.4 * ionization_parameter^0.6)
-    return k
+    @info "Updating radiation... "
+    flush()
+    new_interp = update_wind_interpolator(radiation.wi, streamlines)
+    return update_radiation(radiation, new_interp)
 end
 
-"""
-Calculates the fitting parameter eta_max for the force multiplier calculation
-in Steven & Kallman 1990
-"""
-force_multiplier_eta_log_interpolator = extrapolate(
-    interpolate(
-        (fm_interpolation_data["eta_interp_x"],),
-        fm_interpolation_data["eta_interp_y"],
-        Gridded(Linear()),
-    ),
-    Flat(),
+function update_radiation(radiation::Radiation, dgrid::DensityGrid)
+    new_interp = update_wind_interpolator(radiation.wi, dgrid)
+    return update_radiation(radiation, new_interp)
+end
+
+function update_radiation(radiation::Radiation, wind_interpolator::WindInterpolator)
+    return Radiation(
+        radiation.bh,
+        wind_interpolator,
+        radiation.disk_grid,
+        radiation.fuv_grid,
+        radiation.mdot_grid,
+        radiation.xray_luminosity,
+        radiation.disk_r_in,
+        radiation.z_xray,
+        radiation.z_disk,
+        radiation.relativistic,
+        radiation.xray_opacity,
+        radiation.tau_uv_calculation,
+        radiation.disk_integral_rtol,
+    )
+end
+
+function set_tau_uv_calculation(radiation, tau_uv_calculation)
+    return Radiation(
+        radiation.bh,
+        radiation.wi,
+        radiation.disk_grid,
+        radiation.fuv_grid,
+        radiation.mdot_grid,
+        radiation.xray_luminosity,
+        radiation.disk_r_in,
+        radiation.z_xray,
+        radiation.z_disk,
+        radiation.relativistic,
+        radiation.xray_opacity,
+        tau_uv_calculation,
+        radiation.disk_integral_rtol,
+    )
+end
+
+# Optical depths
+
+# UV
+function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z, mu_electron = 1.17)
+    return compute_tau_uv(
+        radiation.wi.density_grid,
+        ri = 0.0,
+        phii = 0.0,
+        zi = radiation.z_disk,
+        rf = r,
+        zf = z,
+        phif = 0.0,
+        Rg = radiation.bh.Rg,
+        mu_electron = 1.17
+    )
+end
+function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z, mu_electron = 1.17)
+    return compute_tau_uv(
+        radiation.wi.density_grid,
+        ri = rd,
+        phii = phid,
+        zi = radiation.z_disk,
+        rf = r,
+        zf = z,
+        phif = 0.0,
+        Rg = radiation.bh.Rg,
+        mu_electron = 1.17
+    )
+end
+compute_tau_uv(radiation::Radiation, ::NoTauUV; rd, phid, r, z, mu_electron) = 0.0
+
+compute_tau_uv(radiation::Radiation; rd, phid, r, z) = compute_tau_uv(
+    radiation,
+    radiation.tau_uv_calculation,
+    rd = rd,
+    phid = phid,
+    r = r,
+    z = z,
+    mu_electron = 1.17,
 )
-compute_force_multiplier_eta(ionization_parameter, mode::FMInterp) =
-    10 .^ force_multiplier_eta_log_interpolator(log10(ionization_parameter))
-compute_force_multiplier_eta(ionization_parameter) =
-    compute_force_multiplier_eta(ionization_parameter, FMInterp())
 
-function compute_force_multiplier_eta(ionization_parameter, mode::FMNoInterp)
-    if (log10(ionization_parameter) < 0.5)
-        aux = 6.9 * exp(0.16 * ionization_parameter^0.4)
-        eta_max = 10^aux
-    else
-        aux = 9.1 * exp(-7.96e-3 * ionization_parameter)
-        eta_max = 10^aux
-    end
-end
-
-"This is the sobolev optical depth parameter for the force multiplier"
-function compute_tau_eff(number_density, dv_dr)
-    v_thermal_sk = 6.77652505049944e-5 # thermal velocity at T=25e3 K in C units
-    if dv_dr == 0
-        return 1.0
-    end
-    @assert number_density >= 0
-    t = number_density * SIGMA_T * abs(v_thermal_sk / dv_dr)
-    return t
-end
-
-
-"""
-Computes the analytical approximation for the force multiplier,
-from Stevens and Kallman 1990. Note that we modify it slightly to avoid
-numerical overflow.
-"""
-function compute_force_multiplier(t, ionization_parameter, mode::FMInterpolationType)
-    @assert t >= 0
-    @assert ionization_parameter >= 0
-    ALPHA = 0.6
-    TAU_MAX_TOL = 1e-3
-    k = compute_force_multiplier_k(ionization_parameter, mode)
-    eta = compute_force_multiplier_eta(ionization_parameter, mode)
-    tau_max = t * eta
-    if tau_max < TAU_MAX_TOL
-        aux = (1 - ALPHA) * (tau_max^ALPHA)
-    else
-        aux = ((1 + tau_max)^(1 - ALPHA) - 1) / ((tau_max)^(1 - ALPHA))
-    end
-    fm = k * t^(-ALPHA) * aux
-    @assert fm >= 0
-    return fm
-end
-
-compute_force_multiplier(t, ionization_parameter) =
-    compute_force_multiplier(t, ionization_parameter, FMInterp())
-
+# X-ray
+compute_tau_xray(radiation::Radiation; r, z) = compute_tau_xray(
+    radiation.wi.density_grid,
+    radiation.xray_opacity,
+    ri = 0.0,
+    zi = radiation.z_xray,
+    rf = r,
+    zf = z,
+    xray_luminosity = radiation.xray_luminosity,
+    Rg = radiation.bh.Rg,
+    mu_nucleon = 0.61,
+    mu_electron = 1.17,
+)
