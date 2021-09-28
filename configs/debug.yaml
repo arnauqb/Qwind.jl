@@ -12,15 +12,15 @@ black_hole:
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
-  relativistic: true 
-  f_uv: auto
+  relativistic: false
+  f_uv: 0.85
   f_x: 0.15
   n_r: 1000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost 
-  tau_uv_calculation: no_tau_uv
+  tau_uv_calculation: center
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
@@ -40,14 +40,14 @@ initial_conditions:
   mode: CAKIC
   r_in: 20.0
   r_fi: 1500.0
-  n_lines: 10
+  n_lines: auto
   log_spaced: true
   z0: 0.0 # Rg
   K: 0.03
   alpha: 0.6
   mu: 0.61
   interpolation_mode: interpolation
-  use_precalculated: true
+  use_precalculated: false
 
 integrator:
   n_iterations: 2

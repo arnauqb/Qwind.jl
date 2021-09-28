@@ -12,7 +12,7 @@ end
 
 function get_spatial_grid(r, z, r0s, nr = "auto", nz = 50; log = true)
     r_min = max(6.0, minimum(r))
-    z_min = max(minimum(z), 1e-3)
+    z_min = max(minimum(z), 1e-6)
     r_max = min(1e4, maximum(r))
     z_max = min(1e4, maximum(z))
     if nr == "auto"

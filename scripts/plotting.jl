@@ -71,7 +71,7 @@ function plot_streamlines(
 end
 
 function plot_streamlines(
-    integrators::Vector{<:DenseIntegrator};
+    integrators::Vector{<:Qwind.Trajectory};
     fig = nothing,
     ax = nothing,
     alpha = 1.0,
@@ -223,7 +223,7 @@ function plot_xray_grid(
     z_range = 10 .^ range(log10(zmin), log10(zmax), length=nz)
     r_range_grid = r_range .* ones(nz)'
     z_range_grid = z_range' .* ones(nr)
-    f(r, z) = compute_tau_xray(grid, Qwind.Boost(), ri=0.0, zi=zx, rf=r, zf=z, xray_luminosity=xray_luminosity, Rg=Rg)
+    f(r, z) = compute_tau_xray(grid, Qwind.Boost(), ri=0.0, zi=zx, rf=r, zf=z, xray_luminosity=xray_luminosity, Rg=Rg, mu_nucleon=0.61, mu_electron=1.17)
     ret = f.(r_range_grid, z_range_grid)
     if ax === nothing
         fig, ax = plt.subplots()

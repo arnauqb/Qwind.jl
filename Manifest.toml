@@ -156,7 +156,7 @@ version = "0.1.2"
 deps = ["LinearAlgebra", "NearestNeighbors", "RecipesBase"]
 git-tree-sha1 = "5947abb30cca7c26d8fb14e50e7dbb0b36d25660"
 repo-rev = "master"
-repo-url = "https://github.com/lstagner/ConcaveHull.jl"
+repo-url = "https://github.com/lstagner/ConcaveHull.jl.git"
 uuid = "7d11a335-8259-52c9-8750-e30c45c66484"
 version = "1.2.0"
 
