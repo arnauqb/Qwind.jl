@@ -29,20 +29,41 @@ QwindPlotting.plot_density_grid(iterations_dict[2]["rad"].wi.density_grid, rmax=
 
 QwindPlotting.plot_streamlines(iterations_dict[2]["integrators"])
 
+
+fig, ax = plt.subplots()
+for line in iterations_dict[5]["integrators"]
+    if escaped(line)
+        ax.plot(line.p.data[:r], line.p.data[:z])
+    end
+end
+
 radiation = model.rad;
 
 fig, ax = QwindPlotting.plot_xray_grid(radiation.wi.density_grid, radiation.xray_luminosity, radiation.bh.Rg, rmax=100, zmax=100, nr=500, nz=500, vmin=1e-2, vmax=1e2)
 
 
-radiation = iterations_dict[2]["rad"];
+radiation = iterations_dict[5]["rad"];
 
 model.rad = radiation;
 
-integ1 = Qwind.create_and_run_integrator(model, r0=20.01, linewidth=10, trajectory_id=1, atol=1e-8, rtol=1e-3);
-#integ2 = Qwind.create_and_run_integrator(model, r0=377, linewidth=10, trajectory_id=1, atol=1e-8, rtol=1e-3);
-
+integ1 = Qwind.create_and_run_integrator(model, r0=500, linewidth=10, trajectory_id=1, atol=1e-8, rtol=1e-3);
+integ2 = Qwind.create_and_run_integrator(model, r0=700, linewidth=10, trajectory_id=1, atol=1e-8, rtol=1e-3);
 fig, ax = plt.subplots()
-ax.plot(integ1.p.data[:r], integ1.p.data[:z])
-#ax.plot(integ2.p.data[:z], integ2.p.data[:xi])
-#ax.set_yscale("log")
-#ax.set_xscale("log")
+ax.plot(integ1.p.data[:z], integ1.p.data[:])
+ax.plot(integ2.p.data[:z], integ2.p.data[:])
+ax.set_yscale("log")
+ax.set_xscale("log")
+
+tauuvs1 = []
+tauuvs2 = []
+for (r, z) in zip(integ1.p.data[:r], integ1.p.data[:z])
+    tauuv = compute_tau_uv(radiation, rd=0.0, phid=0.0, r=r, z=z)
+    push!(tauuvs1, tauuv)
+end
+for (r, z) in zip(integ2.p.data[:r], integ2.p.data[:z])
+    tauuv = compute_tau_uv(radiation, rd=0.0, phid=0.0, r=r, z=z)
+    push!(tauuvs2, tauuv)
+end
+
+plt.plot(tauuvs1)
+plt.plot(tauuvs2)
