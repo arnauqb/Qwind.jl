@@ -257,6 +257,57 @@ end
         end
 
     end
+end
 
+@testset "Test from center" begin
+    function compute_delta(rd, phid, r, z)
+        return sqrt(r^2 + rd^2 + z^2 - 2 * r * rd * cos(phid))
+    end
+    bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
+    Rg = bh.Rg
+    r_range = range(0, 100.0, length = 500)
+    z_range = range(0, 100.0, length = 500)
+    r_range_test = range(10, 90, length = 100)
+    z_range_test = range(10, 90, length = 100)
+    density_grid = zeros((length(r_range), length(z_range)))
+    mu_electron = 2
+    dens_func(r, z) = 1e8 * exp(-r - z^2)
+    for (i, rp) in enumerate(r_range)
+        for (j, zp) in enumerate(z_range)
+            density_grid[i, j] = dens_func(rp, zp)
+        end
+    end
+    grid = DensityGrid(r_range, z_range, density_grid)
+    function f_anl_kernel(t, rd, phid, r, z)
+        x = rd * cos(phid) * (1 - t) + r * t
+        y = rd * sin(phid) * (1 - t)
+        zp = z * t
+        rp = sqrt(x^2 + y^2)
+        dens = dens_func(rp, zp)
+        return dens
+    end
+    function f_anl(rd, phid, r, z)
+        dens_line =
+            quadgk(t -> f_anl_kernel(t, rd, phid, r, z), 0, 1, rtol = 1e-4, atol = 0)[1]
+        return dens_line * mu_electron * compute_delta(rd, phid, r, z) * SIGMA_T * Rg
+    end
+    for rp in r_range_test
+        for zp in z_range_test
+            truesol = f_anl(0.0, 0.0, rp, zp)
+            qwsol = compute_tau_uv(
+                grid,
+                ri = 0.0,
+                phii = 0.0,
+                zi = 0,
+                rf = rp,
+                phif = 0,
+                zf = zp,
+                Rg = Rg,
+                max_tau = Inf,
+                mu_electron = mu_electron,
+            )
+            @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
+        end
+    end
 end
 

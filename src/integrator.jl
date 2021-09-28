@@ -376,7 +376,7 @@ function compute_lines_range(
                 rtol = 1e-6,
             )
         end
-        if tau_total < 1
+        if tau_total < 5
             max_delta_tau = 0.05
         elseif tau_total < 10
             max_delta_tau = 0.5
