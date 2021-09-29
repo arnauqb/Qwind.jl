@@ -14,6 +14,7 @@ end
 
 function cosma_script(;
     qwind_path,
+    sysimage_path,
     n_cpus = 1,
     job_name = "qwind",
     script_number = 1,
@@ -36,9 +37,7 @@ function cosma_script(;
     
     export JULIA_PROJECT=$qwind_path
 
-
-    julia --project=$qwind_path -e 'push!(LOAD_PATH, "@pkglock"); using PkgLock; PkgLock.instantiate_precompile()'
-    julia $run_script_path -m $script_number
+    julia --sysimage "$sysimage_path" $run_script_path -m $script_number
     """
     open(save_path, "w") do io
         write(io, script)
@@ -48,6 +47,7 @@ end
 function make_cosma_scripts(
     n_models;
     qwind_path,
+    sysimage_path,
     n_cpus = 1,
     path = nothing,
     job_name = "qwind",
@@ -64,6 +64,7 @@ function make_cosma_scripts(
         submit_script_path = path * "/$model_name/submit.sh"
         cosma_script(
             qwind_path=qwind_path,
+            sysimage_path=sysimage_path,
             n_cpus = n_cpus,
             job_name = job_name,
             partition = partition,
