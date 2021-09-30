@@ -173,8 +173,8 @@ function Base.intersect!(
     trajectory1::Trajectory,
     trajectory2::Trajectory,
 )
-    v1 = sign.(trajectory1.vz) .* sqrt.(trajectory1.vr .^ 2 + trajectory1.vz .^ 2)
-    v2 = sign.(trajectory2.vz) .* sqrt.(trajectory2.vr .^ 2 + trajectory2.vz .^ 2)
+    v1 = trajectory1.vz #sign.(trajectory1.vz) .* sqrt.(trajectory1.vr .^ 2 + trajectory1.vz .^ 2)
+    v2 = trajectory2.vz #sign.(trajectory2.vz) .* sqrt.(trajectory2.vr .^ 2 + trajectory2.vz .^ 2)
     intersect!(
         intersections_dict,
         trajectory1.id,

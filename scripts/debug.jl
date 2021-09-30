@@ -21,13 +21,20 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
+streamlines = Streamlines("./debugging/results.hdf5", 10);
+fig, ax = plt.subplots()
+for sl in streamlines
+    ax.loglog(sl.z, sl.vz)
+end
+
+QwindPlotting.plot_streamlines(iterations_dict[5]["integrators"])
+
 fig, ax = plt.subplots()
 dgrid = iterations_dict[2]["rad"].wi.density_grid
 ax.pcolormesh(dgrid.r_range, dgrid.z_range, dgrid.grid', norm=LogNorm())
 
-QwindPlotting.plot_density_grid(iterations_dict[2]["rad"].wi.density_grid, rmax=200, zmax=50)
+QwindPlotting.plot_density_grid(iterations_dict[10]["rad"].wi.density_grid, rmax=200, zmax=50, nr=200, nz=200)
 
-QwindPlotting.plot_streamlines(iterations_dict[2]["integrators"])
 
 
 fig, ax = plt.subplots()
@@ -38,8 +45,7 @@ for line in iterations_dict[5]["integrators"]
 end
 
 radiation = model.rad;
-
-fig, ax = QwindPlotting.plot_xray_grid(radiation.wi.density_grid, radiation.xray_luminosity, radiation.bh.Rg, rmax=100, zmax=100, nr=500, nz=500, vmin=1e-2, vmax=1e2)
+fig, ax = QwindPlotting.plot_xray_grid(radiation.wi.density_grid, radiation.xray_luminosity, radiation.bh.Rg, rmax=100, zmax=1, nr=250, nz=250, vmin=1e-2, vmax=1e2)
 
 
 radiation = iterations_dict[5]["rad"];
