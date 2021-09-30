@@ -5,10 +5,10 @@ system:
   partition: cosma
   account: durham
   max_time: 72:00:00
-  job_name: rin10 
+  job_name: rin20 
   
 black_hole:
-  M: "@vary grid 1e6,1e7,1e8,1e9,1e10" 
+  M: 1e6 #"@vary grid 1e6,1e7,1e8,1e9,1e10" 
   mdot: "@vary log 0.05 0.5 10"
   spin: 0.0 
 
@@ -21,7 +21,7 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: disk
+  tau_uv_calculation: no_tau_uv #disk
   wind_interpolator:
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
@@ -37,7 +37,7 @@ grid:
 
 initial_conditions:
   mode: CAKIC 
-  r_in: 10.0
+  r_in: 20.0
   r_fi: 1500.0
   n_lines: auto 
   log_spaced: true
@@ -51,5 +51,5 @@ integrator:
   n_iterations: 50
   atol: 1e-8
   rtol: 1e-3
-  save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/moremdot/bh_scan_rin10"
+  save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/moremdot/bh_scan_rin20_1e6"
   #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/bh_scan_rin20_ext"

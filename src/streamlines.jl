@@ -50,6 +50,7 @@ function Streamline(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
+        tdata["line_width"]
     )
 end
 
