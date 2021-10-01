@@ -21,13 +21,19 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
-streamlines = Streamlines("./debugging/results.hdf5", 10);
+streamlines = Streamlines("./1e6_0.5/results.hdf5");
 fig, ax = plt.subplots()
 for sl in streamlines
-    ax.loglog(sl.z, sl.vz)
+    ax.loglog(sl.r, sl.z, color = "white", alpha=0.5, linewidth=1)
 end
+QwindPlotting.plot_wind_hull(hull, ax=ax, zmax=20, rmin=20, rmax=25, nr=500, nz=500)
+ax.set_xlim(20,25)
+ax.set_ylim(0,20)
 
-QwindPlotting.plot_streamlines(iterations_dict[5]["integrators"])
+
+hull = Hull(streamlines)
+
+QwindPlotting.plot_streamlines(iterations_dict[4]["integrators"])
 
 fig, ax = plt.subplots()
 dgrid = iterations_dict[2]["rad"].wi.density_grid

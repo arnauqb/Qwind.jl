@@ -21,7 +21,7 @@ end
 struct Streamlines
     streamlines::Vector{Streamline}
 end
-Base.getindex(sl::Streamlines, i) = s1.streamlines[i]
+Base.getindex(sl::Streamlines, i) = sl.streamlines[i]
 Base.length(sl::Streamlines) = length(sl.streamlines)
 Base.iterate(sl::Streamlines) = iterate(sl.streamlines)
 Base.iterate(sl::Streamlines, i) = iterate(sl.streamlines, i)
