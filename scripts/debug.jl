@@ -21,14 +21,45 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
-streamlines = Streamlines("./1e6_0.5/results.hdf5");
+
+
+
+rr = range(10, 1500, length=100);
+Ts = disk_temperature.(Ref(model.bh), rr) .^ 4 .* rr .^2
+fuvs = uv_fractions(model.bh, rr)
+plt.loglog(rr, Ts)
+plt.loglog(rr, Ts .* fuvs)
+
+plt.loglog(rr, fuvs)
+
+
+streamlines = Streamlines("./1e8_0.5_rin75/results.hdf5", 1);
+
+r,z = Qwind.reduce_streamlines(streamlines, rtol=1e-1, atol=1e-4);
+
+hull = Hull(streamlines, atol=1e-4, rtol=1e-1);
+
+QwindPlotting.plot_wind_hull(hull, zmax=10)
+
+vertices = hull.vertices;
+rv = [v[1] for v in vertices];
+zv = [v[2] for v in vertices];
+
+fig, ax =plt.subplots()
+ax.scatter(r,z)
+
+ax.scatter(rv, zv)
+
+
+
+
 fig, ax = plt.subplots()
 for sl in streamlines
-    ax.loglog(sl.r, sl.z, color = "white", alpha=0.5, linewidth=1)
+    ax.plot(sl.r, sl.z, alpha=0.5, linewidth=1)
 end
-QwindPlotting.plot_wind_hull(hull, ax=ax, zmax=20, rmin=20, rmax=25, nr=500, nz=500)
-ax.set_xlim(20,25)
-ax.set_ylim(0,20)
+#QwindPlotting.plot_wind_hull(hull, ax=ax, zmax=20, rmin=20, rmax=25, nr=500, nz=500)
+#ax.set_xlim(20,25)
+#ax.set_ylim(0,20)
 
 
 hull = Hull(streamlines)

@@ -27,16 +27,17 @@ function reduce_streamlines(streamlines; rtol = 0.1, atol=1e-4)
             end
         end
     end
+    # add r0 line
+    r0s = range(streamlines[1].r[1], streamlines[length(streamlines)].r[1], length=2000);
+    z0s = range(streamlines[1].z[1], streamlines[1].z[1], length=2000);
+    r = vcat(r, r0s)
+    z = vcat(z, z0s)
     return r, z
 end
 
-function Hull(streamlines)
-    #r = reduce(vcat, [streamline.r[1:10:end] for streamline in streamlines])
-    #z = reduce(vcat, [streamline.z[1:10:end] for streamline in streamlines])
-    r, z = reduce_streamlines(streamlines, rtol=0.1, atol=1e-1)
-    #println(length(r))
-    #return r, z
+function Hull(streamlines; rtol=1e-3, atol=1e-2)
     @info "Constructing wind hull"
+    r, z = reduce_streamlines(streamlines, rtol=rtol, atol=atol)
     hull = Hull(r, z)
     if !hull.converged
         error("Hull did not converge!")
