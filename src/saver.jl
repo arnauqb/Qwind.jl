@@ -169,7 +169,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         sgroup["vphi"] = streamline.vphi
         sgroup["vz"] = streamline.vz
         sgroup["n"] = streamline.n
-        sgroup["line_width"] = streamline.n
+        sgroup["line_width"] = streamline.width
     end
     return
 end

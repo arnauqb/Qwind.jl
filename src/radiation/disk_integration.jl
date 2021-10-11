@@ -72,7 +72,7 @@ function force_prefactors(radiation::Radiation, ::TauUVCenter, r, z)
     constant = 3 / (π * radiation.bh.efficiency)
     tau_uv = compute_tau_uv(radiation, rd = 0.0, phid = 0.0, r = r, z = z)
     d = sqrt(r^2 + z^2)
-    return constant * exp.(-tau_uv .* [r / d, z / d])
+    return constant * exp.(-tau_uv)# .* [r / d, z / d])
 end
 force_prefactors(radiation::Radiation, r, z) =
     force_prefactors(radiation, radiation.tau_uv_calculation, r, z)
