@@ -32,19 +32,19 @@ end
 """
 Computes the Eddington luminosity for the given black hole mass.
 """
-function compute_eddington_luminosity(bh_mass; mu_e = 1.17)
-    return 4π * G * bh_mass * C * mu_e / SIGMA_E
+function compute_eddington_luminosity(bh_mass; mu_electron = 1.17)
+    return 4π * G * bh_mass * C * mu_electron / SIGMA_E
 end
-compute_eddington_luminosity(bh::BlackHole) = compute_eddington_luminosity(bh.M)
+compute_eddington_luminosity(bh::BlackHole; mu_electron=1.17) = compute_eddington_luminosity(bh.M, mu_electron=mu_electron)
 
 """
 Computes the bolometric luminosity of the AGN given the black
 hole mass and the normalized eddington rate.
 """
-compute_bolometric_luminosity(bh_mass, eddington_rate; mu_e=1.17) =
-    eddington_rate * compute_eddington_luminosity(bh_mass; mu_e=mu_e)
-compute_bolometric_luminosity(bh::BlackHole; mu_e=1.17) =
-    compute_bolometric_luminosity(bh.M, bh.mdot, mu_e=1.17)
+compute_bolometric_luminosity(bh_mass, eddington_rate; mu_electron=1.17) =
+    eddington_rate * compute_eddington_luminosity(bh_mass; mu_electron=mu_electron)
+compute_bolometric_luminosity(bh::BlackHole; mu_electron=1.17) =
+    compute_bolometric_luminosity(bh.M, bh.mdot, mu_electron=1.17)
 
 """
 Computes the escape velocity for the given distance in units of C.
@@ -91,13 +91,13 @@ assuming no wind losses.
 - mdot : normalized eddington rate ∈ [0,1]
 - spin : black hole spin parameter ∈ (-1, 1)
 """
-function compute_mass_accretion_rate(M, mdot, spin; mu_e=1.17)
+function compute_mass_accretion_rate(M, mdot, spin; mu_electron=1.17)
     efficiency = compute_efficiency(spin)
-    return compute_bolometric_luminosity(M, mdot, mu_e=mu_e) / (efficiency * C^2)
+    return compute_bolometric_luminosity(M, mdot, mu_electron=mu_electron) / (efficiency * C^2)
 end
 
-function compute_mass_accretion_rate(bh::BlackHole; mu_e=1.17)
-    return compute_mass_accretion_rate(bh.M, bh.mdot, bh.spin, mu_e=mu_e)
+function compute_mass_accretion_rate(bh::BlackHole; mu_electron=1.17)
+    return compute_mass_accretion_rate(bh.M, bh.mdot, bh.spin, mu_electron=mu_electron)
 end
 
 """

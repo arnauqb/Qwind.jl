@@ -34,7 +34,7 @@ struct DensityGrid{T, U, V} <: InterpolationGrid
 end
 
 DensityGrid(grid_data::Dict) =
-    DensityGrid(grid_data["r"], grid_data["z"], grid_data["grid"])
+    DensityGrid(grid_data["r"], grid_data["z"], grid_data["grid"], grid_data["nr"], grid_data["nz"])
 
 function DensityGrid(h5_path::String, it_num)
     it_name = @sprintf "iteration_%03d" it_num
