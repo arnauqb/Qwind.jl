@@ -80,6 +80,7 @@ using Qwind, Test
         )
         for r in new_grid.r_range
             for z in new_grid.z_range[3:end] # dont include 0 as it is problematic for the interp.
+                println("r $r z $z")
                 if r <= 50
                     @test get_velocity(new_grid, r, z) ≈ [1,2,3]
                 else
