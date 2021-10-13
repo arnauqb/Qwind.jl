@@ -26,4 +26,7 @@ include("thermodynamics_tests.jl")
 include("trajectory_intersection_tests.jl")
 
 include("utils_tests.jl")
+
+# saver tests
+include("saver_tests.jl")
 end
