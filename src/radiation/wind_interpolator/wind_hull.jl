@@ -50,7 +50,7 @@ function Hull(hull_data::Dict)
     vs_r = hull_data["vertices_r"]
     vs_z = hull_data["vertices_z"]
     vertices = [[r, z] for (r, z) in zip(vs_r, vs_z)]
-    Hull(vertices, hull_data["k"], hull_data["converged"])
+    Hull(vertices, hull_data["k"]) #, hull_data["converged"]) #TODO: same as above
 end
 
 

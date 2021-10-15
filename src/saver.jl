@@ -170,7 +170,7 @@ function save_wind_hull!(hull::ConcaveHull.Hull, group)
     g["k"] = hull.k
     g["vertices_r"] = [v[1] for v in hull.vertices]
     g["vertices_z"] = [v[2] for v in hull.vertices]
-    g["converged"] = hull.converged
+    #g["converged"] = hull.converged
 end
 save_wind_hull!(hull::Nothing, group) = nothing
 
