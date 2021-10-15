@@ -39,9 +39,9 @@ function Hull(streamlines; rtol=1e-3, atol=1e-2)
     @info "Constructing wind hull"
     r, z = reduce_streamlines(streamlines, rtol=rtol, atol=atol)
     hull = Hull(r, z)
-    if !hull.converged
-        error("Hull did not converge!")
-    end
+    #if !hull.converged # TODO: reintroduce this when CH dependency updated.
+    #    error("Hull did not converge!")
+    #end
     @info "Done"
     return hull
 end
