@@ -21,9 +21,6 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict)
 
-
-
-
 rr = range(10, 1500, length=100);
 Ts = disk_temperature.(Ref(model.bh), rr) .^ 4 .* rr .^2
 fuvs = uv_fractions(model.bh, rr)

@@ -40,46 +40,84 @@ end
     @test Qwind.is_point_in_wind(hull, [200, 0]) == false
 end
 
-@testset "Test interpolation grid" begin
+@testset "Test density grid" begin
 
     r_range = Float64[]
     z_range = Float64[]
-    for r in range(10,100, length=50)
-        for z in range(10,100, length=50)
+    for r in range(10, 100, length = 50)
+        for z in range(10, 100, length = 50)
             push!(r_range, r)
             push!(z_range, z)
         end
     end
-    hull = Hull(
-        [0.01, 200, 0.01, 200],
-        [0.01, 200, 200, 0.01],
-    );
-    r0_range = collect(range(0.1, 100.0, step = 10));
-    func(r, z) = 1e12 * exp(-z / 100) / r;
-    n_range = func.(r_range, z_range);
-    grid = DensityGrid(
-        r_range,
-        z_range,
-        n_range,
-        r0_range,
-        hull,
-        nr = 50,
-        nz = 50,
-    );
+    hull = Hull([0.01, 200, 0.01, 200], [0.01, 200, 200, 0.01])
+    r0_range = collect(range(0.1, 100.0, step = 10))
+    func(r, z) = 1e12 * exp(-z / 100) / r
+    n_range = func.(r_range, z_range)
+    grid = DensityGrid(r_range, z_range, n_range, r0_range, hull, nr = 50, nz = 50)
 
     @testset "Test gridpoints" begin
         # Grid points should be exact?
         for (i, r) in enumerate(grid.r_range)
             for (j, z) in enumerate(grid.z_range)
-                @test grid.grid[i,j] ≈ func(r,z) rtol = 0.1
+                @test grid.grid[i, j] ≈ func(r, z) rtol = 0.1
+                @test get_density(grid, r, z) ≈ func(r, z) rtol = 0.1
             end
         end
     end
 
     @testset "Test interpolation" begin
-        for r in range(grid.r_range[1], grid.r_range[end], length=100)
-            for z in range(grid.z_range[1], grid.z_range[end], length=100)
-                @test func(r,z) ≈ grid.interpolator(r,z) rtol = 0.1
+        for r in range(grid.r_range[1], grid.r_range[end], length = 100)
+            for z in range(grid.z_range[1], grid.z_range[end], length = 100)
+                @test func(r, z) ≈ interpolate_density(grid, r, z) rtol = 0.1
+            end
+        end
+    end
+
+    @testset "Test update grid average method" begin
+        new_hull = Hull([0.01, 50, 0.01, 50], [0.01, 200, 200, 0.01])
+        new_density = 1e8 .* ones(length(r_range))
+        new_grid = Qwind.update_density_grid(
+            grid,
+            Qwind.AverageGrid(),
+            new_hull,
+            r_range,
+            z_range,
+            new_density,
+            r0_range,
+        )
+        for r in new_grid.r_range
+            for z in new_grid.z_range
+                if r <= 50
+                    @test get_density(new_grid, r, z) ≈
+                          10^((8 + log10(get_density(grid, r, z))) / 2)
+                else
+                    @test get_density(new_grid, r, z) ≈
+                          10 .^ ((2 + log10(get_density(grid, r, z))) / 2)
+                end
+            end
+        end
+    end
+
+    @testset "Test update grid replace method" begin
+        new_hull = Hull([0.01, 50, 0.01, 50], [0.01, 200, 200, 0.01])
+        new_density = 1e8 .* ones(length(r_range))
+        new_grid = Qwind.update_density_grid(
+            grid,
+            Qwind.ReplaceGrid(),
+            new_hull,
+            r_range,
+            z_range,
+            new_density,
+            r0_range,
+        )
+        for r in new_grid.r_range
+            for z in new_grid.z_range
+                if r <= 50
+                    @test get_density(new_grid, r, z) ≈ 1e8
+                else
+                    @test get_density(new_grid, r, z) ≈ 1e2
+                end
             end
         end
     end

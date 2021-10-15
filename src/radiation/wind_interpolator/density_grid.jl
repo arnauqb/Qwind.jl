@@ -34,7 +34,7 @@ struct DensityGrid{T, U, V} <: InterpolationGrid
 end
 
 DensityGrid(grid_data::Dict) =
-    DensityGrid(grid_data["r"], grid_data["z"], grid_data["grid"])
+    DensityGrid(grid_data["r"], grid_data["z"], grid_data["grid"], grid_data["nr"], grid_data["nz"])
 
 function DensityGrid(h5_path::String, it_num)
     it_name = @sprintf "iteration_%03d" it_num
@@ -69,11 +69,10 @@ function DensityGrid(
     nr = "auto",
     nz = 50,
     log = true,
-    interpolation_type = "linear",
 )
     @info "Constructing density interpolator..."
     flush()
-    interpolator = get_density_interpolator(r, z, n, type = interpolation_type)
+    interpolator = get_density_interpolator(r, z, n)
     @info "Done"
     @info "Filling density grid..."
     flush()
@@ -91,8 +90,8 @@ function DensityGrid(
         end
     end
     # add z = 0 line
-    #density_grid = [density_grid[:, 1] density_grid]
-    #pushfirst!(z_range, 0.0)
+    density_grid = [density_grid[:, 1] density_grid]
+    pushfirst!(z_range, 0.0)
     grid = DensityGrid(r_range, z_range, density_grid, nr, nz)
     @info "Done"
     flush()
@@ -104,7 +103,6 @@ function DensityGrid(
     hull;
     nr = "auto",
     nz = 50,
-    interpolation_type = "linear",
 )
     r0 = [line.r[1] for line in streamlines]
     r, z, vr, vphi, vz, n = reduce_streamlines(streamlines)
@@ -117,7 +115,6 @@ function DensityGrid(
         nr = nr,
         nz = nz,
         log = true,
-        interpolation_type = "linear",
     )
 end
 
@@ -145,7 +142,6 @@ function get_density_interpolator(
     r::Vector{Float64},
     z::Vector{Float64},
     n::Vector{Float64};
-    type = "linear",
 )
     mask = (r .> 0) .& (z .> 0)
     r = r[mask]
@@ -155,17 +151,7 @@ function get_density_interpolator(
     z_log = log10.(z)
     log_n = log10.(n)
     points = hcat(r_log, z_log)
-    if type == "linear"
-        interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
-    elseif type == "nn"
-        interp = scipy_interpolate.NearestNDInterpolator(points, log_n, rescale = true)
-    elseif type == "clough_tocher"
-        interp = scipy_interpolate.CloughTocher2DInterpolator(points, log_n, fill_value = 2)
-    elseif type == "rbf"
-        interp = scipy_interpolate.Rbf(r_log, z_log, log_n)
-    else
-        error("interpolation type $type not supported")
-    end
+    interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
     return interp
 end
 
