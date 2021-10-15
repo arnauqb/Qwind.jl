@@ -2,6 +2,8 @@
 
 ![CI](https://github.com/arnauqb/Qwind.jl/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/arnauqb/Qwind.jl/branch/main/graph/badge.svg?token=KQPtxMDMAm)](https://codecov.io/gh/arnauqb/Qwind.jl)
+[![Documentation](https://github.com/arnauqb/Qwind.jl/actions/workflows/docs.yml/badge.svg)](https://arnauqb.github.io/Qwind.jl/)
+[![TagBot](https://github.com/arnauqb/Qwind.jl/actions/workflows/tagbot.yml/badge.svg)](https://github.com/arnauqb/Qwind.jl/actions/workflows/tagbot.yml)
 
 # Qwind: Modelling UV line-driven winds in the context of Active Galactic Nuclei (AGN)
 
