@@ -204,17 +204,3 @@ function disk_height(bh::BlackHole, r; mu_e = 1.17)
     return SIGMA_E * mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 /
            (G * bh.M * C) / bh.Rg
 end
-
-function characteristic_disk_height(bh::BlackHole, r, mu_e = 1.17)
-    return SIGMA_E / mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 /
-           (G * bh.M * C) / bh.Rg
-end
-
-#function disk_height(bh::BlackHole, r; mu_e=1.17)
-#    return SIGMA_E / mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 / (G * bh.M * C) /
-#           bh.Rg
-#end
-
-function pressure_scale_height(bh::BlackHole; r)
-    return 3/2 * 1/bh.efficiency * bh.mdot * disk_nt_rel_factors(bh, r)
-end
