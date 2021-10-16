@@ -18,7 +18,7 @@ function get_model(config)
     return model, iterations_dict
 end
 
-model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./configs/config_test.yaml");
 run!(model, iterations_dict)
 
 rr = range(10, 1500, length=100);
