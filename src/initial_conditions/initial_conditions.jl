@@ -11,7 +11,7 @@ getnlines(ic::InitialConditions) = ic.nlines
 struct UniformIC{T} <: InitialConditions{T}
     rin::T
     rfi::T
-    nlines::Int
+    nlines::Union{Int,String}
     z0::T
     n0::T
     v0::T

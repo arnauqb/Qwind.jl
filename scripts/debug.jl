@@ -33,7 +33,7 @@ ax.set_xlim(0,2500)
 ax.set_ylim(0,2500)
 ax.set_xlabel(L"$R$ [ $R_g$ ]")
 ax.set_ylabel(L"$z$ [ $R_g$ ]")
-fig.savefig("./docs/src/figures/streamlines.png", dpi=300)
+fig.savefig("./docs/src/figures/streamlines.png", dpi=100)
 
 dgrid = DensityGrid("./example/results.hdf5");
 
@@ -44,7 +44,7 @@ ax.set_xlim(0,2500)
 ax.set_ylim(0,2500)
 ax.set_xlabel(L"$R$ [ $R_g$ ]")
 ax.set_ylabel(L"$z$ [ $R_g$ ]")
-fig.savefig("./docs/src/figures/density_grid.png", dpi=300)
+fig.savefig("./docs/src/figures/density_grid.png", dpi=100)
 
 vgrid = VelocityGrid("./example/results.hdf5");
 
@@ -63,7 +63,7 @@ ax[1].set_title("Vr")
 ax[2].set_title("Vphi")
 ax[3].set_title("Vz")
 plt.subplots_adjust(wspace=0.05, hspace=0.05)
-fig.savefig("./docs/src/figures/velocity_grid.png", dpi=300)
+fig.savefig("./docs/src/figures/velocity_grid.png", dpi=100)
 
 
 
