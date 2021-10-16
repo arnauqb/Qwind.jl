@@ -43,8 +43,7 @@ end
     end
 
     @testset "Adaptive spacing" begin
-        #model = Model(String(@__DIR__) * "/integrator_config.yaml")
-        model = Model("/home/arnau/code/Qwind.jl/test/integrator_config.yaml")
+        model = Model(String(@__DIR__) * "/integrator_config.yaml")
         lrs, lws = Qwind.compute_lines_range(model)
         tau(r) = 1e9 * (r - 10) * model.bh.Rg * SIGMA_T
         delta_tau(delta_r) = 1e9 * delta_r * model.bh.Rg * SIGMA_T
