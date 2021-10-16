@@ -10,6 +10,8 @@ struct Radiation{T<:AbstractFloat}
     disk_r_in::T
     z_xray::T
     z_disk::T
+    mu_nucleon::T
+    mu_electron::T
     relativistic::RelativisticFlag
     xray_opacity::XRayOpacityFlag
     tau_uv_calculation::TauUVCalculationFlag
@@ -19,15 +21,17 @@ end
 function Radiation(
     bh::BlackHole,
     wi::WindInterpolator;
-    nr::Int,
-    fx::Float64,
-    fuv::Union{String,Number},
-    disk_r_in::Float64,
-    z_xray::Float64,
-    disk_height::Float64,
-    relativistic::RelativisticFlag,
-    xray_opacity::XRayOpacityFlag,
-    tau_uv_calculation::TauUVCalculationFlag,
+    nr,
+    fx,
+    fuv,
+    disk_r_in,
+    z_xray,
+    disk_height,
+    mu_nucleon,
+    mu_electron,
+    relativistic,
+    xray_opacity,
+    tau_uv_calculation,
     disk_integral_rtol = 1e-3,
 )
     rmin = bh.isco
@@ -53,6 +57,8 @@ function Radiation(
         disk_r_in,
         z_xray,
         disk_height,
+        mu_nucleon,
+        mu_electron,
         relativistic,
         xray_opacity,
         tau_uv_calculation,
@@ -100,6 +106,8 @@ function Radiation(bh::BlackHole, config::Dict)
         disk_r_in = disk_r_in,
         z_xray = rc[:z_xray],
         disk_height = rc[:disk_height],
+        mu_nucleon = get(rc, :mu_nucleon, 0.61),
+        mu_electron = get(rc, :mu_electron, 1.17),
         relativistic = rel,
         xray_opacity = xray_opacity,
         tau_uv_calculation = tau_uv_calc,
@@ -137,10 +145,7 @@ end
 
 get_density(radiation::Radiation, r, z) = get_density(radiation.wi, r, z)
 
-function update_radiation(
-    radiation::Radiation,
-    streamlines::Streamlines,
-)
+function update_radiation(radiation::Radiation, streamlines::Streamlines)
     @info "Updating radiation... "
     flush()
     new_interp = update_wind_interpolator(radiation.wi, streamlines)
@@ -163,6 +168,8 @@ function update_radiation(radiation::Radiation, wind_interpolator::WindInterpola
         radiation.disk_r_in,
         radiation.z_xray,
         radiation.z_disk,
+        radiation.mu_nucleon,
+        radiation.mu_electron,
         radiation.relativistic,
         radiation.xray_opacity,
         radiation.tau_uv_calculation,
@@ -181,6 +188,8 @@ function set_tau_uv_calculation(radiation, tau_uv_calculation)
         radiation.disk_r_in,
         radiation.z_xray,
         radiation.z_disk,
+        radiation.mu_nucleon,
+        radiation.mu_electron,
         radiation.relativistic,
         radiation.xray_opacity,
         tau_uv_calculation,
@@ -191,7 +200,14 @@ end
 # Optical depths
 
 # UV
-function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z, mu_electron = 1.17)
+function compute_tau_uv(
+    radiation::Radiation,
+    ::TauUVCenter;
+    rd,
+    phid,
+    r,
+    z,
+)
     return compute_tau_uv(
         radiation.wi.density_grid,
         ri = 0.0,
@@ -201,10 +217,17 @@ function compute_tau_uv(radiation::Radiation, ::TauUVCenter; rd, phid, r, z, mu_
         zf = z,
         phif = 0.0,
         Rg = radiation.bh.Rg,
-        mu_electron = 1.17
+        mu_electron = radiation.mu_electron,
     )
 end
-function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z, mu_electron = 1.17)
+function compute_tau_uv(
+    radiation::Radiation,
+    ::TauUVDisk;
+    rd,
+    phid,
+    r,
+    z,
+)
     return compute_tau_uv(
         radiation.wi.density_grid,
         ri = rd,
@@ -214,10 +237,10 @@ function compute_tau_uv(radiation::Radiation, ::TauUVDisk; rd, phid, r, z, mu_el
         zf = z,
         phif = 0.0,
         Rg = radiation.bh.Rg,
-        mu_electron = 1.17
+        mu_electron = radiation.mu_electron,
     )
 end
-compute_tau_uv(radiation::Radiation, ::NoTauUV; rd, phid, r, z, mu_electron) = 0.0
+compute_tau_uv(radiation::Radiation, ::NoTauUV; rd, phid, r, z) = 0.0
 
 compute_tau_uv(radiation::Radiation; rd, phid, r, z) = compute_tau_uv(
     radiation,
@@ -226,7 +249,6 @@ compute_tau_uv(radiation::Radiation; rd, phid, r, z) = compute_tau_uv(
     phid = phid,
     r = r,
     z = z,
-    mu_electron = 1.17,
 )
 
 # X-ray
@@ -239,6 +261,6 @@ compute_tau_xray(radiation::Radiation; r, z) = compute_tau_xray(
     zf = z,
     xray_luminosity = radiation.xray_luminosity,
     Rg = radiation.bh.Rg,
-    mu_nucleon = 0.61,
-    mu_electron = 1.17,
+    mu_nucleon = radiation.mu_nucleon,
+    mu_electron = radiation.mu_electron,
 )

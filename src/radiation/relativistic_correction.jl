@@ -43,6 +43,7 @@ function relativistic_correction(rd, phid, zd, r, z, vr, vz)
         z = z,
         vr = vr,
         vz = vz,
+        z0=zd,
         beta = beta,
         gamma = gamma,
         r_projection = r_projection,

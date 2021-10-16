@@ -7,8 +7,8 @@ Computes gas thermal velocity.
 - temperature: gas temperature in K
 - mu : gas mean molecular weight. Default = 0.61 (ionized solar abundance gas)
 """
-function compute_thermal_velocity(temperature, mu)
-    return sqrt(K_B * temperature / (mu * M_P)) / C
+function compute_thermal_velocity(temperature, mu_nucleon)
+    return sqrt(K_B * temperature / (mu_nucleon * M_P)) / C
 end
 compute_thermal_velocity(temperature) = compute_thermal_velocity(temperature, 0.61)
 

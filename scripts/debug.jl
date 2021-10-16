@@ -6,6 +6,7 @@ using YAML, HDF5, CSV, DataFrames, PyPlot
 include("scripts/plotting.jl")
 using Profile, PProf, TimerOutputs, BenchmarkTools
 LogNorm = matplotlib.colors.LogNorm
+Normalize = matplotlib.colors.Normalize
 
 function get_model(config)
     model = Model(config)
@@ -18,8 +19,56 @@ function get_model(config)
     return model, iterations_dict
 end
 
-model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./configs/config_test.yaml");
 run!(model, iterations_dict)
+
+
+sls = Streamlines("./example/results.hdf5");
+
+fig, ax = plt.subplots()
+for sl in sls
+    ax.plot(sl.r, sl.z, linewidth=1)
+end
+ax.set_xlim(0,2500)
+ax.set_ylim(0,2500)
+ax.set_xlabel(L"$R$ [ $R_g$ ]")
+ax.set_ylabel(L"$z$ [ $R_g$ ]")
+fig.savefig("./docs/src/figures/streamlines.png", dpi=300)
+
+dgrid = DensityGrid("./example/results.hdf5");
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(dgrid.r_range, dgrid.z_range, dgrid.grid', norm=LogNorm(1e4, 1e8))
+plt.colorbar(cm, ax=ax)
+ax.set_xlim(0,2500)
+ax.set_ylim(0,2500)
+ax.set_xlabel(L"$R$ [ $R_g$ ]")
+ax.set_ylabel(L"$z$ [ $R_g$ ]")
+fig.savefig("./docs/src/figures/density_grid.png", dpi=300)
+
+vgrid = VelocityGrid("./example/results.hdf5");
+
+fig, ax = plt.subplots(1, 3, figsize=(6,2), sharex=true, sharey=true)
+ax[1].pcolormesh(vgrid.r_range, vgrid.z_range, vgrid.vr_grid', norm=Normalize(0, 0.5))
+ax[2].pcolormesh(vgrid.r_range, vgrid.z_range, vgrid.vphi_grid', norm=Normalize(0, 0.5))
+cm = ax[3].pcolormesh(vgrid.r_range, vgrid.z_range, vgrid.vz_grid', norm=Normalize(0, 0.5))
+plt.colorbar(cm, ax=ax[3])
+ax[1].set_ylim(0,2500)
+ax[1].set_xlim(0,2500)
+for i in 1:3
+    ax[i].set_xlabel(L"$R$ [ $R_g$ ]")
+end
+ax[1].set_ylabel(L"$z$ [ $R_g$ ]")
+ax[1].set_title("Vr")
+ax[2].set_title("Vphi")
+ax[3].set_title("Vz")
+plt.subplots_adjust(wspace=0.05, hspace=0.05)
+fig.savefig("./docs/src/figures/velocity_grid.png", dpi=300)
+
+
+
+
+
 
 rr = range(10, 1500, length=100);
 Ts = disk_temperature.(Ref(model.bh), rr) .^ 4 .* rr .^2

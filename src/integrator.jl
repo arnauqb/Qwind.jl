@@ -346,17 +346,17 @@ function compute_lines_range(
 )
     lines_range = []
     lines_widths = []
-    r_range = range(rin, rfi, length=250);
-    density_range = getn0.(Ref(model), r_range);
+    r_range = range(rin, rfi, length = 250)
+    density_range = getn0.(Ref(model), r_range)
     r = rin
     function mass_loss_kernel(model; r)
-        ridx = min(searchsortedfirst(r_range, r), length(r_range));
+        ridx = min(searchsortedfirst(r_range, r), length(r_range))
         n0 = density_range[ridx]
         v0 = getv0(model, r)
         return n0 * M_P * v0 * C * 2π * r * model.bh.Rg^2
     end
     function tau_kernel(model; r)
-        ridx = min(searchsortedfirst(r_range, r), length(r_range));
+        ridx = min(searchsortedfirst(r_range, r), length(r_range))
         n0 = density_range[ridx]
         return n0 * SIGMA_T * model.bh.Rg
     end
