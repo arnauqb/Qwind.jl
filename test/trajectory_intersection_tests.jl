@@ -33,21 +33,21 @@ end
 
 @testset "Test intersections" begin
     @testset "Trivial miss" begin
-        s1 = Segment(1,2,3,4)
-        s2 = Segment(5,2,6,4)
+        s1 = Segment(1, 2, 3, 4)
+        s2 = Segment(5, 2, 6, 4)
         @test Qwind.trivial_miss(s1, s2)
-        s2 = Segment(1,2,3,4)
-        s1 = Segment(5,2,6,4)
+        s2 = Segment(1, 2, 3, 4)
+        s1 = Segment(5, 2, 6, 4)
         @test Qwind.trivial_miss(s1, s2)
-        s1 = Segment(1,1,3,2)
-        s2 = Segment(1,5,3,6)
+        s1 = Segment(1, 1, 3, 2)
+        s2 = Segment(1, 5, 3, 6)
         @test Qwind.trivial_miss(s1, s2)
-        s2 = Segment(1,1,3,2)
-        s1 = Segment(1,5,3,6)
+        s2 = Segment(1, 1, 3, 2)
+        s1 = Segment(1, 5, 3, 6)
         @test Qwind.trivial_miss(s1, s2)
     end
     @testset "Simple segment intersection" begin
-        A = zeros((2,2))
+        A = zeros((2, 2))
         b = zeros(2)
         # do intersect
         segment1 = Segment(2.3, 7.99, 10.64, 3.93)
@@ -76,5 +76,40 @@ end
         index = intersect(r1, z1, r2, z2)
         @test index == 4
     end
+end
+
+@testset "Test get intersection times" begin
+    trajectories = Qwind.Trajectory[]
+    for i = 1:5
+        ifloat = Float64(i)
+        traj = Qwind.Trajectory(
+            i,
+            [0, ifloat, 2*ifloat],
+            [ifloat, ifloat, 0.5 * ifloat],
+            [0, 1.0, 5.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1e8, 1e8, 1e8],
+        )
+        push!(trajectories, traj)
+    end
+    n = 10
+    traj = Qwind.Trajectory(
+        0,
+        collect(range(0.0, 10.0, length=n)),
+        collect(range(-1.0, 5.0, length=n)),
+        0.8 .* collect(range(0,5, length=n)),
+        50.0 .* ones(n),
+        50.0 .* ones(n),
+        50.0 .* ones(n),
+        1e8 .* ones(n),
+    )
+    push!(trajectories, traj)
+    times = Qwind.get_intersection_times(trajectories)
+    for i in 1:5
+        @test times[i] == i
+    end
+    @test times[0] == 10
 end
 
