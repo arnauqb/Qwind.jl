@@ -110,7 +110,7 @@ ax.set_ylabel(L"$z$ [ $R_g$ ]")
 
 
 
-![Streamlines](/home/arnau/code/Qwind.jl/docs/src/figures/streamlines.png)
+![Streamlines](./figures/streamlines.png)
 
 By default, the streamlines of the latest iteration will be loaded. A specific iteration can be checked with
 
@@ -137,7 +137,7 @@ ax.set_xlabel(L"$R$ [ $R_g$ ]")
 ax.set_ylabel(L"$z$ [ $R_g$ ]")
 ```
 
-![](/home/arnau/code/Qwind.jl/docs/src/figures/density_grid.png)
+![](./figures/density_grid.png)
 
 ### Velocity Grid
 
@@ -160,7 +160,7 @@ ax[3].set_title("Vz")
 plt.subplots_adjust(wspace=0.05, hspace=0.05)
 ```
 
-![](/home/arnau/code/Qwind.jl/docs/src/figures/velocity_grid.png)
+![](./figures/velocity_grid.png)
 
 
 
