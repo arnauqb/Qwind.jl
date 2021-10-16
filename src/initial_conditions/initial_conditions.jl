@@ -20,12 +20,8 @@ end
 
 function UniformIC(radiation, config)
     icc = config[:initial_conditions]
-    if :launch_range in keys(icc)
-        rin, rfi = icc[:launch_range]
-    else
-        rin = icc[:r_in]
-        rfi = icc[:r_fi]
-    end
+    rin = icc[:r_in]
+    rfi = icc[:r_fi]
     nlines = icc[:n_lines]
     if nlines != "auto"
         nlines = Int(nlines)
@@ -116,5 +112,5 @@ function getn0(ic::CAKIC, radiation::Radiation, r0)
     return get_initial_density(radiation, r = r0, mdot = mdot, K = ic.K)
 end
 getn0(model, r0) = getn0(model.ic, model.rad, r0)
-getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0))
+getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0), ic.radiation.mu_nucleon)
 getv0(model, r0) = getv0(model.ic, r0)
