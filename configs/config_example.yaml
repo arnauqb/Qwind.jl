@@ -1,0 +1,46 @@
+black_hole:
+  M: 1e8 # solar masses
+  mdot: 0.5 # Eddington units
+  spin: 0.0 # spin parameter (-1,1)
+
+radiation:
+  relativistic: true 
+  f_uv: auto
+  f_x: 0.15
+  n_r: 1000 # number of bins in the disk
+  disk_r_in: 6.0
+  z_xray: 0.0
+  disk_height: 0.0
+  mu_nucleon: 0.61
+  mu_electron: 1.17
+  xray_opacity: boost 
+  tau_uv_calculation: no_tau_uv 
+  disk_integral_rtol: 1e-3
+  wind_interpolator:
+    update_grid_method: "average"
+    vacuum_density: 1e2
+    nz: 500
+    nr: auto 
+
+grid:
+  r_min: 6.0
+  r_max: 50000.0
+  z_min: 0.0
+  z_max: 50000.0
+
+initial_conditions:
+  mode: CAKIC 
+  r_in: 50.0
+  r_fi: 1500.0
+  n_lines: auto
+  log_spaced: true
+  z0: 0.0 # Rg
+  K: 0.03
+  alpha: 0.6
+  use_precalculated: true # use cached results
+
+integrator:
+  n_iterations: 5
+  atol: 1e-8
+  rtol: 1e-3
+  save_path: "./example"
