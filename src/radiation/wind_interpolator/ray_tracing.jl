@@ -621,14 +621,12 @@ function compute_tau_uv(
     end
     set_iterator!(iterator, ri, phii, zi, rf, phif, zf)
     ret = 0.0
-    dist = 0.0
     sigmarg = Rg * SIGMA_T
     while !iterator.finished
         iterator.previous_point .= iterator.intersection
         cell_density = get_density(grid, iterator)
         next_intersection!(iterator)
         intersection_size = dist_to_intersection(iterator, iterator.previous_point)
-        dist += intersection_size
         ret += compute_tau_uv_cell(intersection_size, cell_density, mu_electron)
         if ret * sigmarg > max_tau
             return max_tau
