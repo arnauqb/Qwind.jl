@@ -43,7 +43,7 @@ function radiation_force_integrand!(
     beta,
     gamma,
 )
-    delta = distance_from_disk(rd, phid, radiation.z_disk, r, 0.0, z)
+    delta = compute_distance_cylindrical(rd, phid, radiation.z_disk, r, 0.0, z)
     r_projection = (r - rd * cos(phid))
     common_projection = 1.0 / (rd^2 * delta^4)
     nt = disk_nt_rel_factors(radiation, rd)
