@@ -35,6 +35,7 @@ include("radiation/force_multiplier.jl")
 include("radiation/xrays.jl")
 include("radiation/relativistic_correction.jl")
 include("radiation/disk_integration.jl")
+include("radiation/scattering.jl")
 
 # initial conditions
 include("initial_conditions/initial_conditions.jl")
