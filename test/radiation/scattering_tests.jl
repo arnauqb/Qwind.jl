@@ -109,6 +109,14 @@ end
         Rg = bh.Rg,
         mu_electron = 1.17,
     ) ≈ 11.18 * 1.17 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
+    @test Qwind.compute_optical_depth_to_cell(
+        dgrid,
+        origin = [13.89, 0, 11.25],
+        rectangle = Rectangle(rmin=3, rmax=7, zmin=4, zmax=7),
+        theta = 4.218,
+        Rg = bh.Rg,
+        mu_electron = 1.17,
+    ) ≈ 8.96 * 1.17 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
 
     @testset "cell absorption" begin
         lumin = compute_bolometric_luminosity(bh)
