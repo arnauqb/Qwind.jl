@@ -16,6 +16,7 @@ include("radiation/xrays_tests.jl")
 include("radiation/force_multiplier_tests.jl")
 include("radiation/disk_tests.jl")
 include("radiation/relativistic_corrections_tests.jl")
+include("radiation/scattering_tests.jl")
 
 # Wind interpolator
 include("radiation/wind_interpolator/ray_tracing_tests.jl")
