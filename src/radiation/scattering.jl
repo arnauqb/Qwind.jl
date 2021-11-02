@@ -1,7 +1,12 @@
 using LinearAlgebra
 using QuadGK
 
-export Rectangle
+export Rectangle,
+    compute_luminosity_absorbed_by_cell,
+    compute_luminosity_absorbed_grid,
+    compute_scattered_flux_in_cell,
+    compute_total_flux_in_cell,
+    compute_total_flux_grid
 
 struct Rectangle{T<:AbstractFloat}
     rmin::T
@@ -13,7 +18,7 @@ end
 function atan_positive(y, x)
     angle = atan(y, x)
     if angle < 0
-        return angle + 2π 
+        return angle + 2π
     else
         return angle
     end
@@ -71,8 +76,8 @@ function compute_first_intersection(rectangle, theta)
         else
             return [rectangle.rmin, zi]
         end
-    # fourth quadrant
-    elseif π/2 <= theta <= π
+        # fourth quadrant
+    elseif π / 2 <= theta <= π
         zi = cotheta * rectangle.rmin
         if zi > rectangle.zmax
             ri = rectangle.zmax / cotheta
@@ -80,8 +85,8 @@ function compute_first_intersection(rectangle, theta)
         else
             return [rectangle.rmin, zi]
         end
-    # third quadrant
-    elseif π <= theta <= 3π/2
+        # third quadrant
+    elseif π <= theta <= 3π / 2
         zi = cotheta * rectangle.rmax
         if zi > rectangle.zmax
             ri = rectangle.zmax / cotheta
@@ -89,7 +94,7 @@ function compute_first_intersection(rectangle, theta)
         else
             return [rectangle.rmax, zi]
         end
-    # second quadrant
+        # second quadrant
     else
         zi = cotheta * rectangle.rmax
         if zi < rectangle.zmin
@@ -124,8 +129,8 @@ function compute_second_intersection(rectangle, theta)
         else
             return [rectangle.rmax, zi]
         end
-    # fourth quadrant
-    elseif π/2 <= theta <= π
+        # fourth quadrant
+    elseif π / 2 <= theta <= π
         zi = cotheta * rectangle.rmax
         if zi < rectangle.zmin
             ri = rectangle.zmin / cotheta
@@ -133,8 +138,8 @@ function compute_second_intersection(rectangle, theta)
         else
             return [rectangle.rmax, zi]
         end
-    # third quadrant
-    elseif π <= theta <= 3π/2
+        # third quadrant
+    elseif π <= theta <= 3π / 2
         zi = cotheta * rectangle.rmin
         if zi < rectangle.zmin
             ri = rectangle.zmin / cotheta
@@ -142,7 +147,7 @@ function compute_second_intersection(rectangle, theta)
         else
             return [rectangle.rmin, zi]
         end
-    # second quadrant
+        # second quadrant
     else
         zi = cotheta * rectangle.rmin
         if zi > rectangle.zmax
@@ -246,7 +251,7 @@ function compute_luminosity_absorbed_by_cell(
     function f(theta)
         tau_to_cell = compute_optical_depth_to_cell(
             density_grid,
-            origin=source_position,
+            origin = source_position,
             rectangle = cell,
             theta = theta,
             Rg = Rg,
@@ -261,9 +266,172 @@ function compute_luminosity_absorbed_by_cell(
         )
         return sin(theta) * exp(-tau_to_cell) * (1 - exp(-tau_cell))
     end
-    integ, _ = quadgk(f, theta_min, theta_max, atol = 0, rtol = 1e-2)
+    integ, _ = quadgk(f, theta_min, theta_max, atol = 0, rtol = 1e-1)
     return source_luminosity / (4π) * integ
+end
+
+function compute_luminosity_absorbed_grid(
+    dgrid;
+    Rg,
+    source_luminosity,
+    source_position,
+    mu_electron = 1.17,
+)
+    ret = zeros(length(dgrid.r_range) - 1, length(dgrid.z_range) - 1)
+    for i = 1:(length(dgrid.r_range) - 1)
+        for j = 1:(length(dgrid.z_range) - 1)
+            cell = Rectangle(
+                rmin = dgrid.r_range[i],
+                rmax = dgrid.r_range[i + 1],
+                zmin = dgrid.z_range[j],
+                zmax = dgrid.z_range[j + 1],
+            )
+            lumin_absorbed = compute_luminosity_absorbed_by_cell(
+                dgrid,
+                source_position = source_position,
+                cell = cell,
+                Rg = Rg,
+                cell_density = dgrid.grid[i, j],
+                source_luminosity = source_luminosity,
+                mu_electron = mu_electron,
+            )
+            ret[i, j] = lumin_absorbed
+        end
+    end
+    return ret
 end
 
 
 
+function compute_scattered_flux_in_cell(
+    density_grid;
+    scattered_luminosity_per_cell,
+    cell,
+    cell_density,
+    Rg,
+    mu_electron,
+)
+    ret = 0.0
+    for i = 1:(length(density_grid.r_range) - 1)
+        for j = 1:(length(density_grid.z_range) - 1)
+            r_source = (density_grid.r_range[i + 1] - density_grid.r_range[i]) / 2
+            z_source = (density_grid.z_range[j + 1] - density_grid.z_range[j]) / 2
+            source_luminosity = scattered_luminosity_per_cell[i, j]
+            cell_density = density_grid.grid[i, j]
+            r_target = (cell.rmin + cell.rmax) / 2
+            z_target = (cell.zmin + cell.zmax) / 2
+            function f(phi)
+                distance = compute_distance_cylindrical(
+                    r_source,
+                    phi,
+                    z_source,
+                    r_target,
+                    0,
+                    z_target,
+                ) * Rg
+                tau = compute_tau_uv(
+                    density_grid,
+                    ri = r_source,
+                    phii = phi,
+                    zi = z_source,
+                    rf = r_target,
+                    phif = 0,
+                    zf = z_target,
+                    Rg = Rg,
+                    mu_electron = mu_electron,
+                    max_tau = 50,
+                )
+                return source_luminosity * exp(-tau) / distance^2
+            end
+            #f(phi) =
+            #f(phi) = compute_luminosity_absorbed_by_cell(
+            #    density_grid,
+            #    source_position = [r_source, phi, z_source],
+            #    source_luminosity = source_luminosity,
+            #    cell = cell,
+            #    Rg = Rg,
+            #    mu_electron = mu_electron,
+            #    cell_density = cell_density,
+            #)
+            flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 1e-2)
+            ret += flux
+        end
+    end
+    return ret
+end
+
+function compute_total_flux_in_cell(
+    density_grid;
+    scattered_luminosity_per_cell,
+    source_position,
+    source_luminosity,
+    cell,
+    cell_density,
+    Rg,
+    mu_electron,
+)
+    scattered = compute_scattered_flux_in_cell(
+        density_grid,
+        scattered_luminosity_per_cell = scattered_luminosity_per_cell,
+        cell = cell,
+        cell_density = cell_density,
+        Rg = Rg,
+        mu_electron = mu_electron,
+    )
+    rf = (cell.rmin + cell.rmax) / 2
+    zf = (cell.zmin + cell.zmax) / 2
+    ridx = searchsortedfirst(density_grid.r_range, cell.rmin)
+    zidx = searchsortedfirst(density_grid.z_range, cell.zmin)
+    distance_center_sq = (rf^2 + zf^2) * Rg^2
+    tau_center = compute_tau_uv(
+        density_grid,
+        ri = 0,
+        phii = 0,
+        zi = 0,
+        rf = rf,
+        phif = 0,
+        zf = zf,
+        Rg = Rg,
+        mu_electron = mu_electron,
+        max_tau = 50,
+    )
+    from_center =
+        scattered_luminosity_per_cell[ridx, zidx] * exp(-tau_center) / distance_center_sq
+    return from_center + scattered
+end
+
+function compute_total_flux_grid(density_grid; Rg, mu_electron = 1.17, source_luminosity)
+    ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
+    absorbed_from_center = compute_luminosity_absorbed_grid(
+        density_grid,
+        Rg = Rg,
+        source_position = [0, 0, 0],
+        source_luminosity = source_luminosity,
+    )
+    function f(i)
+        println(i)
+        ret = zeros(length(density_grid.z_range) -1)
+        for j = 1:(length(density_grid.z_range) - 1)
+            cell = Rectangle(
+                density_grid.r_range[i],
+                density_grid.r_range[i + 1],
+                density_grid.z_range[j],
+                density_grid.z_range[j + 1],
+            )
+            ret[j] = compute_total_flux_in_cell(
+                density_grid,
+                scattered_luminosity_per_cell = absorbed_from_center,
+                cell = cell,
+                cell_density = density_grid.grid[i, j],
+                Rg = Rg,
+                mu_electron = mu_electron,
+                source_position = [0, 0, 0],
+                source_luminosity = source_luminosity,
+            )
+        end
+        return ret
+    end
+    rets = pmap(f, 1:length(density_grid.r_range)-1)
+    rets = reduce(hcat, rets)'
+    return rets
+end
