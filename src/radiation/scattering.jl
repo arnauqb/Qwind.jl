@@ -1,5 +1,4 @@
-using LinearAlgebra
-using QuadGK
+using QuadGK, ProgressMeter, LinearAlgebra
 
 export Rectangle,
     compute_luminosity_absorbed_by_cell,
@@ -266,7 +265,7 @@ function compute_luminosity_absorbed_by_cell(
         )
         return sin(theta) * exp(-tau_to_cell) * (1 - exp(-tau_cell))
     end
-    integ, _ = quadgk(f, theta_min, theta_max, atol = 0, rtol = 1e-1)
+    integ, _ = quadgk(f, theta_min, theta_max, atol = 0, rtol = 1e-2)
     return source_luminosity / (4π) * integ
 end
 
@@ -314,21 +313,23 @@ function compute_scattered_flux_in_cell(
     ret = 0.0
     for i = 1:(length(density_grid.r_range) - 1)
         for j = 1:(length(density_grid.z_range) - 1)
-            r_source = (density_grid.r_range[i + 1] - density_grid.r_range[i]) / 2
-            z_source = (density_grid.z_range[j + 1] - density_grid.z_range[j]) / 2
+            r_source = (density_grid.r_range[i+1] + density_grid.r_range[i]) / 2
+            z_source = (density_grid.z_range[j+1] + density_grid.z_range[j]) / 2
             source_luminosity = scattered_luminosity_per_cell[i, j]
             cell_density = density_grid.grid[i, j]
             r_target = (cell.rmin + cell.rmax) / 2
             z_target = (cell.zmin + cell.zmax) / 2
             function f(phi)
-                distance = compute_distance_cylindrical(
-                    r_source,
-                    phi,
-                    z_source,
-                    r_target,
-                    0,
-                    z_target,
-                ) * Rg
+                distance =
+                    compute_distance_cylindrical(
+                        r_source,
+                        phi,
+                        z_source,
+                        r_target,
+                        0,
+                        z_target,
+                    ) * Rg
+                distance = max(distance, 1e-6)
                 tau = compute_tau_uv(
                     density_grid,
                     ri = r_source,
@@ -341,23 +342,41 @@ function compute_scattered_flux_in_cell(
                     mu_electron = mu_electron,
                     max_tau = 50,
                 )
-                return source_luminosity * exp(-tau) / distance^2
+                ret = source_luminosity * exp(-tau) / distance^2
+                return ret
             end
-            #f(phi) =
-            #f(phi) = compute_luminosity_absorbed_by_cell(
-            #    density_grid,
-            #    source_position = [r_source, phi, z_source],
-            #    source_luminosity = source_luminosity,
-            #    cell = cell,
-            #    Rg = Rg,
-            #    mu_electron = mu_electron,
-            #    cell_density = cell_density,
-            #)
-            flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 1e-2)
+            flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 5e-2)
             ret += flux
         end
     end
     return ret
+end
+
+function compute_flux_from_center_in_cell(
+    density_grid;
+    cell,
+    cell_density,
+    Rg,
+    mu_electron,
+    source_luminosity,
+)
+    rf = (cell.rmin + cell.rmax) / 2
+    zf = (cell.zmin + cell.zmax) / 2
+    distance_center_sq = (rf^2 + zf^2) * Rg^2
+    tau_center = compute_tau_uv(
+        density_grid,
+        ri = 0,
+        phii = 0,
+        zi = 0,
+        rf = rf,
+        phif = 0,
+        zf = zf,
+        Rg = Rg,
+        mu_electron = mu_electron,
+        max_tau = Inf,
+    )
+    from_center = source_luminosity * exp(-tau_center) / distance_center_sq
+    return from_center
 end
 
 function compute_total_flux_in_cell(
@@ -378,29 +397,45 @@ function compute_total_flux_in_cell(
         Rg = Rg,
         mu_electron = mu_electron,
     )
-    rf = (cell.rmin + cell.rmax) / 2
-    zf = (cell.zmin + cell.zmax) / 2
-    ridx = searchsortedfirst(density_grid.r_range, cell.rmin)
-    zidx = searchsortedfirst(density_grid.z_range, cell.zmin)
-    distance_center_sq = (rf^2 + zf^2) * Rg^2
-    tau_center = compute_tau_uv(
+    from_center = compute_flux_from_center_in_cell(
         density_grid,
-        ri = 0,
-        phii = 0,
-        zi = 0,
-        rf = rf,
-        phif = 0,
-        zf = zf,
+        cell = cell,
+        cell_density = cell_density,
         Rg = Rg,
         mu_electron = mu_electron,
-        max_tau = 50,
+        source_luminosity = source_luminosity,
     )
-    from_center =
-        scattered_luminosity_per_cell[ridx, zidx] * exp(-tau_center) / distance_center_sq
     return from_center + scattered
 end
 
-function compute_total_flux_grid(density_grid; Rg, mu_electron = 1.17, source_luminosity)
+function compute_total_flux_from_center_grid(density_grid; Rg, mu_electron = 1.17, source_luminosity)
+    ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
+    function f(i)
+        ret = zeros(length(density_grid.z_range) - 1)
+        for j = 1:(length(density_grid.z_range) - 1)
+            cell = Rectangle(
+                density_grid.r_range[i],
+                density_grid.r_range[i + 1],
+                density_grid.z_range[j],
+                density_grid.z_range[j + 1],
+            )
+            ret[j] = compute_flux_from_center_in_cell(
+                density_grid,
+                cell = cell,
+                cell_density = density_grid.grid[i, j],
+                Rg = Rg,
+                mu_electron = mu_electron,
+                source_luminosity = source_luminosity,
+            )
+        end
+        return ret
+    end
+    rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    rets = reduce(hcat, rets)'
+    return rets
+end
+
+function compute_total_flux_grid(density_grid; Rg, mu_electron = 1.17, source_luminosity, parallel=true)
     ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
     absorbed_from_center = compute_luminosity_absorbed_grid(
         density_grid,
@@ -409,8 +444,7 @@ function compute_total_flux_grid(density_grid; Rg, mu_electron = 1.17, source_lu
         source_luminosity = source_luminosity,
     )
     function f(i)
-        println(i)
-        ret = zeros(length(density_grid.z_range) -1)
+        ret = zeros(length(density_grid.z_range) - 1)
         for j = 1:(length(density_grid.z_range) - 1)
             cell = Rectangle(
                 density_grid.r_range[i],
@@ -431,7 +465,12 @@ function compute_total_flux_grid(density_grid; Rg, mu_electron = 1.17, source_lu
         end
         return ret
     end
-    rets = pmap(f, 1:length(density_grid.r_range)-1)
+    rets = nothing
+    if parallel
+        rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    else
+        rets = f.(1:(length(density_grid.r_range) - 1))
+    end
     rets = reduce(hcat, rets)'
     return rets
 end
