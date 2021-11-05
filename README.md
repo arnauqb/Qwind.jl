@@ -17,6 +17,7 @@ You can find the code documentation (with installation instructions) [here](http
 
 If you make use of the code, please cite the the paper](https://arxiv.org/abs/2111.02742). Here is a bibtex entry:
 
+```
 @misc{querabofarull2021qwind3,
       title={Qwind3: UV line-driven accretion disc wind models for AGN feedback}, 
       author={Arnau Quera-Bofarull and Chris Done and Cedric G. Lacey and Mariko Nomura and Ken Ohsuga},
@@ -25,6 +26,7 @@ If you make use of the code, please cite the the paper](https://arxiv.org/abs/21
       archivePrefix={arXiv},
       primaryClass={astro-ph.HE}
 }
+```
 
 # Contributions
 
