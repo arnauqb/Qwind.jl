@@ -15,7 +15,7 @@ You can find the code documentation (with installation instructions) [here](http
 
 # Citation
 
-If you make use of the code, please cite the the paper](https://arxiv.org/abs/2111.02742). Here is a bibtex entry:
+If you make use of the code, please cite the [the paper](https://arxiv.org/abs/2111.02742). Here is a bibtex entry:
 
 ```
 @misc{querabofarull2021qwind3,
