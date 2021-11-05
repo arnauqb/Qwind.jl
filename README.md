@@ -7,7 +7,7 @@
 
 # Qwind: Modelling UV line-driven winds originating from accretion discs
 
-Qwind is a code that aims to simulate the launching and acceleration phase of line-driven winds in the context of AGN accretion discs. Refer to [PAPER] for an explanation on the physics of the code.
+Qwind is a code that aims to simulate the launching and acceleration phase of line-driven winds in the context of AGN accretion discs. Refer to [the paper](https://arxiv.org/abs/2111.02742) for an explanation on the physics of the code.
 
 # Documentation
 
