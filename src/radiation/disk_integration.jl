@@ -12,7 +12,7 @@ function compute_tau_uv_integrand(
 )
     return compute_tau_uv(
         radiation,
-        rii = r_disk,
+        ri = r_disk,
         phii = phi_disk,
         zi = radiation.z_disk,
         rf = r_wind,

@@ -42,7 +42,8 @@ grid:
 initial_conditions:
   mode: CAKIC #UniformIC
   #r_in: "@vary grid 12,14,16,18"
-  r_in: "@vary log 10.0 250 10"
+  #r_in: "@vary log 10.0 250 10"
+  r_in: 20
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
@@ -59,4 +60,5 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/rin_scan_ref"
-  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_fixed_grid"
+  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_fixed_grid"
+  save_path: "tests"
