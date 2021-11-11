@@ -20,20 +20,82 @@ function get_model(config)
 end
 model, iterations_dict = get_model("./configs/debug.yaml");
 iterations_dict[1] = Dict()
-integrators, streamlines = Qwind.run_integrators!(model, iterations_dict, it_num = 1, parallel = false);
+integrators, streamlines =
+    Qwind.run_integrators!(model, iterations_dict, it_num = 1, parallel = true);
 wi = model.rad.wi;
 
 #new_radiation = update_radiation(model.rad, streamlines)
 
-
 hull = Hull(streamlines);
 density_grid = update_density_grid(wi.density_grid, wi.update_grid_flag, streamlines, hull);
-velocity_grid = update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, streamlines, hull);
+velocity_grid =
+    update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, streamlines, hull);
 
 
-ionization_grid = IonizationGrid(
+#Profile.clear()
+#@time ionization_grid = IonizationGrid(
+#    density_grid,
+#    Rg = model.rad.bh.Rg,
+#    xray_luminosity = model.rad.xray_luminosity,
+#    z_xray = model.rad.z_xray,
+#    parallel = false,
+#);
+#pprof()
+
+#fig, ax = plt.subplots()
+#cm = ax.pcolormesh(
+#    ionization_grid.r_range,
+#    ionization_grid.z_range,
+#    ionization_grid.grid',
+#    norm = LogNorm(),
+#)
+#plt.colorbar(cm, ax = ax)
+#
+#fig, ax = plt.subplots()
+#cm = ax.pcolormesh(
+#    density_grid.r_range,
+#    density_grid.z_range,
+#    density_grid.grid',
+#    norm = LogNorm(),
+#)
+#plt.colorbar(cm, ax = ax)
+
+ion0 = Qwind.compute_initial_ionization_grid(
     density_grid,
-    Rg = model.rad.bh.Rg,
-    xray_luminosity = model.rad.xray_luminosity,
-    z_xray = model.rad.z_xray,
+    model.rad.xray_luminosity,
+    model.bh.Rg,
+    model.rad.z_xray,
+);
+absorbed_from_center = compute_luminosity_absorbed_grid(
+    density_grid,
+    ion0,
+    Rg = model.bh.Rg,
+    source_position = [0, 0, model.rad.z_xray],
+    source_luminosity = model.rad.xray_luminosity,
+    mu_electron = 1.17,
+    mu_nucleon = 0.61,
+);
+
+
+nodes,weights = gausslegendre(10);
+i = 5;
+j = 6;
+@time res = Qwind.compute_scattered_flux_in_cell(
+    density_grid,
+    ion0;
+    scattered_luminosity_per_cell = absorbed_from_center,
+    cell = Rectangle(
+        density_grid.r_range[i],
+        density_grid.r_range[i + 1],
+        density_grid.z_range[j],
+        density_grid.z_range[j + 1],
+    ),
+    cell_density = 1e8,
+    absorption_opacity = BoostOpacity(),
+    mu_electron = 1.17,
+    mu_nucleon = 0.61,
+    Rg = model.bh.Rg,
+    nodes=nodes,
+    weights=weights,
 )
+println(res)

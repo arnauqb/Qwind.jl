@@ -233,7 +233,7 @@ function compute_optical_depth_to_cell(
         Rg = Rg,
         mu_electron = mu_electron,
         mu_nucleon = mu_nucleon,
-        max_tau = Inf,
+        max_tau = 30,
     )
 end
 
@@ -329,6 +329,8 @@ function compute_scattered_flux_in_cell(
     mu_electron = 1.17,
     mu_nucleon = 0.61,
     Rg,
+    nodes,
+    weights,
 )
     density_grid = density_grid
     ret = 0.0
@@ -341,6 +343,7 @@ function compute_scattered_flux_in_cell(
             source_luminosity = scattered_luminosity_per_cell[i, j]
             cell_density = density_grid.grid[i, j]
             function f(phi)
+                #phi = π * (phi+1)/2
                 distance =
                     compute_distance_cylindrical(
                         r_source,
@@ -365,12 +368,13 @@ function compute_scattered_flux_in_cell(
                     Rg = Rg,
                     mu_electron = mu_electron,
                     mu_nucleon = mu_nucleon,
-                    max_tau = Inf,
+                    max_tau = 30,
                 )
                 ret = source_luminosity * exp(-tau) / distance^2
                 return ret
             end
-            flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 5e-2)
+            #flux = π * weights' * f.(nodes)
+            flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 1e-1)
             ret += flux
         end
     end
@@ -405,7 +409,7 @@ function compute_ionizing_flux_from_center_in_cell(
         Rg = Rg,
         mu_electron = mu_electron,
         mu_nucleon = mu_nucleon,
-        max_tau = Inf,
+        max_tau = 30,
     )
     from_center = source_luminosity * exp(-tau_center) / distance_center_sq
     return from_center

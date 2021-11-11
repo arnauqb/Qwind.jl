@@ -41,8 +41,8 @@ grid:
 initial_conditions:
   mode: CAKIC
   r_in: 50.0
-  r_fi: 100.0
-  n_lines: 5
+  r_fi: 1000.0
+  n_lines: auto
   log_spaced: true
   z0: 0.0 # Rg
   K: 0.03
