@@ -21,14 +21,14 @@ radiation:
   disk_height: 0.0
   uv_opacity: thomson
   xray_opacity: boost 
-  xray_scattering: true
+  xray_scattering: false 
   tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nr: 250
+    nr: "auto"
     nz: 251
 
 grid:
@@ -52,8 +52,8 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 2
+  n_iterations: 3
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
-  save_path: "./debug"
+  save_path: "./auto_nr"

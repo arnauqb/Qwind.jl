@@ -19,13 +19,17 @@ radiation:
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
-  xray_opacity: boost
+  uv_opacity: thomson
+  xray_opacity: boost 
+  xray_scattering: false 
   tau_uv_calculation: disk
+  disk_integral_rtol: 1e-3
   wind_interpolator:
+    update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nz: 500 
-    nr: auto 
+    nz: 250 
+    nr: 250
 
 grid:
   # units of Rg
@@ -54,4 +58,4 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/rin_scan_ref"
-  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_ref"
+  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_fixed_grid"

@@ -19,6 +19,10 @@ function get_model(config)
     return model, iterations_dict
 end
 model, iterations_dict = get_model("./configs/debug.yaml");
+run!(model, iterations_dict);
+
+
+
 iterations_dict[1] = Dict()
 integrators, streamlines =
     Qwind.run_integrators!(model, iterations_dict, it_num = 1, parallel = true);
@@ -33,23 +37,23 @@ velocity_grid =
 
 
 #Profile.clear()
-#@time ionization_grid = IonizationGrid(
-#    density_grid,
-#    Rg = model.rad.bh.Rg,
-#    xray_luminosity = model.rad.xray_luminosity,
-#    z_xray = model.rad.z_xray,
-#    parallel = false,
-#);
+@time ionization_grid = IonizationGrid(
+    density_grid,
+    Rg = model.rad.bh.Rg,
+    xray_luminosity = model.rad.xray_luminosity,
+    z_xray = model.rad.z_xray,
+    parallel = false,
+);
 #pprof()
 
-#fig, ax = plt.subplots()
-#cm = ax.pcolormesh(
-#    ionization_grid.r_range,
-#    ionization_grid.z_range,
-#    ionization_grid.grid',
-#    norm = LogNorm(),
-#)
-#plt.colorbar(cm, ax = ax)
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(
+    ionization_grid.r_range,
+    ionization_grid.z_range,
+    ionization_grid.grid',
+    norm = LogNorm(),
+)
+plt.colorbar(cm, ax = ax)
 #
 #fig, ax = plt.subplots()
 #cm = ax.pcolormesh(
@@ -78,8 +82,8 @@ absorbed_from_center = compute_luminosity_absorbed_grid(
 
 
 nodes,weights = gausslegendre(10);
-i = 125;
-j = 126;
+i = 25;
+j = 26;
 #Profile.clear()
 @time Qwind.compute_scattered_flux_in_cell(
     density_grid,

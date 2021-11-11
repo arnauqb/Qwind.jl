@@ -190,7 +190,7 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
         xray_luminosity = radiation.xray_luminosity,
         z_xray = radiation.z_xray,
     )
-    return WindInterpolator(
+    new_interp = WindInterpolator(
         hull,
         density_grid,
         velocity_grid,

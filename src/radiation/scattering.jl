@@ -1,4 +1,4 @@
-using QuadGK, ProgressMeter, LinearAlgebra
+using QuadGK, ProgressMeter, LinearAlgebra, FastGaussQuadrature
 
 export Rectangle,
     compute_luminosity_absorbed_by_cell,
@@ -429,6 +429,8 @@ function compute_total_flux_in_cell(
     mu_electron = 1.17,
     mu_nucleon = 0.61,
     include_scattered = true,
+    nodes,
+    weights
 )
     ret = compute_ionizing_flux_from_center_in_cell(
         density_grid,
@@ -449,7 +451,9 @@ function compute_total_flux_in_cell(
             cell = cell,
             cell_density = cell_density,
             absorption_opacity = absorption_opacity,
-            Rg=Rg
+            Rg=Rg,
+            nodes=nodes,
+            weights=weights,
         )
     end
     return ret
@@ -502,6 +506,7 @@ function compute_total_flux_grid(
     include_scattered = true,
     z_xray,
     absorption_opacity,
+    n_nodes = 10
 )
     ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
     absorbed_from_center = compute_luminosity_absorbed_grid(
@@ -513,6 +518,7 @@ function compute_total_flux_grid(
         mu_electron = mu_electron,
         mu_nucleon = mu_nucleon,
     )
+    nodes, weights = gausslegendre(n_nodes)
     function f(i)
         ret = zeros(length(density_grid.z_range) - 1)
         for j = 1:(length(density_grid.z_range) - 1)
@@ -535,6 +541,8 @@ function compute_total_flux_grid(
                 include_scattered = include_scattered,
                 absorption_opacity = absorption_opacity,
                 z_xray=z_xray,
+                nodes=nodes,
+                weights=weights,
             )
         end
         return ret
