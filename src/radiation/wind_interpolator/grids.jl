@@ -31,7 +31,9 @@ function get_spatial_grid(r, z, r0s, nr = "auto", nz = 50; log = true)
     else
         z_range = range(z_min, z_max, length = nz - 1)
     end
-    r_range = unique(round.(r_range, digits = 7))
-    z_range = unique(round.(z_range, digits = 7))
+    r_range = collect(r_range)
+    z_range = collect(z_range)
+    #r_range = unique(round.(r_range, digits = 8))
+    #z_range = unique(round.(z_range, digits = 8))
     return r_range, z_range
 end
