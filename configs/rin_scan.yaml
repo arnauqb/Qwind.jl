@@ -1,5 +1,6 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
+  sysimage_path: /cosma/home/dp004/dc-quer1/sys_everywhere.so
   n_cpus: 32
   partition: cosma6
   account: dp004
@@ -20,16 +21,16 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   uv_opacity: thomson
-  xray_opacity: boost 
-  xray_scattering: false 
+  xray_opacity: boost
+  xray_scattering: false
   tau_uv_calculation: disk
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nz: 250 
     nr: 250
+    nz: 250 
 
 grid:
   # units of Rg
