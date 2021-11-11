@@ -25,7 +25,9 @@ include("radiation/wind_interpolator/wind_hull.jl")
 include("radiation/wind_interpolator/ray_tracing.jl")
 include("radiation/wind_interpolator/density_grid.jl")
 include("radiation/wind_interpolator/velocity_grid.jl")
+include("radiation/wind_interpolator/ionization_grid.jl")
 include("radiation/wind_interpolator/base.jl")
+include("radiation/wind_interpolator/optical_depths.jl")
 
 # radiation
 include("radiation/base.jl")

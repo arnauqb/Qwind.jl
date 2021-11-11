@@ -6,22 +6,21 @@ struct WindInterpolator{T,U,V}
     wind_hull::ConcaveHull.Hull
     density_grid::DensityGrid{T,U,V}
     velocity_grid::VelocityGrid{T,U,V}
+    ionization_grid::IonizationGrid{T,U,V}
     vacuum_density::T
     update_grid_flag::UpdateGridFlag
 end
 
-WindInterpolator(
-    nr,
-    nz;
-    vacuum_density = 1e2,
-    update_grid_flag = AverageGrid(),
-) = WindInterpolator(
-    Hull(),
-    DensityGrid(nr, nz, vacuum_density),
-    VelocityGrid(nr, nz, 0.0),
-    vacuum_density,
-    update_grid_flag,
-)
+WindInterpolator(nr, nz; vacuum_density = 1e2, update_grid_flag = AverageGrid()) =
+    WindInterpolator(
+        Hull(),
+        DensityGrid(nr, nz, vacuum_density),
+        VelocityGrid(nr, nz, 0.0),
+        IonizationGrid(nr, nz, 1e15),
+        vacuum_density,
+        update_grid_flag,
+    )
+
 function WindInterpolator(config::Dict)
     update_method = get(config, :update_grid_method, "average")
     if update_method == "average"
@@ -40,10 +39,15 @@ function WindInterpolator(config::Dict)
 end
 
 function WindInterpolator(
-    streamlines::Union{Streamlines, Nothing};
+    streamlines::Union{Streamlines,Nothing};
     nr = "auto",
     nz = 50,
     vacuum_density = 1e2,
+    xray_luminosity,
+    Rg,
+    mu_nucleon = 0.61,
+    mu_electron = 1.17,
+    z_xray,
     update_grid_flag = Average(),
 )
     if nr != "auto"
@@ -54,62 +58,44 @@ function WindInterpolator(
         hull = Hull()
         density_grid = DensityGrid(nr, nz, vacuum_density)
         velocity_grid = VelocityGrid(nr, nz, 0.0)
+        ionization_grid = IonizationGrid(nr, nz, 1e15)
     else
         hull = Hull(streamlines)
         density_grid = DensityGrid(streamlines, hull, nr = nr, nz = nz)
         velocity_grid = VelocityGrid(streamlines, hull, nr = nr, nz = nz)
+        ionization_grid = IonizationGrid(
+            density_grid,
+            xray_luminosity = xray_luminosity,
+            Rg = Rg,
+            mu_nucleon = mu_nucleon,
+            mu_electron = mu_electron,
+            z_xray = z_xray,
+        )
     end
     return WindInterpolator(
         hull,
         density_grid,
         velocity_grid,
+        IonizationGrid(
+            density_grid,
+            xray_luminosity = xray_luminosity,
+            Rg = Rg,
+            z_xray = z_xray,
+            mu_nucleon = mu_nucleon,
+            mu_electron = mu_electron,
+        ),
         vacuum_density,
         update_grid_flag,
     )
 end
 
 
-function update_wind_interpolator(
-    wi::WindInterpolator,
-    streamlines::Streamlines,
-)
-    if maximum(wi.density_grid.grid) == wi.vacuum_density
-        # first iteration, do not average
-        return WindInterpolator(
-            streamlines,
-            nr = wi.density_grid.nr,
-            nz = wi.density_grid.nz,
-            vacuum_density = wi.vacuum_density,
-            update_grid_flag = wi.update_grid_flag,
-        )
-    end
-    hull = Hull(streamlines)
-    density_grid = update_density_grid(
-        wi.density_grid,
-        wi.update_grid_flag,
-        streamlines,
-        hull,
-    )
-    velocity_grid = update_velocity_grid(
-        wi.velocity_grid,
-        wi.update_grid_flag,
-        streamlines,
-        hull,
-    )
-    return WindInterpolator(
-        hull,
-        density_grid,
-        velocity_grid,
-        wi.vacuum_density,
-        wi.update_grid_flag,
-    )
-end
-
 function update_wind_interpolator(wi::WindInterpolator, dgrid::DensityGrid)
     return WindInterpolator(
         wi.wind_hull,
         dgrid,
         wi.velocity_grid,
+        wi.ionization_grid,
         wi.vacuum_density,
         wi.update_grid_flag,
     )
@@ -120,6 +106,18 @@ function update_wind_interpolator(wi::WindInterpolator, vgrid::VelocityGrid)
         wi.wind_hull,
         wi.density_grid,
         vgrid,
+        wi.ionization_grid,
+        wi.vacuum_density,
+        wi.update_grid_flag,
+    )
+end
+
+function update_wind_interpolator(wi::WindInterpolator, xigrid::IonizationGrid)
+    return WindInterpolator(
+        wi.wind_hull,
+        wi.density_grid,
+        wi.velocity_grid,
+        xigrid,
         wi.vacuum_density,
         wi.update_grid_flag,
     )

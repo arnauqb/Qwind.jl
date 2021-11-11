@@ -236,8 +236,17 @@ function save(u, t, integrator, radiation::Radiation, trajectory_id)
     vphi = integrator.p.l0 / sqrt(r^2 + z^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
-    taux = compute_tau_xray(radiation, r = r, z = z)
-    ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
+    #taux = compute_tau_xray(
+    #    radiation,
+    #    ri = 0,
+    #    phii = 0,
+    #    zi = radiation.z_xray,
+    #    rf = r,
+    #    zf = z,
+    #    phif = 0.0,
+    #)
+    #ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
+    ξ = interpolate_ionization_parameter(radiation.wi.ionization_grid, r, z)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     push!(data[:r], r)
@@ -247,7 +256,7 @@ function save(u, t, integrator, radiation::Radiation, trajectory_id)
     push!(data[:vz], vz)
     push!(data[:n], density)
     push!(data[:dvdr], dvdr)
-    push!(data[:taux], taux)
+    #push!(data[:taux], taux)
     push!(data[:tauuv], 0.0)
     push!(data[:xi], ξ)
     push!(data[:taueff], taueff)
@@ -294,16 +303,25 @@ function compute_radiation_acceleration(radiation::Radiation, du, u, p::Paramete
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, p)
-    taux = compute_tau_xray(radiation, r = r, z = z)
-    ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
+    #taux = compute_tau_xray(
+    #    radiation,
+    #    ri = 0.0,
+    #    phii = 0.0,
+    #    zi = radiation.z_xray,
+    #    rf = r,
+    #    phif = 0.0,
+    #    zf = z,
+    #)
+    #ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
+    ξ = interpolate_ionization_parameter(radiation.wi.ionization_grid, r, z)
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(
         radiation,
-        r = r,
-        z = z,
-        vr = vr,
-        vz = vz,
+        r_wind = r,
+        z_wind = z,
+        vr_wind = vr,
+        vz_wind = vz,
         rtol = radiation.disk_integral_rtol,
     )
     force_radiation = (1 + forcemultiplier) * disc_radiation_field

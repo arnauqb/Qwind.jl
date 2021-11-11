@@ -150,5 +150,16 @@ end
         end
     end
 
+    @testset "Save ionization grid" begin
+        recovered = IonizationGrid("./saver_tests.hdf5")
+        original = model.rad.wi.ionization_grid
+        for fieldname in fieldnames(IonizationGrid)
+            if fieldname == :iterator
+                continue
+            end
+            @test getfield(original, fieldname) == getfield(recovered, fieldname)
+        end
+    end
+
 end
 

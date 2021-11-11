@@ -12,8 +12,9 @@ export DensityInterpolator,
     TauUVCenter,
     TauUVDisk,
     NoTauUV,
-    Boost,
-    Thomson
+    BoostOpacity,
+    ThomsonOpacity,
+    NoOpacity
 
 abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
@@ -27,10 +28,11 @@ abstract type FMInterpolationFlag <: Flag end
 struct FMNoInterp <: FMInterpolationFlag end
 struct FMInterp <: FMInterpolationFlag end
 
-# type of X-Ray opacity
-abstract type XRayOpacityFlag <: Flag end
-struct Thomson <: XRayOpacityFlag end
-struct Boost <: XRayOpacityFlag end
+# opacity types
+abstract type OpacityFlag <: Flag end
+struct NoOpacity <: OpacityFlag end
+struct ThomsonOpacity <: OpacityFlag end
+struct BoostOpacity <: OpacityFlag end
 
 # Relativistic correction to luminosity
 abstract type RelativisticFlag <: Flag end

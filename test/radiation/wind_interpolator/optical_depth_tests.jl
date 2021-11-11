@@ -44,7 +44,7 @@ end
                     for pd in phid_range_test
                         #println("rdp $rdp rp $rp zp $zp pd $pd")
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_tau_uv(
+                        qwsol = compute_optical_depth(
                             grid,
                             ri = rdp,
                             phii = pd,
@@ -105,7 +105,7 @@ end
                         delta = compute_delta(rdp, pd, rp, zp)
                         #println("delta $delta")
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_tau_uv(
+                        qwsol = compute_optical_depth(
                             grid,
                             ri = rdp,
                             phii = pd,
@@ -158,7 +158,7 @@ end
                 for zp in z_range_test
                     for pd in phid_range_test
                         truesol = f_anl(rdp, pd, rp, zp)
-                        qwsol = compute_tau_uv(
+                        qwsol = compute_optical_depth(
                             grid,
                             ri = rdp,
                             phii = pd,
@@ -294,7 +294,7 @@ end
     for rp in r_range_test
         for zp in z_range_test
             truesol = f_anl(0.0, 0.0, rp, zp)
-            qwsol = compute_tau_uv(
+            qwsol = compute_optical_depth(
                 grid,
                 ri = 0.0,
                 phii = 0.0,

@@ -7,10 +7,10 @@ function gamma0(radiation, r)
     radiation_no_tau_uv = set_tau_uv_calculation(radiation, NoTauUV())
     ret = compute_disc_radiation_field_small_heights(
         radiation_no_tau_uv,
-        r = r,
-        z = 1.0,
-        vr = 0.0,
-        vz = 0.0,
+        r_wind = r,
+        z_wind = 1.0,
+        vr_wind = 0.0,
+        vz_wind = 0.0,
     )[2]
     fuv, mdot = get_fuv_mdot(radiation, r)
     # remove fuv
@@ -23,10 +23,10 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
     radiation_no_tau_uv = set_tau_uv_calculation(radiation, NoTauUV())
     frad = compute_disc_radiation_field(
         radiation_no_tau_uv,
-        r = r,
-        z = z,
-        vr = 0.0,
-        vz = 0.0,
+        r_wind = r,
+        z_wind = z,
+        vr_wind = 0.0,
+        vz_wind = 0.0,
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,
@@ -42,10 +42,10 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
     radiation_no_tau_uv.fuv_grid .= 1.0
     fr = compute_disc_radiation_field(
         radiation_no_tau_uv,
-        r = r,
-        z = z,
-        vr = 0.0,
-        vz = 0.0,
+        r_wind = r,
+        z_wind = z,
+        vr_wind = 0.0,
+        vz_wind = 0.0,
         max_z_vertical_flux = zmax,
         rtol = 1e-4,
         maxevals = 100000,

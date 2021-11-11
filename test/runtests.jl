@@ -21,8 +21,10 @@ include("radiation/scattering_tests.jl")
 # Wind interpolator
 include("radiation/wind_interpolator/ray_tracing_tests.jl")
 include("radiation/wind_interpolator/optical_depth_tests.jl")
+include("radiation/wind_interpolator/wind_hull_tests.jl")
 include("radiation/wind_interpolator/density_grid_tests.jl")
 include("radiation/wind_interpolator/velocity_grid_tests.jl")
+include("radiation/wind_interpolator/ionziation_grid_tests.jl")
 include("radiation/wind_interpolator/base_tests.jl")
 
 include("thermodynamics_tests.jl")
