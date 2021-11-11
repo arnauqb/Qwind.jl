@@ -78,9 +78,10 @@ absorbed_from_center = compute_luminosity_absorbed_grid(
 
 
 nodes,weights = gausslegendre(10);
-i = 5;
-j = 6;
-@time res = Qwind.compute_scattered_flux_in_cell(
+i = 125;
+j = 126;
+Profile.clear()
+@profile Qwind.compute_scattered_flux_in_cell(
     density_grid,
     ion0;
     scattered_luminosity_per_cell = absorbed_from_center,
@@ -98,4 +99,33 @@ j = 6;
     nodes=nodes,
     weights=weights,
 )
-println(res)
+pprof()
+
+times = zeros(length(density_grid.r_range)-1, length(density_grid.z_range)-1);
+for i = 1:(length(density_grid.r_range) - 1)
+    for j = 1:(length(density_grid.z_range) - 1)
+        r_source = (density_grid.r_range[i + 1] + density_grid.r_range[i]) / 2
+        z_source = (density_grid.z_range[j + 1] + density_grid.z_range[j]) / 2
+        time = @elapsed compute_optical_depth(
+            density_grid.iterator,
+            density_grid,
+            ion0,
+            BoostOpacity(),
+            ri = 0,
+            phii = π/2,
+            zi = 0,
+            rf = density_grid.r_range[i],
+            phif = 0,
+            zf = density_grid.z_range[j],
+            Rg = model.bh.Rg,
+            mu_electron = 1.17,
+            mu_nucleon = 0.61,
+            max_tau = 30,
+        )
+        times[i, j] = time
+    end
+end
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(density_grid.r_range[1:end-1], density_grid.z_range[1:end-1], times', norm=LogNorm())
+plt.colorbar(cm, ax = ax)

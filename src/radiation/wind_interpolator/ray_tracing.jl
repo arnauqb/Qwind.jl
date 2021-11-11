@@ -25,7 +25,7 @@ function get_time_to_intersection_r(r, a, b, ri, current_lambda)
     rad = sqrt(rad)
     sol1 = (-b + rad) / (2a)
     sol2 = (-b - rad) / (2a)
-    if current_lambda > max(sol1, sol2)
+    if current_lambda > sol1 
         return Inf
     end
     if sol1 > 0

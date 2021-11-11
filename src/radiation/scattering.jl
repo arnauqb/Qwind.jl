@@ -343,7 +343,7 @@ function compute_scattered_flux_in_cell(
             source_luminosity = scattered_luminosity_per_cell[i, j]
             cell_density = density_grid.grid[i, j]
             function f(phi)
-                #phi = π * (phi+1)/2
+                phi = π * (phi+1)/2
                 distance =
                     compute_distance_cylindrical(
                         r_source,
@@ -368,13 +368,13 @@ function compute_scattered_flux_in_cell(
                     Rg = Rg,
                     mu_electron = mu_electron,
                     mu_nucleon = mu_nucleon,
-                    max_tau = 30,
+                    max_tau = 20,
                 )
                 ret = source_luminosity * exp(-tau) / distance^2
                 return ret
             end
-            #flux = π * weights' * f.(nodes)
-            flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 1e-1)
+            flux = π * weights' * f.(nodes)
+            #flux, _ = 2 .* quadgk(f, 0, π, atol = 0, rtol = 1e-1)
             ret += flux
         end
     end
