@@ -41,9 +41,8 @@ grid:
 
 initial_conditions:
   mode: CAKIC #UniformIC
-  #r_in: "@vary grid 12,14,16,18"
-  #r_in: "@vary log 10.0 250 10"
-  r_in: 20
+  r_in: "@vary log 10.0 250 10"
+  #r_in: 20
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
