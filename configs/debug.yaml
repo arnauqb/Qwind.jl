@@ -28,7 +28,7 @@ radiation:
     update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nr: "auto"
+    nr: 250
     nz: 251
 
 grid:

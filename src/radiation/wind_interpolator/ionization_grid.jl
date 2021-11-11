@@ -104,7 +104,8 @@ function IonizationGrid(
     mu_nucleon = 0.61,
     mu_electron = 1.13,
     absorption_opacity=BoostOpacity(),
-    parallel=true
+    include_scattered=true,
+    parallel=true,
 )
     @info "Updating ionization grid..."
     xi0 = compute_initial_ionization_grid(density_grid, xray_luminosity, Rg, z_xray)
@@ -121,6 +122,7 @@ function IonizationGrid(
             z_xray = z_xray,
             xray_luminosity = xray_luminosity,
             absorption_opacity=absorption_opacity,
+            include_scattered=include_scattered
         )
         change = compute_change_in_grid(xi0.grid, xi_grid)
         xi_grid = total_flux ./ density_grid.grid[1:(end - 1), 1:(end - 1)]
