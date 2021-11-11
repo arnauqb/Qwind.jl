@@ -28,26 +28,10 @@ function get_time_to_intersection_r(r, a, b, ri, current_lambda)
     if current_lambda > sol1 
         return Inf
     end
-    if sol1 > 0
-        if sol2 > 0
-            if sol1 < sol2
-                if sol1 > current_lambda
-                    return sol1
-                else
-                    return sol2
-                end
-            else
-                if sol2 > current_lambda
-                    return sol2
-                else
-                    return sol1
-                end
-            end
-        else
-            return sol1
-        end
-    else
+    if sol2 > current_lambda
         return sol2
+    else
+        return sol1
     end
 end
 

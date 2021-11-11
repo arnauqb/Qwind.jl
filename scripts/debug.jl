@@ -80,8 +80,8 @@ absorbed_from_center = compute_luminosity_absorbed_grid(
 nodes,weights = gausslegendre(10);
 i = 125;
 j = 126;
-Profile.clear()
-@profile Qwind.compute_scattered_flux_in_cell(
+#Profile.clear()
+@time Qwind.compute_scattered_flux_in_cell(
     density_grid,
     ion0;
     scattered_luminosity_per_cell = absorbed_from_center,
@@ -99,7 +99,7 @@ Profile.clear()
     nodes=nodes,
     weights=weights,
 )
-pprof()
+#pprof()
 
 times = zeros(length(density_grid.r_range)-1, length(density_grid.z_range)-1);
 for i = 1:(length(density_grid.r_range) - 1)
