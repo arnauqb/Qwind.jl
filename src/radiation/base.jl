@@ -172,6 +172,7 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
             vacuum_density = wi.vacuum_density,
             update_grid_flag = wi.update_grid_flag,
             xray_luminosity = radiation.xray_luminosity,
+            include_scattered_flux=radiation.xray_scattering,
             z_xray = radiation.z_xray,
             mu_nucleon = radiation.mu_nucleon,
             mu_electron = radiation.mu_electron,
@@ -189,6 +190,9 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
         Rg = radiation.bh.Rg,
         xray_luminosity = radiation.xray_luminosity,
         z_xray = radiation.z_xray,
+        mu_nucleon = radiation.mu_nucleon,
+        mu_electron = radiation.mu_electron,
+        include_scattering = radiation.xray_scattering,
     )
     new_interp = WindInterpolator(
         hull,

@@ -490,7 +490,12 @@ function compute_total_flux_from_center_grid(
         end
         return ret
     end
-    rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    rets = nothing
+    if is_logging(stderr)
+        rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    else
+        rets = pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    end
     rets = reduce(hcat, rets)'
     return rets
 end

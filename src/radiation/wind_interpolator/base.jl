@@ -45,6 +45,7 @@ function WindInterpolator(
     vacuum_density = 1e2,
     xray_luminosity,
     Rg,
+    include_scattered_flux=true,
     mu_nucleon = 0.61,
     mu_electron = 1.17,
     z_xray,
@@ -70,20 +71,14 @@ function WindInterpolator(
             mu_nucleon = mu_nucleon,
             mu_electron = mu_electron,
             z_xray = z_xray,
+            include_scattered = include_scattered_flux,
         )
     end
     return WindInterpolator(
         hull,
         density_grid,
         velocity_grid,
-        IonizationGrid(
-            density_grid,
-            xray_luminosity = xray_luminosity,
-            Rg = Rg,
-            z_xray = z_xray,
-            mu_nucleon = mu_nucleon,
-            mu_electron = mu_electron,
-        ),
+        ionization_grid,
         vacuum_density,
         update_grid_flag,
     )

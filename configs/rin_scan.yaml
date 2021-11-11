@@ -23,7 +23,7 @@ radiation:
   uv_opacity: thomson
   xray_opacity: boost
   xray_scattering: false
-  tau_uv_calculation: disk
+  tau_uv_calculation:  no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
