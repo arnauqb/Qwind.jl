@@ -23,7 +23,7 @@ radiation:
   uv_opacity: thomson
   xray_opacity: boost
   xray_scattering: false
-  tau_uv_calculation: disk
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
@@ -60,5 +60,4 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/rin_scan_ref"
-  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_fixed_grid"
-  save_path: "tests"
+  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_fixed_grid"
