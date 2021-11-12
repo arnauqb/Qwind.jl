@@ -492,9 +492,9 @@ function compute_total_flux_from_center_grid(
     end
     rets = nothing
     if is_logging(stderr)
-        rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
-    else
         rets = pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    else
+        rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
     end
     rets = reduce(hcat, rets)'
     return rets
@@ -555,9 +555,9 @@ function compute_total_flux_grid(
     rets = nothing
     if parallel
         if is_logging(stderr)
-            rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
-        else
             rets = pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+        else
+            rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
         end
     else
         rets = f.(1:(length(density_grid.r_range) - 1))
