@@ -192,7 +192,7 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
         z_xray = radiation.z_xray,
         mu_nucleon = radiation.mu_nucleon,
         mu_electron = radiation.mu_electron,
-        include_scattering = radiation.xray_scattering,
+        include_scattered = radiation.xray_scattering,
     )
     new_interp = WindInterpolator(
         hull,

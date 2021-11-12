@@ -13,8 +13,8 @@ function compute_optical_depth_cell(
     cell_density = density_grid.grid[r_idx, z_idx]
     cell_ion = 1e15
     cell_ion = ionization_grid.grid[
-        min(r_idx, density_grid.nr - 1),
-        min(z_idx, density_grid.nz - 1),
+        min(r_idx, ionization_grid.nr),
+        min(z_idx, ionization_grid.nz),
     ]
     intersection_size = dist_to_intersection(iterator, iterator.previous_point)
     ret = intersection_size * cell_density * mu_electron
