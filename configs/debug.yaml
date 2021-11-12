@@ -28,8 +28,8 @@ radiation:
     update_grid_method: "average"
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nr: auto
-    nz: 251
+    nr: 500
+    nz: 500
 
 grid:
   # units of Rg
@@ -40,8 +40,8 @@ grid:
 
 initial_conditions:
   mode: CAKIC
-  r_in: 50.0
-  r_fi: 1000.0
+  r_in: 40.0
+  r_fi: 1500.0
   n_lines: auto
   log_spaced: true
   z0: 0.0 # Rg

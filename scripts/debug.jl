@@ -18,10 +18,9 @@ function get_model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/debug.yaml");
+#model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./todebug.yaml");
 run!(model, iterations_dict);
-
-
 
 iterations_dict[1] = Dict()
 integrators, streamlines =
@@ -30,7 +29,8 @@ wi = model.rad.wi;
 
 #new_radiation = update_radiation(model.rad, streamlines)
 
-hull = Hull(streamlines);
+hull = Hull(streamlines, rtol=1e-2);
+
 density_grid = update_density_grid(wi.density_grid, wi.update_grid_flag, streamlines, hull);
 velocity_grid =
     update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, streamlines, hull);
