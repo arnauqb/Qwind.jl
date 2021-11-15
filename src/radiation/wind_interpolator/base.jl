@@ -6,7 +6,7 @@ struct WindInterpolator{T,U,V}
     wind_hull::ConcaveHull.Hull
     density_grid::DensityGrid{T,U,V}
     velocity_grid::VelocityGrid{T,U,V}
-    #ionization_grid::IonizationGrid{T,U,V}
+    scattered_lumin_grid::ScatteredLuminosityGrid{T,U,V}
     vacuum_density::T
     update_grid_flag::UpdateGridFlag
 end
@@ -16,6 +16,7 @@ WindInterpolator(nr, nz; vacuum_density = 1e2, update_grid_flag = AverageGrid())
         Hull(),
         DensityGrid(nr, nz, vacuum_density),
         VelocityGrid(nr, nz, 0.0),
+        ScatteredLuminosityGrid(nr, nz, 0.0),
         #IonizationGrid(nr, nz, 1e15),
         vacuum_density,
         update_grid_flag,
@@ -45,7 +46,7 @@ function WindInterpolator(
     vacuum_density = 1e2,
     xray_luminosity,
     Rg,
-    include_scattered_flux=true,
+    include_scattered_flux = true,
     mu_nucleon = 0.61,
     mu_electron = 1.17,
     z_xray,
@@ -59,11 +60,20 @@ function WindInterpolator(
         hull = Hull()
         density_grid = DensityGrid(nr, nz, vacuum_density)
         velocity_grid = VelocityGrid(nr, nz, 0.0)
+        scattered_lumin_grid = ScatteredLuminosityGrid(nr, nz, 0.0)
         #ionization_grid = IonizationGrid(nr, nz, 1e15)
     else
         hull = Hull(streamlines)
         density_grid = DensityGrid(streamlines, hull, nr = nr, nz = nz)
         velocity_grid = VelocityGrid(streamlines, hull, nr = nr, nz = nz)
+        scattered_lumin_grid = ScatteredLuminosityGrid(
+            density_grid,
+            Rg = Rg,
+            source_luminosity = xray_luminosity,
+            source_position = (0, 0, z_xray),
+            mu_electron = mu_electron,
+            mu_nucleon = mu_nucleon,
+        )
         #ionization_grid = IonizationGrid(
         #    density_grid,
         #    xray_luminosity = xray_luminosity,
@@ -78,6 +88,7 @@ function WindInterpolator(
         hull,
         density_grid,
         velocity_grid,
+        scattered_lumin_grid,
         #ionization_grid,
         vacuum_density,
         update_grid_flag,

@@ -16,6 +16,7 @@ function compute_optical_depth_cell(
     phif,
     tau_to_cell,
     source_luminosity,
+    Rg,
 )
     iterator = density_grid.iterator
     cell_density = density_grid.grid[r_idx, z_idx]
@@ -23,15 +24,28 @@ function compute_optical_depth_cell(
     #    min(r_idx, ionization_grid.nr),
     #    min(z_idx, ionization_grid.nz),
     #]
-    dx = sqrt(1e5 * cell_density / (source_luminosity * exp(-tau_to_cell)))
-    distance_to_source = compute_distance_cylindrical(ri, phii, zi, rf, phif, zf)
+    dx = sqrt(source_luminosity * exp(-tau_to_cell) / cell_density / 1e5) / Rg
+    distance_to_source = compute_distance_cylindrical(
+        ri,
+        phii,
+        zi,
+        iterator.previous_point[1],
+        iterator.previous_point[2],
+        iterator.previous_point[3],
+    )
     intersection_size = dist_to_intersection(iterator, iterator.previous_point)
-    ret = cell_density * mu_electron * intersection_size
+    ret = cell_density * mu_electron
     if distance_to_source > dx
-        return 100 * ret
+        ret = 100 * ret * intersection_size
     else
-        return ret
+        if distance_to_source + intersection_size > dx
+            ret = ret * (dx - distance_to_source) +
+                   100 * (distance_to_source + intersection_size - dx)
+        else
+            ret = ret * intersection_size
+        end
     end
+    return ret
     #delta_boost = max(distance_to_source - dx, 0)
     #ret = (delta_boost * 100 + dx) * mu_electron * cell_density
     #return ret
@@ -60,6 +74,7 @@ function compute_optical_depth_cell(
     phif,
     tau_to_cell,
     source_luminosity,
+    Rg,
 )
     iterator = density_grid.iterator
     cell_density = density_grid.grid[r_idx, z_idx]
@@ -82,7 +97,7 @@ function compute_optical_depth(
     mu_electron = 1.17,
     mu_nucleon = 0.61,
     max_tau = 50,
-    source_luminosity
+    source_luminosity,
 )
     set_iterator!(iterator, ri, phii, zi, rf, phif, zf)
     ret = 0.0
@@ -108,10 +123,11 @@ function compute_optical_depth(
             zf = zf,
             phif = phif,
             source_luminosity = source_luminosity,
-        )
-        if ret * sigmarg > max_tau
+            Rg = Rg,
+        ) * sigmarg
+        if ret > max_tau
             return max_tau
         end
     end
-    return ret * sigmarg
+    return ret 
 end

@@ -21,6 +21,29 @@ end
 model, iterations_dict = get_model("./configs/tests/xi.yaml");
 run!(model, iterations_dict);
 
+rr = range(6, 1500, length=500);
+zz = 10 .^ range(-6, log10(1500), length=500);
+ret = zeros(length(rr), length(zz));
+for (i, r) in enumerate(rr)
+    for (j, z) in enumerate(zz)
+        ret[i,j] = compute_tau_xray(
+            model.rad,
+            ri = 0.0,
+            phii = 0.0,
+            zi = model.rad.z_xray,
+            rf = r,
+            phif = 0.0,
+            zf = z,
+        )
+    end
+end
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(rr, zz, ret', norm=LogNorm(vmin=1e-2, vmax=1e2))
+plt.colorbar(cm, ax=ax)
+
+compute_tau_xray(model.rad, ri=0.0, phii=0, zi=0, rf=1000, phif=1, zf=1)
+
 
 scattered_grid = ScatteredLuminosityGrid()
 

@@ -26,6 +26,7 @@ include("radiation/wind_interpolator/ray_tracing.jl")
 include("radiation/wind_interpolator/density_grid.jl")
 include("radiation/wind_interpolator/velocity_grid.jl")
 include("radiation/wind_interpolator/ionization_grid.jl")
+include("radiation/scattering.jl")
 include("radiation/wind_interpolator/base.jl")
 include("radiation/wind_interpolator/optical_depths.jl")
 
@@ -37,7 +38,6 @@ include("radiation/force_multiplier.jl")
 include("radiation/xrays.jl")
 include("radiation/relativistic_correction.jl")
 include("radiation/disk_integration.jl")
-include("radiation/scattering.jl")
 
 # initial conditions
 include("initial_conditions/initial_conditions.jl")

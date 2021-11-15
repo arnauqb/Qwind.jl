@@ -185,6 +185,7 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
         update_density_grid(wi.density_grid, wi.update_grid_flag, streamlines, hull)
     velocity_grid =
         update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, streamlines, hull)
+    scattered_lumin_grid = ScatteredLuminosityGrid(density_grid, radiation)
     #ionization_grid = IonizationGrid(
     #    density_grid,
     #    Rg = radiation.bh.Rg,
@@ -198,6 +199,7 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
         hull,
         density_grid,
         velocity_grid,
+        scattered_lumin_grid,
         #ionization_grid,
         wi.vacuum_density,
         wi.update_grid_flag,
