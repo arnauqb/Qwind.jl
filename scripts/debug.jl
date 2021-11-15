@@ -18,9 +18,42 @@ function get_model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-#model, iterations_dict = get_model("./configs/debug.yaml");
-model, iterations_dict = get_model("./todebug.yaml");
+model, iterations_dict = get_model("./configs/tests/xi.yaml");
 run!(model, iterations_dict);
+
+
+scattered_grid = ScatteredLuminosityGrid()
+
+rr = range(6, 1500, length=500);
+zz = 10 .^ range(-6, log10(1500), length=500);
+real_grid = zeros(length(rr), length(zz));
+int_grid = zeros(length(rr), length(zz));
+for (i, r) in enumerate(rr)
+    for (j, z) in enumerate(zz)
+        taux = compute_tau_xray(
+            model.rad,
+            ri = 0.0,
+            phii = 0.0,
+            zi = model.rad.z_xray,
+            rf = r,
+            phif = 0.0,
+            zf = z,
+        )
+        density = interpolate_density(model.rad.wi.density_grid, r, z)
+        xi = compute_ionization_parameter(model.rad, r, z, 1e-4, 1e-4, density, taux)
+        int_grid[i, j] = interpolate_ionization_parameter(model.rad.wi.ionization_grid, r, z)
+        real_grid[i, j] = xi
+    end
+end
+
+
+fig, ax = plt.subplots(1, 2)
+ax[1].pcolormesh(rr, zz, real_grid', norm=LogNorm())
+ax[2].pcolormesh(rr, zz, int_grid', norm=LogNorm())
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(rr, zz, (real_grid ./ int_grid)', norm=LogNorm())
+plt.colorbar(cm, ax=ax)
 
 iterations_dict[1] = Dict()
 integrators, streamlines =
