@@ -1,4 +1,4 @@
-export Radiation, update_radiation
+export Radiation, update_radiation, compute_tau_uv, compute_tau_xray
 
 struct Radiation{T<:AbstractFloat}
     bh::BlackHole{T}
@@ -185,20 +185,22 @@ function update_radiation(radiation::Radiation, streamlines::Streamlines)
         update_density_grid(wi.density_grid, wi.update_grid_flag, streamlines, hull)
     velocity_grid =
         update_velocity_grid(wi.velocity_grid, wi.update_grid_flag, streamlines, hull)
-    ionization_grid = IonizationGrid(
-        density_grid,
-        Rg = radiation.bh.Rg,
-        xray_luminosity = radiation.xray_luminosity,
-        z_xray = radiation.z_xray,
-        mu_nucleon = radiation.mu_nucleon,
-        mu_electron = radiation.mu_electron,
-        include_scattered = radiation.xray_scattering,
-    )
+    scattered_lumin_grid = ScatteredLuminosityGrid(density_grid, radiation)
+    #ionization_grid = IonizationGrid(
+    #    density_grid,
+    #    Rg = radiation.bh.Rg,
+    #    xray_luminosity = radiation.xray_luminosity,
+    #    z_xray = radiation.z_xray,
+    #    mu_nucleon = radiation.mu_nucleon,
+    #    mu_electron = radiation.mu_electron,
+    #    include_scattered = radiation.xray_scattering,
+    #)
     new_interp = WindInterpolator(
         hull,
         density_grid,
         velocity_grid,
-        ionization_grid,
+        scattered_lumin_grid,
+        #ionization_grid,
         wi.vacuum_density,
         wi.update_grid_flag,
     )
@@ -260,7 +262,7 @@ function compute_tau_uv(radiation::Radiation; ri, phii, zi, rf, phif, zf, max_ta
     return compute_optical_depth(
         radiation.wi.density_grid.iterator,
         radiation.wi.density_grid,
-        radiation.wi.ionization_grid,
+        #radiation.wi.ionization_grid,
         radiation.uv_opacity,
         ri = ri,
         phii = phii,
@@ -272,6 +274,7 @@ function compute_tau_uv(radiation::Radiation; ri, phii, zi, rf, phif, zf, max_ta
         mu_nucleon = radiation.mu_nucleon,
         mu_electron = radiation.mu_electron,
         Rg = radiation.bh.Rg,
+        source_luminosity = radiation.xray_luminosity,
     )
 end
 
@@ -279,7 +282,7 @@ function compute_tau_xray(radiation::Radiation; ri, phii, zi, rf, phif, zf, max_
     return compute_optical_depth(
         radiation.wi.density_grid.iterator,
         radiation.wi.density_grid,
-        radiation.wi.ionization_grid,
+        #radiation.wi.ionization_grid,
         radiation.xray_opacity,
         ri = ri,
         phii = phii,
@@ -291,5 +294,6 @@ function compute_tau_xray(radiation::Radiation; ri, phii, zi, rf, phif, zf, max_
         mu_nucleon = radiation.mu_nucleon,
         mu_electron = radiation.mu_electron,
         Rg = radiation.bh.Rg,
+        source_luminosity = radiation.xray_luminosity,
     )
 end

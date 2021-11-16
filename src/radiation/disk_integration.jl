@@ -166,14 +166,13 @@ function compute_disc_radiation_field_small_heights(
 )
     constant = 3 / (2 * radiation.bh.efficiency)
     fuv, mdot = get_fuv_mdot(radiation, r_wind)
-    tau_uv = compute_tau_uv(
+    tau_uv = compute_tau_uv_integrand(
         radiation,
-        ri=r_wind,
-        phii=0.0,
-        zi=radiation.z_disk,
-        rf=r_wind,
-        phif=0.0,
-        zf=z_wind,
+        radiation.tau_uv_calculation,
+        r_disk=r_wind,
+        phi_disk=0.0,
+        r_wind=r_wind,
+        z_wind=z_wind,
     )
     beta = compute_beta(vr_wind, vz_wind)
     rel = ((1 - beta) / (1 + beta))^2

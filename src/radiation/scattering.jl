@@ -1,11 +1,14 @@
-using QuadGK, ProgressMeter, LinearAlgebra, FastGaussQuadrature
+using QuadGK, ProgressMeter, LinearAlgebra, FastGaussQuadrature, Cubature
 
 export Rectangle,
     compute_luminosity_absorbed_by_cell,
     compute_luminosity_absorbed_grid,
     compute_scattered_flux_in_cell,
     compute_total_flux_in_cell,
-    compute_total_flux_grid
+    compute_total_flux_grid,
+    ScatteredLuminosityGrid,
+    scattered_flux_in_point
+
 
 struct Rectangle{T<:AbstractFloat}
     rmin::T
@@ -208,12 +211,13 @@ end
 computes the optical depth to the cell
 """
 function compute_optical_depth_to_cell(
-    density_grid,
-    ionization_grid;
+    density_grid;
+    #ionization_grid;
     origin,
     rectangle,
     theta,
     Rg,
+    source_luminosity,
     absorption_opacity = BoostOpacity(),
     mu_electron = 1.17,
     mu_nucleon = 0.61,
@@ -222,7 +226,7 @@ function compute_optical_depth_to_cell(
     return compute_optical_depth(
         density_grid.iterator,
         density_grid,
-        ionization_grid,
+        #ionization_grid,
         absorption_opacity,
         ri = origin[1],
         phii = origin[2],
@@ -233,6 +237,7 @@ function compute_optical_depth_to_cell(
         Rg = Rg,
         mu_electron = mu_electron,
         mu_nucleon = mu_nucleon,
+        source_luminosity = source_luminosity,
         max_tau = 30,
     )
 end
@@ -244,8 +249,8 @@ end
 Computes the amount of luminosity absorbed by a cell from a central source.
 """
 function compute_luminosity_absorbed_by_cell(
-    density_grid,
-    ionization_grid;
+    density_grid;
+    #ionization_grid;
     source_position,
     cell,
     Rg,
@@ -259,8 +264,8 @@ function compute_luminosity_absorbed_by_cell(
     theta_min, theta_max = compute_intercepting_angles(cell_centered_source)
     function f(theta)
         tau_to_cell = compute_optical_depth_to_cell(
-            density_grid,
-            ionization_grid;
+            density_grid;
+            #ionization_grid;
             origin = source_position,
             rectangle = cell,
             theta = theta,
@@ -268,6 +273,7 @@ function compute_luminosity_absorbed_by_cell(
             mu_electron = mu_electron,
             mu_nucleon = mu_nucleon,
             absorption_opacity = absorption_opacity,
+            source_luminosity = source_luminosity,
         )
         tau_cell = compute_cell_optical_depth(
             cell,
@@ -283,8 +289,8 @@ function compute_luminosity_absorbed_by_cell(
 end
 
 function compute_luminosity_absorbed_grid(
-    density_grid,
-    ionization_grid;
+    density_grid;
+    #ionization_grid;
     Rg,
     source_luminosity,
     source_position,
@@ -292,7 +298,8 @@ function compute_luminosity_absorbed_grid(
     mu_nucleon = mu_nucleon,
 )
     ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
-    for i = 1:(length(density_grid.r_range) - 1)
+    function f(i)
+        ret = zeros(length(density_grid.z_range) - 1)
         for j = 1:(length(density_grid.z_range) - 1)
             cell = Rectangle(
                 rmin = density_grid.r_range[i],
@@ -301,8 +308,8 @@ function compute_luminosity_absorbed_grid(
                 zmax = density_grid.z_range[j + 1],
             )
             lumin_absorbed = compute_luminosity_absorbed_by_cell(
-                density_grid,
-                ionization_grid;
+                density_grid;
+                #ionization_grid;
                 source_position = source_position,
                 cell = cell,
                 Rg = Rg,
@@ -311,17 +318,25 @@ function compute_luminosity_absorbed_grid(
                 mu_electron = mu_electron,
                 mu_nucleon = mu_nucleon,
             )
-            ret[i, j] = lumin_absorbed
+            ret[j] = lumin_absorbed
         end
+        return ret
     end
-    return ret
+    rets = nothing
+    if is_logging(stderr)
+        rets = pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    else
+        rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+    end
+    rets = reduce(hcat, rets)'
+    return rets
 end
 
 
 
 function compute_scattered_flux_in_cell(
-    density_grid,
-    ionization_grid;
+    density_grid;
+    #ionization_grid;
     scattered_luminosity_per_cell,
     cell,
     cell_density,
@@ -343,7 +358,7 @@ function compute_scattered_flux_in_cell(
             source_luminosity = scattered_luminosity_per_cell[i, j]
             cell_density = density_grid.grid[i, j]
             function f(phi)
-                phi = π * (phi+1)/2
+                phi = π * (phi + 1) / 2
                 distance =
                     compute_distance_cylindrical(
                         r_source,
@@ -357,7 +372,7 @@ function compute_scattered_flux_in_cell(
                 tau = compute_optical_depth(
                     density_grid.iterator,
                     density_grid,
-                    ionization_grid,
+                    #ionization_grid,
                     absorption_opacity,
                     ri = r_source,
                     phii = phi,
@@ -369,6 +384,7 @@ function compute_scattered_flux_in_cell(
                     mu_electron = mu_electron,
                     mu_nucleon = mu_nucleon,
                     max_tau = 20,
+                    source_luminosity = source_luminosity,
                 )
                 ret = source_luminosity * exp(-tau) / distance^2
                 return ret
@@ -430,7 +446,7 @@ function compute_total_flux_in_cell(
     mu_nucleon = 0.61,
     include_scattered = true,
     nodes,
-    weights
+    weights,
 )
     ret = compute_ionizing_flux_from_center_in_cell(
         density_grid,
@@ -451,9 +467,9 @@ function compute_total_flux_in_cell(
             cell = cell,
             cell_density = cell_density,
             absorption_opacity = absorption_opacity,
-            Rg=Rg,
-            nodes=nodes,
-            weights=weights,
+            Rg = Rg,
+            nodes = nodes,
+            weights = weights,
         )
     end
     return ret
@@ -500,73 +516,74 @@ function compute_total_flux_from_center_grid(
     return rets
 end
 
-function compute_total_flux_grid(
-    density_grid,
-    ionization_grid;
-    Rg,
-    mu_nucleon = 0.61,
-    mu_electron = 1.17,
-    xray_luminosity,
-    parallel = true,
-    include_scattered = true,
-    z_xray,
-    absorption_opacity,
-    n_nodes = 10
-)
-    ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
-    absorbed_from_center = compute_luminosity_absorbed_grid(
-        density_grid,
-        ionization_grid,
-        Rg = Rg,
-        source_position = [0, 0, z_xray],
-        source_luminosity = xray_luminosity,
-        mu_electron = mu_electron,
-        mu_nucleon = mu_nucleon,
-    )
-    nodes, weights = gausslegendre(n_nodes)
-    function f(i)
-        ret = zeros(length(density_grid.z_range) - 1)
-        for j = 1:(length(density_grid.z_range) - 1)
-            cell = Rectangle(
-                density_grid.r_range[i],
-                density_grid.r_range[i + 1],
-                density_grid.z_range[j],
-                density_grid.z_range[j + 1],
-            )
-            ret[j] = compute_total_flux_in_cell(
-                density_grid,
-                ionization_grid,
-                scattered_luminosity_per_cell = absorbed_from_center,
-                cell = cell,
-                cell_density = density_grid.grid[i, j],
-                Rg = Rg,
-                mu_electron = mu_electron,
-                source_position = [0, 0, z_xray],
-                source_luminosity = xray_luminosity,
-                include_scattered = include_scattered,
-                absorption_opacity = absorption_opacity,
-                z_xray=z_xray,
-                nodes=nodes,
-                weights=weights,
-            )
-        end
-        return ret
-    end
-    rets = nothing
-    if parallel
-        if is_logging(stderr)
-            rets = pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
-        else
-            rets = @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
-        end
-    else
-        rets = f.(1:(length(density_grid.r_range) - 1))
-    end
-    rets = reduce(hcat, rets)'
-    return rets
-end
+#function compute_total_flux_grid(
+#    density_grid,
+#    ionization_grid;
+#    Rg,
+#    mu_nucleon = 0.61,
+#    mu_electron = 1.17,
+#    xray_luminosity,
+#    parallel = true,
+#    include_scattered = true,
+#    z_xray,
+#    absorption_opacity,
+#    n_nodes = 10,
+#)
+#    ret = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1)
+#    absorbed_from_center = compute_luminosity_absorbed_grid(
+#        density_grid,
+#        ionization_grid,
+#        Rg = Rg,
+#        source_position = [0, 0, z_xray],
+#        source_luminosity = xray_luminosity,
+#        mu_electron = mu_electron,
+#        mu_nucleon = mu_nucleon,
+#    )
+#    nodes, weights = gausslegendre(n_nodes)
+#    function f(i)
+#        ret = zeros(length(density_grid.z_range) - 1)
+#        for j = 1:(length(density_grid.z_range) - 1)
+#            cell = Rectangle(
+#                density_grid.r_range[i],
+#                density_grid.r_range[i + 1],
+#                density_grid.z_range[j],
+#                density_grid.z_range[j + 1],
+#            )
+#            ret[j] = compute_total_flux_in_cell(
+#                density_grid,
+#                ionization_grid,
+#                scattered_luminosity_per_cell = absorbed_from_center,
+#                cell = cell,
+#                cell_density = density_grid.grid[i, j],
+#                Rg = Rg,
+#                mu_electron = mu_electron,
+#                source_position = [0, 0, z_xray],
+#                source_luminosity = xray_luminosity,
+#                include_scattered = include_scattered,
+#                absorption_opacity = absorption_opacity,
+#                z_xray = z_xray,
+#                nodes = nodes,
+#                weights = weights,
+#            )
+#        end
+#        return ret
+#    end
+#    rets = nothing
+#    if parallel
+#        if is_logging(stderr)
+#            rets =
+#                @showprogress pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+#        else
+#            rets = pmap(f, 1:(length(density_grid.r_range) - 1), batch_size = 10)
+#        end
+#    else
+#        rets = f.(1:(length(density_grid.r_range) - 1))
+#    end
+#    rets = reduce(hcat, rets)'
+#    return rets
+#end
 
-compute_total_flux_grid(radiation::Radiation; parallel = true) = compute_total_flux_grid(
+compute_total_flux_grid(radiation; parallel = true) = compute_total_flux_grid(
     radiation.wi.density_grid,
     radiation.wi.ionization_grid,
     Rg = radiation.bh.Rg,
@@ -577,3 +594,172 @@ compute_total_flux_grid(radiation::Radiation; parallel = true) = compute_total_f
     absorption_opacity = radiation.xray_opacity,
     parallel = parallel,
 )
+
+struct ScatteredLuminosityGrid{T,U,V} <: InterpolationGrid
+    r_range::Vector{T}
+    z_range::Vector{T}
+    grid::Array{T,2}
+    nr::Union{U,String}
+    nz::U
+    iterator::GridIterator{T,U,V}
+    interpolator::Any
+    function ScatteredLuminosityGrid(r_range, z_range, grid, nr = nothing, nz = nothing)
+        if nr === nothing
+            nr = length(r_range)
+        end
+        if nz === nothing
+            nz = length(z_range)
+        end
+        iterator = GridIterator(r_range, z_range)
+        interpolator =
+            Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
+        interpolator = Interpolations.extrapolate(interpolator, 1e2)
+        return new{typeof(r_range[1]),Int,Bool}(
+            r_range,
+            z_range,
+            grid,
+            nr,
+            nz,
+            iterator,
+            interpolator,
+        )
+    end
+end
+
+function ScatteredLuminosityGrid(nr::Union{String,Int}, nz::Int, value::Number)
+    r_range = [-1.0, 0.0]
+    z_range = [-1.0, 0.0]
+    density_grid = value .* [[1.0, 1.0] [1.0, 1.0]]
+    return ScatteredLuminosityGrid(r_range, z_range, density_grid, nr, nz)
+end
+
+function ScatteredLuminosityGrid(
+    density_grid::DensityGrid;
+    Rg,
+    source_luminosity,
+    source_position,
+    mu_electron = 1.17,
+    mu_nucleon = 0.61,
+)
+    grid = compute_luminosity_absorbed_grid(
+        density_grid,
+        Rg = Rg,
+        source_luminosity = source_luminosity,
+        source_position = source_position,
+        mu_electron = mu_electron,
+        mu_nucleon = mu_nucleon,
+    )
+    rr = density_grid.r_range[1:(end - 1)] + diff(density_grid.r_range) / 2
+    zz = density_grid.z_range[1:(end - 1)] + diff(density_grid.z_range) / 2
+    return ScatteredLuminosityGrid(rr, zz, grid, density_grid.nr, density_grid.nz)
+end
+
+ScatteredLuminosityGrid(density_grid, rad) = ScatteredLuminosityGrid(
+    density_grid,
+    Rg = rad.bh.Rg,
+    source_luminosity = rad.xray_luminosity,
+    source_position = (0, 0, rad.z_xray),
+    mu_electron = rad.mu_electron,
+    mu_nucleon = rad.mu_nucleon,
+)
+
+function interpolate_scattered_luminosity(grid::ScatteredLuminosityGrid, r, z)
+    return grid.interpolator(r, z)
+end
+
+function get_scattered_luminosity(grid::ScatteredLuminosityGrid, r, z)
+    if point_outside_grid(grid, r, z)
+        return 0.0
+    end
+    ridx = searchsorted_nearest(grid.r_range, r)
+    zidx = searchsorted_nearest(grid.z_range, z)
+    return grid.grid[ridx, zidx]
+end
+
+function scattered_flux_in_point_integrand!(
+    v,
+    scattered_luminosity_grid,
+    density_grid;
+    r_source,
+    z_source,
+    phi_source,
+    r_target,
+    z_target,
+    Rg,
+    mu_electron = 1.17,
+    mu_nucleon = 0.61,
+    absorption_opacity,
+)
+    source_luminosity =
+        interpolate_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
+    distance =
+        compute_distance_cylindrical(
+            r_source,
+            phi_source,
+            z_source,
+            r_target,
+            0,
+            z_target,
+        ) * Rg
+    distance = max(distance, 1e-6)
+    tau = compute_optical_depth(
+        density_grid.iterator,
+        density_grid,
+        absorption_opacity,
+        ri = r_source,
+        phii = phi_source,
+        zi = z_source,
+        rf = r_target,
+        phif = 0,
+        zf = z_target,
+        Rg = Rg,
+        mu_electron = mu_electron,
+        mu_nucleon = mu_nucleon,
+        source_luminosity = source_luminosity,
+        max_tau = 20,
+    )
+    v[1] = source_luminosity * exp(-tau) / distance^2
+end
+
+function scattered_flux_in_point(
+    scattered_luminosity_grid,
+    density_grid;
+    r,
+    z,
+    absorption_opacity,
+    mu_electron = 1.17,
+    mu_nucleon = 0.61,
+    Rg,
+    #nodes,
+    #weights,
+    rtol = 1e-3,
+    atol = 0,
+    norm = Cubature.INDIVIDUAL,
+    maxevals = 50000,
+)
+    f(x, v) = scattered_flux_in_point_integrand!(
+        v,
+        scattered_luminosity_grid,
+        density_grid,
+        r_source = x[1],
+        phi_source = x[2],
+        z_source = x[3],
+        r_target = r,
+        z_target = z,
+        absorption_opacity = absorption_opacity,
+        mu_electron = mu_electron,
+        mu_nucleon = mu_nucleon,
+        Rg = Rg,
+    )
+    integrated, error = hcubature(
+        1,
+        f,
+        (density_grid.r_range[1], 0, density_grid.z_range[1]),
+        (density_grid.r_range[end], π, density_grid.z_range[end]),
+        abstol = atol,
+        reltol = rtol,
+        error_norm = norm,
+        maxevals = maxevals,
+    )
+    return integrated[1]
+end
