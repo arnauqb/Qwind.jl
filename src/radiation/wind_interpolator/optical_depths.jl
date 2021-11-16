@@ -20,10 +20,6 @@ function compute_optical_depth_cell(
 )
     iterator = density_grid.iterator
     cell_density = density_grid.grid[r_idx, z_idx]
-    #cell_ion = ionization_grid.grid[
-    #    min(r_idx, ionization_grid.nr),
-    #    min(z_idx, ionization_grid.nz),
-    #]
     dx = sqrt(source_luminosity * exp(-tau_to_cell) / cell_density / 1e5) / Rg
     distance_to_source = compute_distance_cylindrical(
         ri,

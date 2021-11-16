@@ -246,26 +246,26 @@ function save(u, t, integrator, radiation::Radiation, trajectory_id)
         phif = 0.0,
     )
     #ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
-    ξ = compute_ionization_parameter(
-        r = r,
-        z = z,
-        vr = vr,
-        vz = vz,
-        number_density = density,
-        tau_x = taux,
-        xray_luminosity = radiation.xray_luminosity,
-        Rg = radiation.bh.Rg,
-        include_scattering = radiation.xray_scattering,
-        scattered_luminosity_grid = radiation.wi.scattered_lumin_grid,
-        density_grid = radiation.wi.density_grid,
-        absorption_opacity = radiation.xray_opacity,
-        zh = radiation.z_xray,
-        mu_electron = radiation.mu_electron,
-        mu_nucleon = radiation.mu_nucleon,
-    )
+    #ξ = compute_ionization_parameter(
+    #    r = r,
+    #    z = z,
+    #    vr = vr,
+    #    vz = vz,
+    #    number_density = density,
+    #    tau_x = taux,
+    #    xray_luminosity = radiation.xray_luminosity,
+    #    Rg = radiation.bh.Rg,
+    #    include_scattering = radiation.xray_scattering,
+    #    scattered_luminosity_grid = radiation.wi.scattered_lumin_grid,
+    #    density_grid = radiation.wi.density_grid,
+    #    absorption_opacity = radiation.xray_opacity,
+    #    zh = radiation.z_xray,
+    #    mu_electron = radiation.mu_electron,
+    #    mu_nucleon = radiation.mu_nucleon,
+    #)
     #ξ = interpolate_ionization_parameter(radiation.wi.ionization_grid, r, z)
     taueff = compute_tau_eff(density, dvdr)
-    forcemultiplier = compute_force_multiplier(taueff, ξ)
+    #forcemultiplier = compute_force_multiplier(taueff, ξ)
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
@@ -275,9 +275,9 @@ function save(u, t, integrator, radiation::Radiation, trajectory_id)
     push!(data[:dvdr], dvdr)
     #push!(data[:taux], taux)
     push!(data[:tauuv], 0.0)
-    push!(data[:xi], ξ)
+    #push!(data[:xi], ξ)
     push!(data[:taueff], taueff)
-    push!(data[:fm], forcemultiplier)
+    #push!(data[:fm], forcemultiplier)
     return 0.0
 end
 
@@ -330,22 +330,14 @@ function compute_radiation_acceleration(radiation::Radiation, du, u, p::Paramete
         zf = z,
     )
     #ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
-    ξ = compute_ionization_parameter(
+    @time ξ = compute_ionization_parameter(
+        radiation,
         r = r,
         z = z,
         vr = vr,
         vz = vz,
         number_density = density,
         tau_x = taux,
-        xray_luminosity = radiation.xray_luminosity,
-        Rg = radiation.bh.Rg,
-        include_scattering = radiation.xray_scattering,
-        scattered_luminosity_grid = radiation.wi.scattered_lumin_grid,
-        density_grid = radiation.wi.density_grid,
-        absorption_opacity = radiation.xray_opacity,
-        zh = radiation.z_xray,
-        mu_electron = radiation.mu_electron,
-        mu_nucleon = radiation.mu_nucleon,
     )
     #ξ = interpolate_ionization_parameter(radiation.wi.ionization_grid, r, z)
     taueff = compute_tau_eff(density, dvdr)

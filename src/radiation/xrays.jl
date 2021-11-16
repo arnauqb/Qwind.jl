@@ -43,13 +43,13 @@ function compute_ionization_parameter(;
     return max(ret, 1e-20)
 end
 
-compute_ionization_parameter(radiation::Radiation; r, z, vr, vz, n, tau_x) =
+compute_ionization_parameter(radiation::Radiation; r, z, vr, vz, number_density, tau_x) =
     compute_ionization_parameter(
         r = r,
         z = z,
         vr = vr,
         vz = vz,
-        number_density = n,
+        number_density = number_density,
         tau_x = tau_x,
         xray_luminosity = radiation.xray_luminosity,
         Rg = radiation.bh.Rg,

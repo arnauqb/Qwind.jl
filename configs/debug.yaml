@@ -21,7 +21,7 @@ radiation:
   disk_height: 0.0
   uv_opacity: thomson
   xray_opacity: boost 
-  xray_scattering: false 
+  xray_scattering: true
   tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
@@ -52,7 +52,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 3
+  n_iterations: 1
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
