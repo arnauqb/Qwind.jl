@@ -384,6 +384,7 @@ function compute_scattered_flux_in_cell(
                     mu_electron = mu_electron,
                     mu_nucleon = mu_nucleon,
                     max_tau = 20,
+                    source_luminosity = source_luminosity,
                 )
                 ret = source_luminosity * exp(-tau) / distance^2
                 return ret
@@ -628,7 +629,7 @@ end
 function ScatteredLuminosityGrid(nr::Union{String,Int}, nz::Int, value::Number)
     r_range = [-1.0, 0.0]
     z_range = [-1.0, 0.0]
-    density_grid = value.* [[1.0, 1.0] [1.0, 1.0]]
+    density_grid = value .* [[1.0, 1.0] [1.0, 1.0]]
     return ScatteredLuminosityGrid(r_range, z_range, density_grid, nr, nz)
 end
 
@@ -688,10 +689,9 @@ function scattered_flux_in_point_integrand!(
     mu_electron = 1.17,
     mu_nucleon = 0.61,
     absorption_opacity,
-    source_luminosity,
 )
     source_luminosity =
-        interpolate_scattered_luminosity(scattered_luminosty_grid, r_source, z_source)
+        interpolate_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
     distance =
         compute_distance_cylindrical(
             r_source,
@@ -737,7 +737,7 @@ function scattered_flux_in_point(
     norm = Cubature.INDIVIDUAL,
     maxevals = 50000,
 )
-    f(x, v) = scattered_flux_in_point_integrand(
+    f(x, v) = scattered_flux_in_point_integrand!(
         v,
         scattered_luminosity_grid,
         density_grid,
@@ -754,12 +754,12 @@ function scattered_flux_in_point(
     integrated, error = hcubature(
         1,
         f,
-        (density_grid.r_rnage[1], 0, density_grid.z_range[1]),
-        (density_grid.r_rnage[end], π, density_grid.z_range[end]),
+        (density_grid.r_range[1], 0, density_grid.z_range[1]),
+        (density_grid.r_range[end], π, density_grid.z_range[end]),
         abstol = atol,
         reltol = rtol,
         error_norm = norm,
         maxevals = maxevals,
     )
-    return integrated
+    return integrated[1]
 end

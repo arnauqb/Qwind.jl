@@ -25,12 +25,13 @@ update_model!(model::Model, radiation::Radiation) = (model.rad = radiation)
 
 run_parallel!(config::String, iterations_dict) =
     run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}), iterations_dict)
-run!(config::String, iterations_dict = nothing) = run!(
+run!(config::String, iterations_dict = nothing; parallel = true) = run!(
     YAML.load_file(config, dicttype = Dict{Symbol,Any}),
     iterations_dict = iterations_dict,
+    parallel = parallel,
 )
-run!(config::Dict, iterations_dict = nothing) =
-    run!(Model(config), iterations_dict = iterations_dict)
+run!(config::Dict, iterations_dict = nothing; parallel = true) =
+    run!(Model(config), iterations_dict = iterations_dict, parallel = parallel)
 
 initialize_integrators(model::Model) = initialize_integrators(
     model.rad,

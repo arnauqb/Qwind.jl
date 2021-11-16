@@ -19,14 +19,41 @@ function get_model(config)
     return model, iterations_dict
 end
 model, iterations_dict = get_model("./configs/tests/xi.yaml");
-run!(model, iterations_dict);
+run!(model, iterations_dict, parallel = true);
 
-rr = range(6, 1500, length=500);
-zz = 10 .^ range(-6, log10(1500), length=500);
+#Profile.clear()
+integ = Qwind.create_and_run_integrator(
+        model,
+        linewidth = 1,
+        r0 = 100,
+        atol = 1e-8,
+        rtol = 1e-3,
+        trajectory_id = 1,
+    );
+#pprof()
+
+
+r = 1000
+z = 1
+phi = 0
+n = 1e9
+tau_x = compute_tau_xray(model.rad, ri = 0.0, phii = 0, zi = 0, rf = r, phif = phi, zf = z)
+compute_ionization_parameter(model.rad, 
+    r = r,
+    z = z,
+    vr = 0,
+    vz = 0,
+    n = n,
+    tau_x = tau_x,
+)
+
+
+rr = range(6, 1500, length = 500);
+zz = 10 .^ range(-6, log10(1500), length = 500);
 ret = zeros(length(rr), length(zz));
 for (i, r) in enumerate(rr)
     for (j, z) in enumerate(zz)
-        ret[i,j] = compute_tau_xray(
+        ret[i, j] = compute_tau_xray(
             model.rad,
             ri = 0.0,
             phii = 0.0,
@@ -39,16 +66,15 @@ for (i, r) in enumerate(rr)
 end
 
 fig, ax = plt.subplots()
-cm = ax.pcolormesh(rr, zz, ret', norm=LogNorm(vmin=1e-2, vmax=1e2))
-plt.colorbar(cm, ax=ax)
+cm = ax.pcolormesh(rr, zz, ret', norm = LogNorm(vmin = 1e-2, vmax = 1e2))
+plt.colorbar(cm, ax = ax)
 
-compute_tau_xray(model.rad, ri=0.0, phii=0, zi=0, rf=1000, phif=1, zf=1)
 
 
 scattered_grid = ScatteredLuminosityGrid()
 
-rr = range(6, 1500, length=500);
-zz = 10 .^ range(-6, log10(1500), length=500);
+rr = range(6, 1500, length = 500);
+zz = 10 .^ range(-6, log10(1500), length = 500);
 real_grid = zeros(length(rr), length(zz));
 int_grid = zeros(length(rr), length(zz));
 for (i, r) in enumerate(rr)
@@ -64,19 +90,20 @@ for (i, r) in enumerate(rr)
         )
         density = interpolate_density(model.rad.wi.density_grid, r, z)
         xi = compute_ionization_parameter(model.rad, r, z, 1e-4, 1e-4, density, taux)
-        int_grid[i, j] = interpolate_ionization_parameter(model.rad.wi.ionization_grid, r, z)
+        int_grid[i, j] =
+            interpolate_ionization_parameter(model.rad.wi.ionization_grid, r, z)
         real_grid[i, j] = xi
     end
 end
 
 
 fig, ax = plt.subplots(1, 2)
-ax[1].pcolormesh(rr, zz, real_grid', norm=LogNorm())
-ax[2].pcolormesh(rr, zz, int_grid', norm=LogNorm())
+ax[1].pcolormesh(rr, zz, real_grid', norm = LogNorm())
+ax[2].pcolormesh(rr, zz, int_grid', norm = LogNorm())
 
 fig, ax = plt.subplots()
-cm = ax.pcolormesh(rr, zz, (real_grid ./ int_grid)', norm=LogNorm())
-plt.colorbar(cm, ax=ax)
+cm = ax.pcolormesh(rr, zz, (real_grid ./ int_grid)', norm = LogNorm())
+plt.colorbar(cm, ax = ax)
 
 iterations_dict[1] = Dict()
 integrators, streamlines =
@@ -85,7 +112,7 @@ wi = model.rad.wi;
 
 #new_radiation = update_radiation(model.rad, streamlines)
 
-hull = Hull(streamlines, rtol=1e-2);
+hull = Hull(streamlines, rtol = 1e-2);
 
 density_grid = update_density_grid(wi.density_grid, wi.update_grid_flag, streamlines, hull);
 velocity_grid =
@@ -137,7 +164,7 @@ absorbed_from_center = compute_luminosity_absorbed_grid(
 );
 
 
-nodes,weights = gausslegendre(10);
+nodes, weights = gausslegendre(10);
 i = 25;
 j = 26;
 #Profile.clear()
@@ -156,12 +183,12 @@ j = 26;
     mu_electron = 1.17,
     mu_nucleon = 0.61,
     Rg = model.bh.Rg,
-    nodes=nodes,
-    weights=weights,
+    nodes = nodes,
+    weights = weights,
 )
 #pprof()
 
-times = zeros(length(density_grid.r_range)-1, length(density_grid.z_range)-1);
+times = zeros(length(density_grid.r_range) - 1, length(density_grid.z_range) - 1);
 for i = 1:(length(density_grid.r_range) - 1)
     for j = 1:(length(density_grid.z_range) - 1)
         r_source = (density_grid.r_range[i + 1] + density_grid.r_range[i]) / 2
@@ -172,7 +199,7 @@ for i = 1:(length(density_grid.r_range) - 1)
             ion0,
             BoostOpacity(),
             ri = 0,
-            phii = π/2,
+            phii = π / 2,
             zi = 0,
             rf = density_grid.r_range[i],
             phif = 0,
@@ -187,5 +214,10 @@ for i = 1:(length(density_grid.r_range) - 1)
 end
 
 fig, ax = plt.subplots()
-cm = ax.pcolormesh(density_grid.r_range[1:end-1], density_grid.z_range[1:end-1], times', norm=LogNorm())
+cm = ax.pcolormesh(
+    density_grid.r_range[1:(end - 1)],
+    density_grid.z_range[1:(end - 1)],
+    times',
+    norm = LogNorm(),
+)
 plt.colorbar(cm, ax = ax)
