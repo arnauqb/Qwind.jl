@@ -5,7 +5,7 @@ export Hull
 
 function Hull(r::Vector{Float64}, z::Vector{Float64})
     points = [[r[i], z[i]] for i = 1:length(r)]
-    hull = ConcaveHull.concave_hull(points)
+    hull = ConcaveHull.concave_hull(points, 500)
     return hull
 end
 
