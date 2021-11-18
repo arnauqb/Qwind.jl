@@ -29,9 +29,10 @@ include("wind/iterator.jl")
 include("wind/base.jl")
 
 # radiation
-include("radiation/base.jl")
 include("radiation/disk.jl")
 include("radiation/force_multiplier.jl")
+include("radiation/scattering.jl")
+include("radiation/base.jl")
 include("radiation/xrays.jl")
 include("radiation/relativistic_correction.jl")
 include("radiation/disk_integration.jl")

@@ -6,10 +6,11 @@ struct Radiation{T<:AbstractFloat}
     fuv_grid::Vector{T}
     mdot_grid::Vector{T}
     xray_luminosity::T
+    scattered_lumin_grid::ScatteredLuminosityGrid
 end
 
-function Radiation(bh::BlackHole; nr, fx, fuv, disk_r_in, disk_r_out)
-    disk_grid = 10 .^ range(log10(disk_r_in), log10(disk_r_out), length = nr)
+function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, nz)
+    disk_grid = 10 .^ range(log10(disk_r_in), log10(disk_r_out), length = disk_nr)
     if fuv == "auto"
         uvf = uv_fractions(bh, disk_grid)
     else
@@ -20,18 +21,21 @@ function Radiation(bh::BlackHole; nr, fx, fuv, disk_r_in, disk_r_out)
     end
     mdot_grid = bh.mdot .* ones(length(disk_grid))
     xray_luminosity = fx * compute_bolometric_luminosity(bh)
-    return Radiation(bh, disk_grid, uvf, mdot_grid, xray_luminosity)
+    scatt_lumin = ScatteredLuminosityGrid(nr, nz, 0.0)
+    return Radiation(bh, disk_grid, uvf, mdot_grid, xray_luminosity, scatt_lumin)
 end
 
 # read from config
 function Radiation(bh::BlackHole, parameters::Parameters)
     return Radiation(
         bh,
-        nr = parameters.disk_nr,
+        disk_nr = parameters.disk_nr,
         fx = parameters.f_x,
         fuv = parameters.f_uv,
         disk_r_in = parameters.disk_r_in,
         disk_r_out = parameters.disk_r_out,
+        nr = parameters.radiation_grid_nr,
+        nz = parameters.radiation_grid_nz,
     )
 end
 
@@ -46,8 +50,6 @@ get_efficiency(radiation::Radiation) = radiation.bh.efficiency
 get_spin(radiation::Radiation) = radiation.bh.spin
 get_isco(radiation::Radiation) = radiation.bh.isco
 
-
-
 # Disk functions
 
 """
@@ -60,28 +62,6 @@ function get_fuv_mdot(radiation::Radiation, r)
     mdot = radiation.mdot_grid[r_index]
     return f_uv, mdot
 end
-
-#function set_tau_uv_calculation(radiation, tau_uv_calculation)
-#    return Radiation(
-#        radiation.bh,
-#        radiation.wi,
-#        radiation.disk_grid,
-#        radiation.fuv_grid,
-#        radiation.mdot_grid,
-#        radiation.xray_luminosity,
-#        radiation.disk_r_in,
-#        radiation.z_xray,
-#        radiation.z_disk,
-#        radiation.mu_nucleon,
-#        radiation.mu_electron,
-#        radiation.relativistic,
-#        radiation.uv_opacity,
-#        radiation.xray_opacity,
-#        radiation.xray_scattering,
-#        tau_uv_calculation,
-#        radiation.disk_integral_rtol,
-#    )
-#end
 
 # Optical depths
 

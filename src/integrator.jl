@@ -112,13 +112,14 @@ function initialize_integrator(
         saved_data,
     )
     callback_set = CallbackSet(termination_callback, saving_callback)
-    a₀ = compute_initial_acceleration(rad, params, r0, z0, 0, v0, integ_params)
+    a₀ = compute_initial_acceleration(rad, wind, params, r0, z0, 0, v0, integ_params)
     du₀ = [0.0, v0, a₀[1], a₀[2]]
     u₀ = [r0, z0, 0.0, v0]
     tspan = (0.0, tmax)
-    dae_problem = create_dae_problem(rad, params, residual!, du₀, u₀, tspan, integ_params)
+    dae_problem =
+        create_dae_problem(rad, wind, params, residual!, du₀, u₀, tspan, integ_params)
     integrator = init(dae_problem, IDA(init_all = false), callback = callback_set)
-    integrator.opts.abstol = params.integrator_atol 
+    integrator.opts.abstol = params.integrator_atol
     integrator.opts.reltol = params.integrator_rtol
     return integrator
 end
@@ -231,7 +232,15 @@ function affect!(integrator)
     terminate!(integrator)
 end
 
-function save(u, t, integrator, radiation::Radiation, wind::Wind, parameters::Parameters, trajectory_id)
+function save(
+    u,
+    t,
+    integrator,
+    radiation::Radiation,
+    wind::Wind,
+    parameters::Parameters,
+    trajectory_id,
+)
     if integrator.p.finished[1]
         return 0.0
     end
@@ -291,7 +300,7 @@ function save(u, t, integrator, radiation::Radiation, wind::Wind, parameters::Pa
     return 0.0
 end
 
-function residual!(radiation::Radiation, parameters, out, du, u, p, t)
+function residual!(radiation::Radiation, wind, parameters, out, du, u, p, t)
     r, z, vr, vz = u
     r_dot, z_dot, vr_dot, vz_dot = du
     if r <= 0 || z < 0 # we force it to fail
@@ -299,13 +308,8 @@ function residual!(radiation::Radiation, parameters, out, du, u, p, t)
         centrifugal_term = 0.0
         gravitational_acceleration = compute_gravitational_acceleration(abs(r), abs(z))
     else
-        radiation_acceleration = compute_radiation_acceleration(
-            radiation,
-            parameters,
-            du,
-            u,
-            p,
-        )
+        radiation_acceleration =
+            compute_radiation_acceleration(radiation, wind, parameters, du, u, p)
         centrifugal_term = p.l0^2 / r^3
         gravitational_acceleration = compute_gravitational_acceleration(r, z)
     end
@@ -317,8 +321,18 @@ function residual!(radiation::Radiation, parameters, out, du, u, p, t)
     out[4] = vz_dot - az
 end
 
-function create_dae_problem(radiation, parameters, residual!, du₀, u₀, tspan, integ_params)
-    func!(out, du, u, p, t) = residual!(radiation, parameters, out, du, u, integ_params, t)
+function create_dae_problem(
+    radiation,
+    wind,
+    parameters,
+    residual!,
+    du₀,
+    u₀,
+    tspan,
+    integ_params,
+)
+    func!(out, du, u, p, t) =
+        residual!(radiation, wind, parameters, out, du, u, integ_params, t)
     return DAEProblem(
         func!,
         du₀,
@@ -331,6 +345,7 @@ end
 
 function compute_radiation_acceleration(
     radiation::Radiation,
+    wind::Wind,
     parameters::Parameters,
     du,
     u,
@@ -342,20 +357,33 @@ function compute_radiation_acceleration(
     at = sqrt(ar^2 + az^2)
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integ_parameters)
-    #taux = compute_tau_xray(
-    #    radiation,
-    #    ri = 0.0,
-    #    phii = 0.0,
-    #    zi = radiation.z_xray,
-    #    rf = r,
-    #    phif = 0.0,
-    #    zf = z,
-    #)
-    taux = 0.0
-    #ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
-    ξ = 0.0
+    taux = compute_tau_xray(
+        wind.density_grid,
+        wind.grid_iterator,
+        radiation,
+        parameters,
+        ri = 0.0,
+        phii = 0.0,
+        zi = parameters.z_xray,
+        rf = r,
+        phif = 0.0,
+        zf = z,
+    )
+    #taux = 0.0
+    ξ = compute_ionization_parameter(
+        radiation,
+        wind,
+        parameters,
+        r = r,
+        z = z,
+        vr = vr,
+        vz = vz,
+        number_density = density,
+        tau_x = taux,
+    )
+    #ξ = 0.0
     taueff = compute_tau_eff(density, dvdr)
-    taueff = 1.0
+    #taueff = 1.0
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(
         radiation,
@@ -371,6 +399,7 @@ end
 
 function compute_initial_acceleration(
     radiation::Radiation,
+    wind::Wind,
     parameters::Parameters,
     r,
     z,
@@ -381,13 +410,8 @@ function compute_initial_acceleration(
     u = [r, z, vr, vz]
     du = [vr, vz, 0, 0]
     gravitational_acceleration = compute_gravitational_acceleration(r, z)
-    radiation_acceleration = compute_radiation_acceleration(
-        radiation,
-        parameters,
-        du,
-        u,
-        integ_params,
-    )
+    radiation_acceleration =
+        compute_radiation_acceleration(radiation, wind, parameters, du, u, integ_params)
     centrifugal_term = integ_params.l0^2 / r^3
     if r == 0
         centrifugal_term = 0.0
@@ -396,13 +420,8 @@ function compute_initial_acceleration(
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     # second estimation
     du = [vr, vz, ar, az]
-    radiation_acceleration = compute_radiation_acceleration(
-        radiation,
-        parameters,
-        du,
-        u,
-        integ_params,
-    )
+    radiation_acceleration =
+        compute_radiation_acceleration(radiation, wind, parameters, du, u, integ_params)
     ar = centrifugal_term + gravitational_acceleration[1] + radiation_acceleration[1]
     az = gravitational_acceleration[2] + radiation_acceleration[2]
     return [ar, az]

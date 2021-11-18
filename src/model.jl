@@ -41,7 +41,7 @@ initialize_integrators(model::Model) = initialize_integrators(
     rtol = model.parameters.integrator_rtol,
 )
 
-function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel = true)
+function run_integrators(model::Model, iterations_dict::Dict; it_num, parallel = true)
     @info "Computing initial conditions for iteration $it_num..."
     lines_range, lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
@@ -82,7 +82,7 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel = 
     end
     save_path = model.parameters.save_path
     integrators, streamlines =
-        run_integrators!(model, iterations_dict, it_num = it_num, parallel = parallel)
+        run_integrators(model, iterations_dict, it_num = it_num, parallel = parallel)
     @info "Integration of iteration $it_num ended!"
     @info "Saving results..."
     flush()

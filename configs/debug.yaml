@@ -13,17 +13,17 @@ radiation:
   disk_height: 0.0
   uv_opacity: thomson
   xray_opacity: boost 
-  xray_scattering: false
+  xray_scattering: true
   tau_uv_calculation: no_tau_uv
   wind_interpolator:
     update_grid_method: "average"
     vacuum_density: 1e2
-    nz: 500
-    nr: auto 
+    nz: 10
+    nr: 11 
 
 initial_conditions:
   mode: cak
-  r_in: 20.0
+  r_in: 40.0
   r_fi: 1500.0
   n_trajs: auto
   z0: 0.0 

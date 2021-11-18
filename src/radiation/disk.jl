@@ -144,11 +144,11 @@ function disk_flux(bh::BlackHole, r)
     return 3 * G * bh.M * Mdot / (8 * π * (r * bh.Rg)^3) * NT_factors
 end
 
-function disk_flux(radiation::Radiation, r)
-    Mdot = compute_mass_accretion_rate(radiation, r)
-    NT_factors = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
-    return 3 * G * bh.M * Mdot / (8 * π * (r * bh.Rg)^3) * NT_factors
-end
+#function disk_flux(radiation::Radiation, r)
+#    Mdot = compute_mass_accretion_rate(radiation, r)
+#    NT_factors = disk_nt_rel_factors(r, radiation.spin, radiation.isco)
+#    return 3 * G * bh.M * Mdot / (8 * π * (r * bh.Rg)^3) * NT_factors
+#end
 
 function disk_flux_norel(bh::BlackHole, r)
     Mdot = compute_mass_accretion_rate(bh)

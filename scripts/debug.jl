@@ -20,22 +20,16 @@ function get_model(config)
 end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict, parallel=true)
+#integs, sls = Qwind.run_integrators(model, iterations_dict; it_num=1, parallel = true);
 
 #run_iteration!(model, iterations_dict, parallel = true, it_num=1);
 
-sls = iterations_dict[1]["streamlines"];
-fig, ax = plt.subplots()
-for sl in sls
-    ax.plot(sl.r, sl.z)
-end
 
 Profile.clear()
-integ = Qwind.create_and_run_integrator(
+@profile integ = Qwind.create_and_run_integrator(
         model,
         linewidth = 1,
         r0 = 100,
-        atol = 1e-8,
-        rtol = 1e-3,
         trajectory_id = 1,
     );
 pprof()
