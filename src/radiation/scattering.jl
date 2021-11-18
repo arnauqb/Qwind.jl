@@ -9,7 +9,6 @@ export Rectangle,
     ScatteredLuminosityGrid,
     scattered_flux_in_point
 
-
 struct Rectangle{T<:AbstractFloat}
     rmin::T
     rmax::T

@@ -1,9 +1,9 @@
 # general pieces of a model
 
-export DensityInterpolator,
-    GridInterpolator,
+export FMInterpolationFlag,
     FMNoInterp,
     FMInterp,
+    RelativisticFlag,
     Relativistic,
     NoRelativistic,
     ConstantUVFraction,
@@ -12,9 +12,20 @@ export DensityInterpolator,
     TauUVCenter,
     TauUVDisk,
     NoTauUV,
+    OpacityFlag,
     BoostOpacity,
     ThomsonOpacity,
-    NoOpacity
+    NoOpacity,
+    XRayScatteringFlag,
+    Scattering,
+    NoScattering,
+    ICFlag,
+    CAKMode,
+    UniformMode,
+    UpdateGridFlag,
+    AverageGrid,
+    ReplaceGrid
+
 
 abstract type InitialConditions{T<:AbstractFloat} end
 abstract type Grid{T<:AbstractFloat} end
@@ -54,3 +65,13 @@ struct NoTauUV <: TauUVCalculationFlag end
 abstract type UpdateGridFlag end
 struct AverageGrid <: UpdateGridFlag end
 struct ReplaceGrid <: UpdateGridFlag end
+
+# X-ray scattering
+abstract type XRayScatteringFlag end
+struct Scattering <: XRayScatteringFlag end
+struct NoScattering <: XRayScatteringFlag end
+
+# Initial conditions flags
+abstract type ICFlag end
+struct CAKMode <: ICFlag end
+struct UniformMode <: ICFlag end

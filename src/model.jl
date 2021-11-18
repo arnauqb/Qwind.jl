@@ -3,25 +3,25 @@ import Qwind: create_and_run_integrator
 
 using YAML, Printf, ProgressMeter
 
-mutable struct Model{T<:AbstractFloat}
-    config::Dict
-    wind_grid::Grid{T}
+mutable struct Model{T<:AbstractFloat,U<:Int,V<:Bool,S<:Flag,W<:String}
+    parameters::Parameters{T,S,V,U,W}
     bh::BlackHole{T}
+    wind::Wind{T,U,V}
     rad::Radiation{T}
     ic::InitialConditions{T}
 end
 
 function Model(config::Dict)
-    bh = BlackHole(config)
-    rad = Radiation(bh, config)
-    wind_grid = Rectangular(config)
-    ic = getfield(Qwind, Symbol(config[:initial_conditions][:mode]))(rad, config)
-    save_path = config[:integrator][:save_path]
-    return Model(config, wind_grid, bh, rad, ic)
+    parameters = Parameters(config)
+    bh = BlackHole(parameters)
+    rad = Radiation(bh, parameters)
+    wind = Wind(parameters)
+    ic = get_initial_conditions(rad, parameters)
+    return Model(parameters, bh, wind, rad, ic)
 end
 
 Model(config_path::String) = Model(YAML.load_file(config_path, dicttype = Dict{Symbol,Any}))
-update_model!(model::Model, radiation::Radiation) = (model.rad = radiation)
+update_wind!(model::Model, wind::Wind) = (model.wind = wind)
 
 run_parallel!(config::String, iterations_dict) =
     run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}), iterations_dict)
@@ -35,10 +35,10 @@ run!(config::Dict, iterations_dict = nothing; parallel = true) =
 
 initialize_integrators(model::Model) = initialize_integrators(
     model.rad,
-    model.wind_grid,
+    model.wind,
     model.ic,
-    atol = model.config[:integrator][:atol],
-    rtol = model.config[:integrator][:rtol],
+    atol = model.parameters.integrator_atol,
+    rtol = model.parameters.integrator_rtol,
 )
 
 function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel = true)
@@ -48,8 +48,6 @@ function run_integrators!(model::Model, iterations_dict::Dict; it_num, parallel 
         model,
         linewidth = lines_widths[i],
         r0 = lines_range[i],
-        atol = model.config[:integrator][:atol],
-        rtol = model.config[:integrator][:rtol],
         trajectory_id = i,
     )
     @info "Starting iteration $it_num ..."
@@ -82,7 +80,7 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel = 
     if it_num ∉ keys(iterations_dict)
         iterations_dict[1] = Dict()
     end
-    save_path = model.config[:integrator][:save_path]
+    save_path = model.parameters.save_path
     integrators, streamlines =
         run_integrators!(model, iterations_dict, it_num = it_num, parallel = parallel)
     @info "Integration of iteration $it_num ended!"
@@ -95,8 +93,8 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel = 
     @info "Mass loss fraction $(wind_properties["mass_loss_fraction"])"
     @info "KL fraction $(wind_properties["kinetic_luminosity"] / wind_properties["bolometric_luminosity"])"
     flush()
-    new_radiation = update_radiation(model.rad, streamlines)
-    update_model!(model, new_radiation)
+    new_wind = update_wind(model.wind, streamlines)
+    update_wind!(model, new_wind)
     @info "Done"
     flush()
     iterations_dict[it_num + 1] = Dict()
@@ -114,12 +112,12 @@ function run!(
     if iterations_dict === nothing
         iterations_dict = Dict()
     end
-    save_path = model.config[:integrator][:save_path]
+    save_path = model.parameters.save_path
     @info "Saving results to $save_path"
     flush()
     # iterations
     if n_iterations === nothing
-        n_iterations = model.config[:integrator][:n_iterations]
+        n_iterations = model.parameters.n_iterations
     end
     iterations_dict[1] = Dict()
     iterations_dict[1]["rad"] = model.rad

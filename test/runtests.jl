@@ -2,6 +2,7 @@ using Qwind, Test
 @time begin
 include("utils.jl")
 include("black_hole_tests.jl")
+include("parameters_tests.jl")
 
 include("grid_tests.jl")
 

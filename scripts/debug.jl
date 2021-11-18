@@ -4,24 +4,32 @@ using Distributed
 @everywhere using Qwind
 using YAML, HDF5, CSV, DataFrames, PyPlot
 include("scripts/plotting.jl")
-using Profile, PProf, TimerOutputs, BenchmarkTools
+using Profile, PProf, TimerOutputs, BenchmarkTools, ProgressMeter
 LogNorm = matplotlib.colors.LogNorm
 Normalize = matplotlib.colors.Normalize
 
 function get_model(config)
     model = Model(config)
     try
-        mv(model.config[:integrator][:save_path], "backup", force = true)
+        mv(model.parameters.save_path, "backup", force = true)
     catch
     end
     model = Model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/tests/xi.yaml");
-run!(model, iterations_dict, parallel = true);
+model, iterations_dict = get_model("./configs/debug.yaml");
+run!(model, iterations_dict, parallel=true)
 
-#Profile.clear()
+#run_iteration!(model, iterations_dict, parallel = true, it_num=1);
+
+sls = iterations_dict[1]["streamlines"];
+fig, ax = plt.subplots()
+for sl in sls
+    ax.plot(sl.r, sl.z)
+end
+
+Profile.clear()
 integ = Qwind.create_and_run_integrator(
         model,
         linewidth = 1,
@@ -30,7 +38,79 @@ integ = Qwind.create_and_run_integrator(
         rtol = 1e-3,
         trajectory_id = 1,
     );
-#pprof()
+pprof()
+
+@code_warntype Qwind.compute_radiation_acceleration(model.rad, [0.1, 0.1, 0.1, 0.1], [1000, 1, 0.1, 0.1], integ.p)
+
+@code_warntype Qwind.compute_force_multiplier(1e-3, 1e2, FMInterp())
+
+@code_warntype Qwind.compute_force_multiplier_k(1e2)
+
+
+streamlines = iterations_dict[1]["streamlines"];
+fig, ax = plt.subplots()
+for sl in streamlines
+    ax.plot(sl.r, sl.z)
+end
+
+
+r, z = Qwind.reduce_streamlines(streamlines, rtol=1e-2, atol=1e-2)
+plt.scatter(r, z)
+
+hull = Hull(r, z)
+
+fig, ax = plt.subplots()
+QwindPlotting.plot_wind_hull(hull, nr=500, nz=500, zmax=50, ax=ax, rmax=1500)
+ax.scatter(r, z, s=1)
+
+QwindPlotting.plot_density_grid(model.rad.wi.density_grid, zmax=50)
+
+QwindPlotting.plot_wind_hull(model.rad.wi.wind_hull, zmax=50, nr=250, nz=250)
+
+QwindPlotting.plot_streamlines(iterations_dict[1]["integrators"])
+
+@everywhere function compute_xi(rad, r, z; include_scattering = true)
+    n = get_density(rad.wi.density_grid, r, z)
+    tau_x = compute_tau_xray(rad, ri = 0, phii = 0, zi = 0, rf = r, zf = z, phif = 0)
+    ret = compute_ionization_parameter(
+        r = r,
+        z = z,
+        vr = 0,
+        vz = 0,
+        number_density = n,
+        tau_x = tau_x,
+        xray_luminosity = rad.xray_luminosity,
+        Rg = rad.bh.Rg,
+        include_scattering = include_scattering,
+        density_grid = rad.wi.density_grid,
+        absorption_opacity = rad.xray_opacity,
+        zh = rad.z_xray,
+        mu_electron = rad.mu_electron,
+        mu_nucleon = rad.mu_nucleon,
+        scattered_luminosity_grid = rad.wi.scattered_lumin_grid,
+    )
+    return ret
+end
+
+@everywhere rr = collect(10 .^ range(log10(6), log10(1000), length = 50))
+@everywhere zz = 10 .^ range(log10(1e-3), log10(1000), length = 51)
+@everywhere rets = zeros(length(rr), length(zz))
+@showprogress for (i, r) in enumerate(rr)
+    rets[i, :] = pmap(
+        z -> compute_xi(model.rad, r, z, include_scattering = true),
+        zz,
+        batch_size = 10,
+    )
+end
+
+fig, ax = plt.subplots()
+cm = ax.pcolormesh(rr, zz, rets', norm = LogNorm(), shading="auto")
+cbar = plt.colorbar(cm, ax = ax)
+ax.set_xlabel("R [Rg]")
+ax.set_ylabel("R [Rg]")
+cbar.set_label("Ionization parameter", rotation=270)
+
+
 
 
 r = 1000

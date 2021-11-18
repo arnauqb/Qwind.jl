@@ -13,6 +13,7 @@ force_multiplier_k_log_interpolator = extrapolate(
     ),
     Flat(),
 )
+
 compute_force_multiplier_k(ionization_parameter, mode::FMInterp) =
     force_multiplier_k_log_interpolator(log10(ionization_parameter))
 compute_force_multiplier_k(ionization_parameter) =
@@ -47,6 +48,7 @@ function compute_force_multiplier_eta(ionization_parameter, mode::FMNoInterp)
         aux = 9.1 * exp(-7.96e-3 * ionization_parameter)
         eta_max = 10^aux
     end
+    return eta_max
 end
 
 "This is the sobolev optical depth parameter for the force multiplier"

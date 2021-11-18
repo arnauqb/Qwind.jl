@@ -36,7 +36,8 @@ function Streamline(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vphi],
         integrator.p.data[:vz],
         integrator.p.data[:n],
-        sqrt.(integrator.p.data[:r].^2 + integrator.p.data[:z] .^2) .* integrator.p.lwnorm
+        sqrt.(integrator.p.data[:r] .^ 2 + integrator.p.data[:z] .^ 2) .*
+        integrator.p.lwnorm,
     )
 end
 
@@ -50,7 +51,7 @@ function Streamline(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
-        tdata["line_width"]
+        tdata["line_width"],
     )
 end
 
@@ -63,7 +64,7 @@ function Streamlines(tsdata::Dict)
         streamline = Streamline(tdata)
         push!(ret, streamline)
     end
-    return Streamlines(ret) 
+    return Streamlines(ret)
 end
 
 function Streamlines(h5_path::String, it_num)
@@ -97,8 +98,8 @@ function slice_streamline(streamline::Streamline; in = 1, fi = nothing)
 end
 
 function escaped(streamline::Streamline)
-    vt = sqrt.(streamline.vr .^2 + streamline.vz .^2 )
-    d = sqrt.(streamline.r .^2 + streamline.z .^ 2)
+    vt = sqrt.(streamline.vr .^ 2 + streamline.vz .^ 2)
+    d = sqrt.(streamline.r .^ 2 + streamline.z .^ 2)
     return maximum(vt .> compute_escape_velocity.(d))
 end
 
@@ -124,7 +125,17 @@ function interpolate_integrator(
         max_time = integration_time[end - 1]
     end
     if max_time <= tmin
-        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
+        return Streamline(
+            integrator.p.id,
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+        )
     end
     if log
         t_range = 10 .^ range(log10(tmin), log10(max_time), length = n_timesteps)
@@ -137,14 +148,24 @@ function interpolate_integrator(
         i += 1
     end
     if length(t_range) == 0
-        return new{Vector{Float64}}([0.0], [0.0], [0.0], [0.0], [0.0])
+        return Streamline(
+            integrator.p.id,
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+            [0.0],
+        )
     end
     dense_solution = integrator.sol(t_range)
     r_dense = dense_solution[1, :]
     z_dense = dense_solution[2, :]
     vr_dense = dense_solution[3, :]
     vz_dense = dense_solution[4, :]
-    line_width_dense = sqrt.(r_dense .^ 2 + z_dense .^2) .* integrator.p.lwnorm
+    line_width_dense = sqrt.(r_dense .^ 2 + z_dense .^ 2) .* integrator.p.lwnorm
     vphi_dense = integrator.p.l0 ./ r_dense
     density_dense =
         compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))

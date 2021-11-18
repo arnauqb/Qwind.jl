@@ -1,7 +1,16 @@
 using Roots, CSV, DataFrames, Interpolations
 using Optim: optimize, Brent
 export InitialConditions,
-    UniformIC, CAKIC, getz0, getrin, getrfi, getn0, getv0, getnlines, getl0
+    UniformIC,
+    CAKIC,
+    getz0,
+    getrin,
+    getrfi,
+    getn0,
+    getv0,
+    getnlines,
+    getl0,
+    get_initial_conditions
 
 getl0(ic::InitialConditions, r) = sqrt(r)
 getrin(ic::InitialConditions) = ic.rin
@@ -15,25 +24,18 @@ struct UniformIC{T} <: InitialConditions{T}
     z0::T
     n0::T
     v0::T
-    logspaced::Bool
+    trajs_spacing::String
 end
 
-function UniformIC(radiation, config)
-    icc = config[:initial_conditions]
-    rin = icc[:r_in]
-    rfi = icc[:r_fi]
-    nlines = icc[:n_lines]
-    if nlines != "auto"
-        nlines = Int(nlines)
-    end
+function UniformIC(radiation, parameters)
     return UniformIC(
-        rin,
-        rfi,
-        nlines,
-        icc[:z0],
-        icc[:n0],
-        icc[:v0] / C,
-        icc[:log_spaced],
+        parameters.wind_r_in,
+        parameters.wind_r_fi,
+        parameters.wind_n_trajs,
+        parameters.wind_z_0,
+        parameters.wind_n_0,
+        parameters.wind_v_0,
+        parameters.wind_trajs_spacing,
     )
 end
 
@@ -41,7 +43,7 @@ end
 getz0(ic::UniformIC, r) = ic.z0
 getn0(ic::UniformIC, r) = ic.n0
 getn0(ic::UniformIC, rad, r0) = ic.n0
-getv0(ic::UniformIC, r) = ic.v0
+getv0(ic::UniformIC, parameters::Parameters, r) = ic.v0
 ## CAK
 
 struct CAKIC{T} <: InitialConditions{T}
@@ -52,28 +54,21 @@ struct CAKIC{T} <: InitialConditions{T}
     z0::T
     K::Union{T,String}
     alpha::Union{T,String}
-    logspaced::Bool
+    trajs_spacing::String
     critical_points_df::DataFrame
     zc_interpolator::Any
     mdot_interpolator::Any
 end
 
-function CAKIC(radiation, config)
-    icc = config[:initial_conditions]
-    M = config[:black_hole][:M]
-    mdot = config[:black_hole][:mdot]
-    if icc[:use_precalculated]
+function CAKIC(radiation, parameters)
+    M = parameters.M
+    mdot = parameters.mdot
+    if parameters.ic_use_precalculated
         filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
         critical_points_df = CSV.read(joinpath(@__DIR__, filename), DataFrame)
     else
         rr, mdots, zcs = calculate_wind_mdots(radiation)
         critical_points_df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
-    end
-    if :launch_range in keys(icc)
-        rin, rfi = icc[:launch_range]
-    else
-        rin = icc[:r_in]
-        rfi = icc[:r_fi]
     end
     zc_interpolator = LinearInterpolation(
         critical_points_df[!, :r],
@@ -85,21 +80,15 @@ function CAKIC(radiation, config)
         critical_points_df[!, :mdot],
         extrapolation_bc = Line(),
     )
-    rin = max(rin, minimum(critical_points_df[!, :r]))
-    rfi = min(rfi, maximum(critical_points_df[!, :r]))
-    nlines = icc[:n_lines]
-    if nlines != "auto"
-        nlines = Int(nlines)
-    end
     return CAKIC(
         radiation,
-        rin,
-        rfi,
-        nlines,
-        icc[:z0],
-        icc[:K],
-        icc[:alpha],
-        icc[:log_spaced],
+        parameters.wind_r_in,
+        parameters.wind_r_fi,
+        parameters.wind_n_trajs,
+        parameters.wind_z_0,
+        parameters.ic_K,
+        parameters.ic_alpha,
+        parameters.wind_trajs_spacing,
         critical_points_df,
         zc_interpolator,
         mdot_interpolator,
@@ -107,10 +96,19 @@ function CAKIC(radiation, config)
 end
 
 getz0(ic::CAKIC, r0) = ic.z0
-function getn0(ic::CAKIC, radiation::Radiation, r0)
+function getn0(ic::CAKIC, radiation::Radiation, parameters, r0)
     mdot = ic.mdot_interpolator(r0)
-    return get_initial_density(radiation, r = r0, mdot = mdot, K = ic.K)
+    return get_initial_density(radiation, parameters, r = r0, mdot = mdot)
 end
-getn0(model, r0) = getn0(model.ic, model.rad, r0)
-getv0(ic::CAKIC, r0) = compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0), ic.radiation.mu_nucleon)
-getv0(model, r0) = getv0(model.ic, r0)
+getn0(model, r0) = getn0(model.ic, model.rad, model.parameters, r0)
+getv0(ic::CAKIC, r0; mu_nucleon = 0.61) =
+    compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0), mu_nucleon)
+getv0(model, r0) = getv0(model.ic, r0, mu_nucleon = model.parameters.mu_nucleon)
+
+function get_initial_conditions(radiation, parameters)
+    if parameters.initial_conditions_flag == CAKMode()
+        return CAKIC(radiation, parameters)
+    elseif parameters.initial_conditions_flag == UniformMode()
+        return UniformMode(radiation, parameters)
+    end
+end

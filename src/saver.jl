@@ -127,8 +127,8 @@ function save_wind(integrators, streamlines, model, save_path, it_num)
         streamlines,
         properties_save_path,
         model.bh,
-        mu_nucleon = model.rad.mu_nucleon,
-        mu_electron = model.rad.mu_electron,
+        mu_nucleon = model.parameters.mu_nucleon,
+        mu_electron = model.parameters.mu_electron,
     )
     return properties
 end
@@ -203,9 +203,9 @@ save_wind_hull!(hull::Nothing, group) = nothing
 
 function save_hdf5(integrators, streamlines, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
-    density_grid = model.rad.wi.density_grid
-    velocity_grid = model.rad.wi.velocity_grid
-    wind_hull = model.rad.wi.wind_hull
+    density_grid = model.wind.density_grid
+    velocity_grid = model.wind.velocity_grid
+    wind_hull = model.wind.wind_hull
     bh = model.bh
     h5open(hdf5_save_path, isfile(hdf5_save_path) ? "r+" : "w") do file
         g = create_group(file, iteration)

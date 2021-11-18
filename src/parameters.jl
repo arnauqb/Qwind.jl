@@ -1,5 +1,5 @@
 using YAML
-export Parameters
+export Parameters, change_parameter
 
 struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     # T float, S flag, U bool, V int, W string
@@ -9,6 +9,8 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     disk_r_in::T
     disk_r_out::T
     disk_nr::V
+    f_uv::Union{T, W}
+    f_x::T
     radiation_grid_nr::Union{V,W}
     radiation_grid_nz::V
     z_xray::T
@@ -16,18 +18,22 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     mu_nucleon::T
     mu_electron::T
     vacuum_density::T
-    wind_r_min::T
-    wind_r_max::T
-    wind_z_min::T
-    wind_z_max::T
     wind_n_trajs::Union{V,W}
     wind_trajs_spacing::W
     wind_r_in::T
     wind_r_fi::T
     wind_z_0::T
+    wind_n_0::T
+    wind_v_0::T
     ic_K::T
     ic_alpha::T
     ic_use_precalculated::U
+    integrator_r_min::T
+    integrator_r_max::T
+    integrator_z_min::T
+    integrator_z_max::T
+    n_iterations::V
+    save_path::W
     # flags
     relativistic_flag::RelativisticFlag
     uv_opacity_flag::OpacityFlag
@@ -51,6 +57,8 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
         disk_r_in,
         disk_r_out,
         disk_nr,
+        f_uv,
+        f_x,
         radiation_grid_nr,
         radiation_grid_nz,
         z_xray,
@@ -58,18 +66,22 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
         mu_nucleon,
         mu_electron,
         vacuum_density,
-        wind_r_min,
-        wind_r_max,
-        wind_z_min,
-        wind_z_max,
         wind_n_trajs,
         wind_trajs_spacing,
         wind_r_in,
         wind_r_fi,
         wind_z_0,
+        wind_n_0,
+        wind_v_0,
         ic_K,
         ic_alpha,
         ic_use_precalculated,
+        integrator_r_min,
+        integrator_r_max,
+        integrator_z_min,
+        integrator_z_max,
+        n_iterations,
+        save_path,
         # flag
         relativistic_flag,
         uv_opacity_flag,
@@ -87,7 +99,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
         scattering_atol,
         scattering_rtol,
     )
-        return new{typeof(M), Flag, Bool, Int, String}(
+        return new{Float64,Flag,Bool,Int,String}(
             # floats
             M,
             mdot,
@@ -95,6 +107,8 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
             disk_r_in,
             disk_r_out,
             disk_nr,
+            f_uv,
+            f_x,
             radiation_grid_nr,
             radiation_grid_nz,
             z_xray,
@@ -102,18 +116,22 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
             mu_nucleon,
             mu_electron,
             vacuum_density,
-            wind_r_min,
-            wind_r_max,
-            wind_z_min,
-            wind_z_max,
             wind_n_trajs,
             wind_trajs_spacing,
             wind_r_in,
             wind_r_fi,
             wind_z_0,
+            wind_n_0,
+            wind_v_0,
             ic_K,
             ic_alpha,
             ic_use_precalculated,
+            integrator_r_min,
+            integrator_r_max,
+            integrator_z_min,
+            integrator_z_max,
+            n_iterations,
+            save_path,
             # flags
             relativistic_flag,
             uv_opacity_flag,
@@ -165,8 +183,7 @@ function Parameters(config::Dict)
     ip = config[:initial_conditions]
     initial_conditions_flag =
         Dict("cak" => CAKMode(), "uniform" => UniformMode())[get(ip, :mode, "cak")]
-
-    boundaries = get(config, :wind_boundaries, Dict())
+    intc = config[:integrator]
 
     return Parameters(
         # floats
@@ -174,8 +191,10 @@ function Parameters(config::Dict)
         mdot = Float64(config[:black_hole][:mdot]),
         spin = Float64(config[:black_hole][:spin]),
         disk_r_in = get(rp, :disk_r_in, 6.0),
-        disk_r_out = get(rp, :disk_r_in, 1600.0),
+        disk_r_out = get(rp, :disk_r_out, 1600.0),
         disk_nr = get(rp, :n_r, 1000),
+        f_uv = get(rp, :f_uv, "auto"),
+        f_x = get(rp, :f_x, 0.15),
         radiation_grid_nr = get(rp, :nr, "auto"),
         radiation_grid_nz = get(rp, :nz, 500),
         z_xray = get(rp, :z_xray, 0.0),
@@ -183,20 +202,26 @@ function Parameters(config::Dict)
         mu_nucleon = get(rp, :mu_nucleon, 0.61),
         mu_electron = get(rp, :mu_electron, 1.17),
         vacuum_density = get(rp, :vacuum_density, 1e2),
-        wind_r_min = get(boundaries, :wind_r_min, 6.0),
-        wind_r_max = get(boundaries, :wind_r_max, 5e4),
-        wind_z_min = get(boundaries, :wind_z_min, 0.0),
-        wind_z_max = get(boundaries, :wind_z_max, 5e4),
 
         # initial conditions
         wind_n_trajs = get(ip, :n_lines, "auto"),
         wind_trajs_spacing = get(ip, :trajs_spacing, "log"),
         wind_r_in = get(ip, :r_in, 20.0),
         wind_r_fi = get(ip, :r_fi, 1500.0),
-        wind_z_0 = get(ip, :z0, 0.0),
+        wind_z_0 = get(ip, :z_0, 0.0),
+        wind_n_0 = get(ip, :n_0, 1e8),
+        wind_v_0 = get(ip, :v_0, 1e7),
         ic_K = get(ip, :K, 0.03),
         ic_alpha = get(ip, :alpha, 0.6),
         ic_use_precalculated = get(ip, :use_precalculated, true),
+
+        # integrators
+        integrator_r_min = get(intc, :integrator_r_min, 6.0),
+        integrator_r_max = get(intc, :integrator_r_max, 5e4),
+        integrator_z_min = get(intc, :integrator_z_min, 0.0),
+        integrator_z_max = get(intc, :integrator_z_max, 5e4),
+        n_iterations = config[:integrator][:n_iterations],
+        save_path = config[:integrator][:save_path],
 
         # flags
         relativistic_flag = relativistic_flag,
@@ -220,3 +245,15 @@ end
 
 Parameters(config_file::String) =
     Parameters(YAML.load_file(config_file, dicttype = Dict{Symbol,Any}))
+
+function change_parameter(parameters::Parameters, key, value)
+    dd = Dict()
+    for field in fieldnames(Parameters)
+        if key == field
+            dd[field] = value
+        else
+            dd[field] = getfield(parameters, field)
+        end
+    end
+    return Parameters(;dd...)
+end
