@@ -37,7 +37,9 @@ function get_time_to_intersection_r(iterator)
     while true
         index = max(abs(iterator.current_r_idx + (n_steps + 1) * iterator.direction_r), 1)
         if index > length(iterator.r_range)
-            return Inf, 0.0
+            lambda = Inf
+            index = 0
+            break
         end
         r = iterator.r_range[index]
         lambda = get_time_to_intersection_r(

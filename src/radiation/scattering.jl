@@ -224,9 +224,8 @@ function compute_optical_depth_to_cell(
 )
     first_intersection = compute_first_intersection(rectangle, theta, origin)
     return compute_optical_depth(
-        iterator,
         density_grid,
-        #ionization_grid,
+        iterator,
         absorption_opacity,
         ri = origin[1],
         phii = origin[2],
@@ -238,7 +237,7 @@ function compute_optical_depth_to_cell(
         mu_electron = mu_electron,
         mu_nucleon = mu_nucleon,
         source_luminosity = source_luminosity,
-        max_tau = 30,
+        max_tau = 30.0,
     )
 end
 
@@ -387,7 +386,7 @@ function compute_scattered_flux_in_cell(
                     Rg = Rg,
                     mu_electron = mu_electron,
                     mu_nucleon = mu_nucleon,
-                    max_tau = 20,
+                    max_tau = 20.0,
                     source_luminosity = source_luminosity,
                 )
                 ret = source_luminosity * exp(-tau) / distance^2
@@ -628,8 +627,8 @@ function scattered_flux_in_point_integrand!(
     mu_nucleon = 0.61,
     absorption_opacity,
 )
-    source_luminosity =
-        interpolate_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
+    #source_luminosity = interpolate_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
+    source_luminosity = get_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
     distance =
         compute_distance_cylindrical(
             r_source,
@@ -654,7 +653,7 @@ function scattered_flux_in_point_integrand!(
         mu_electron = mu_electron,
         mu_nucleon = mu_nucleon,
         source_luminosity = source_luminosity,
-        max_tau = 20,
+        max_tau = 20.0,
     )
     v[1] = source_luminosity * exp(-tau) / distance^2
 end
@@ -669,8 +668,6 @@ function scattered_flux_in_point(
     mu_electron = 1.17,
     mu_nucleon = 0.61,
     Rg,
-    #nodes,
-    #weights,
     rtol = 1e-3,
     atol = 0,
     norm = Cubature.INDIVIDUAL,

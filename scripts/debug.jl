@@ -19,22 +19,55 @@ function get_model(config)
     return model, iterations_dict
 end
 model, iterations_dict = get_model("./configs/debug.yaml");
-run!(model, iterations_dict, parallel=true)
+run!(model, iterations_dict, parallel = true)
 #integs, sls = Qwind.run_integrators(model, iterations_dict; it_num=1, parallel = true);
 
 #run_iteration!(model, iterations_dict, parallel = true, it_num=1);
 
 
+
 Profile.clear()
-@profile integ = Qwind.create_and_run_integrator(
-        model,
-        linewidth = 1,
-        r0 = 100,
-        trajectory_id = 1,
-    );
+@profile integ =
+    Qwind.create_and_run_integrator(model, linewidth = 1, r0 = 100, trajectory_id = 1);
 pprof()
 
-@code_warntype Qwind.compute_radiation_acceleration(model.rad, [0.1, 0.1, 0.1, 0.1], [1000, 1, 0.1, 0.1], integ.p)
+@code_warntype compute_optical_depth(
+    model.wind.density_grid,
+    model.wind.grid_iterator,
+    model.parameters.xray_opacity_flag,
+    ri = 10,
+    phii = 0,
+    zi = 20,
+    rf = 30,
+    phif = 0,
+    zf = 25,
+    Rg = model.bh.Rg,
+    mu_electron = model.parameters.mu_electron,
+    mu_nucleon = model.parameters.mu_nucleon,
+    source_luminosity = model.rad.xray_luminosity,
+)
+
+
+#Profile.clear()
+@btime scattered_flux_in_point(
+    model.rad.scattered_lumin_grid,
+    model.wind.density_grid,
+    model.wind.grid_iterator;
+    r = 100,
+    z = 0,
+    absorption_opacity = model.parameters.xray_opacity_flag,
+    mu_electron = model.parameters.mu_electron,
+    mu_nucleon = model.parameters.mu_nucleon,
+    Rg= model.bh.Rg,
+)
+#pprof()
+
+@code_warntype Qwind.compute_radiation_acceleration(
+    model.rad,
+    [0.1, 0.1, 0.1, 0.1],
+    [1000, 1, 0.1, 0.1],
+    integ.p,
+)
 
 @code_warntype Qwind.compute_force_multiplier(1e-3, 1e2, FMInterp())
 
@@ -48,18 +81,18 @@ for sl in streamlines
 end
 
 
-r, z = Qwind.reduce_streamlines(streamlines, rtol=1e-2, atol=1e-2)
+r, z = Qwind.reduce_streamlines(streamlines, rtol = 1e-2, atol = 1e-2)
 plt.scatter(r, z)
 
 hull = Hull(r, z)
 
 fig, ax = plt.subplots()
-QwindPlotting.plot_wind_hull(hull, nr=500, nz=500, zmax=50, ax=ax, rmax=1500)
-ax.scatter(r, z, s=1)
+QwindPlotting.plot_wind_hull(hull, nr = 500, nz = 500, zmax = 50, ax = ax, rmax = 1500)
+ax.scatter(r, z, s = 1)
 
-QwindPlotting.plot_density_grid(model.rad.wi.density_grid, zmax=50)
+QwindPlotting.plot_density_grid(model.rad.wi.density_grid, zmax = 50)
 
-QwindPlotting.plot_wind_hull(model.rad.wi.wind_hull, zmax=50, nr=250, nz=250)
+QwindPlotting.plot_wind_hull(model.rad.wi.wind_hull, zmax = 50, nr = 250, nz = 250)
 
 QwindPlotting.plot_streamlines(iterations_dict[1]["integrators"])
 
@@ -98,11 +131,11 @@ end
 end
 
 fig, ax = plt.subplots()
-cm = ax.pcolormesh(rr, zz, rets', norm = LogNorm(), shading="auto")
+cm = ax.pcolormesh(rr, zz, rets', norm = LogNorm(), shading = "auto")
 cbar = plt.colorbar(cm, ax = ax)
 ax.set_xlabel("R [Rg]")
 ax.set_ylabel("R [Rg]")
-cbar.set_label("Ionization parameter", rotation=270)
+cbar.set_label("Ionization parameter", rotation = 270)
 
 
 
@@ -112,14 +145,7 @@ z = 1
 phi = 0
 n = 1e9
 tau_x = compute_tau_xray(model.rad, ri = 0.0, phii = 0, zi = 0, rf = r, phif = phi, zf = z)
-compute_ionization_parameter(model.rad, 
-    r = r,
-    z = z,
-    vr = 0,
-    vz = 0,
-    n = n,
-    tau_x = tau_x,
-)
+compute_ionization_parameter(model.rad, r = r, z = z, vr = 0, vz = 0, n = n, tau_x = tau_x)
 
 
 rr = range(6, 1500, length = 500);

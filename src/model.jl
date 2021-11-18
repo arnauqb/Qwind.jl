@@ -22,6 +22,7 @@ end
 
 Model(config_path::String) = Model(YAML.load_file(config_path, dicttype = Dict{Symbol,Any}))
 update_wind!(model::Model, wind::Wind) = (model.wind = wind)
+update_radiation!(model::Model, rad::Radiation) = (model.rad= rad)
 
 run_parallel!(config::String, iterations_dict) =
     run_parallel!(YAML.load_file(config, dicttype = Dict{Symbol,Any}), iterations_dict)
@@ -95,6 +96,8 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel = 
     flush()
     new_wind = update_wind(model.wind, streamlines)
     update_wind!(model, new_wind)
+    new_radiation = update_radiation(model.rad, new_wind, model.parameters)
+    update_radiation!(model, new_radiation)
     @info "Done"
     flush()
     iterations_dict[it_num + 1] = Dict()

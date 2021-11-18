@@ -80,7 +80,7 @@ function compute_optical_depth(
     Rg,
     mu_electron = 1.17,
     mu_nucleon = 0.61,
-    max_tau = 50,
+    max_tau = 50.0,
     source_luminosity,
 )
     set_iterator!(iterator, ri, phii, zi, rf, phif, zf)

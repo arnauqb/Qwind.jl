@@ -39,6 +39,24 @@ function Radiation(bh::BlackHole, parameters::Parameters)
     )
 end
 
+function update_radiation(radiation::Radiation, new_wind::Wind, parameters)
+    new_lumin_grid = ScatteredLuminosityGrid(
+        new_wind.density_grid,
+        new_wind.grid_iterator,
+        Rg = radiation.bh.Rg,
+        source_luminosity = radiation.xray_luminosity,
+        source_position = [0, 0, parameters.z_xray],
+    )
+    return Radiation(
+        radiation.bh,
+        radiation.disk_grid,
+        radiation.fuv_grid,
+        radiation.mdot_grid,
+        radiation.xray_luminosity,
+        new_lumin_grid,
+    )
+end
+
 # quick access to BH functions
 disk_nt_rel_factors(radiation::Radiation, r) = disk_nt_rel_factors(radiation.bh, r)
 compute_eddington_luminosity(radiation::Radiation) =

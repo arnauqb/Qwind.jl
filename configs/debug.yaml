@@ -15,11 +15,10 @@ radiation:
   xray_opacity: boost 
   xray_scattering: true
   tau_uv_calculation: no_tau_uv
-  wind_interpolator:
-    update_grid_method: "average"
-    vacuum_density: 1e2
-    nz: 10
-    nr: 11 
+  vacuum_density: 1e2
+  update_grid_method: "average"
+  grid_nz: 500
+  grid_nr: auto
 
 initial_conditions:
   mode: cak
@@ -32,7 +31,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 1
+  n_iterations: 2
   save_path: "./debug"
   integrator_r_min: 6.0
   integrator_r_max: 50000.0
