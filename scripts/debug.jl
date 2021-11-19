@@ -18,8 +18,28 @@ function get_model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./configs/rin_scan.yaml");
 run!(model, iterations_dict, parallel = true)
+
+
+getn0(model, 100)
+
+compute_optical_depth(
+    model.wind.density_grid,
+    model.wind.grid_iterator,
+    Qwind.ThomsonOpacity(),
+    mu_electron = model.parameters.mu_electron,
+    mu_nucleon = model.parameters.mu_nucleon,
+    ri = 0,
+    zi = 0,
+    phii = 0,
+    rf = 1000,
+    zf = 1,
+    phif = 0,
+    source_luminosity = model.rad.xray_luminosity,
+    Rg = model.bh.Rg,
+    max_tau=Inf
+)
 
 #integs, sls = Qwind.run_integrators(model, iterations_dict; it_num=1, parallel = true);
 

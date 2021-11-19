@@ -44,6 +44,7 @@ abstract type OpacityFlag <: Flag end
 struct NoOpacity <: OpacityFlag end
 struct ThomsonOpacity <: OpacityFlag end
 struct BoostOpacity <: OpacityFlag end
+struct BoostOpacity2 <: OpacityFlag end
 
 # Relativistic correction to luminosity
 abstract type RelativisticFlag <: Flag end

@@ -7,7 +7,7 @@ radiation:
   relativistic: true
   f_uv: auto
   f_x: 0.15
-  n_r: 1000
+  n_r: 2000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
@@ -34,9 +34,9 @@ integrator:
   n_iterations: 20
   save_path: "./debug"
   integrator_r_min: 6.0
-  integrator_r_max: 50000.0
+  integrator_r_max: 10000.0
   integrator_z_min: 0.0
-  integrator_z_max: 50000.0
+  integrator_z_max: 10000.0
 
 numerical_tolerances:
   disk_integral_atol: 0

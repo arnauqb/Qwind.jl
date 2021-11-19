@@ -27,7 +27,7 @@ radiation:
   vacuum_density: 1e2
   update_grid_method: "average"
   grid_nz: 500
-  grid_nr: "@vary grid 100,250,500,auto"
+  grid_nr: auto #"@vary grid 100,250,500,auto"
 
 initial_conditions:
   mode: cak
@@ -40,12 +40,13 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 20
-  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/scattering/new_res_scan"
+  n_iterations: 1
+    #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/scattering/new_res_scan"
+  save_path: "./debug"
   integrator_r_min: 6.0
-  integrator_r_max: 50000.0
+  integrator_r_max: 10000.0
   integrator_z_min: 0.0
-  integrator_z_max: 50000.0
+  integrator_z_max: 10000.0
 
 numerical_tolerances:
   disk_integral_atol: 0
