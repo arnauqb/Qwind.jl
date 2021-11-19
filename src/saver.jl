@@ -160,6 +160,15 @@ function save_velocity_grid!(velocity_grid::VelocityGrid, group)
     return
 end
 
+function save_scattered_lumin_grid!(grid::ScatteredLuminosityGrid, group)
+    dg = create_group(group, "scattered_luminosity_grid")
+    dg["r"] = grid.r_range
+    dg["z"] = grid.z_range
+    dg["nr"] = grid.nr
+    dg["nz"] = grid.nz
+    return
+end
+
 function save_streamlines_and_trajectories!(integrators, streamlines, group)
     g = create_group(group, "trajectories")
     gg = create_group(group, "streamlines")
@@ -211,6 +220,7 @@ function save_hdf5(integrators, streamlines, model, hdf5_save_path, it_num)
         g = create_group(file, iteration)
         save_density_grid!(density_grid, g)
         save_velocity_grid!(velocity_grid, g)
+        save_scattered_lumin_grid!(model.rad.scattered_lumin_grid, g)
         save_streamlines_and_trajectories!(integrators, streamlines, g)
         save_wind_hull!(wind_hull, g)
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)

@@ -589,7 +589,7 @@ function ScatteredLuminosityGrid(
     return ScatteredLuminosityGrid(rr, zz, grid, density_grid.nr, density_grid.nz)
 end
 
-ScatteredLuminosityGrid(density_grid, iterator, rad, parameters) = ScatteredLuminosityGrid(
+ScatteredLuminosityGrid(density_grid::DensityGrid, iterator::GridIterator, rad, parameters::Parameters) = ScatteredLuminosityGrid(
     density_grid,
     iterator,
     Rg = rad.bh.Rg,

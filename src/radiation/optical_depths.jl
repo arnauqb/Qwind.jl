@@ -34,8 +34,7 @@ function compute_optical_depth_cell(
         ret = 100 * ret * intersection_size
     else
         if distance_to_source + intersection_size > dx
-            ret = ret * (dx - distance_to_source) +
-                   100 * (distance_to_source + intersection_size - dx)
+            ret = ret * ((dx - distance_to_source) + 100 * (distance_to_source + intersection_size - dx))
         else
             ret = ret * intersection_size
         end

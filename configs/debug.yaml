@@ -17,8 +17,8 @@ radiation:
   tau_uv_calculation: no_tau_uv
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 500
-  grid_nr: auto
+  grid_nz: 10
+  grid_nr: 11
 
 initial_conditions:
   mode: cak
@@ -31,7 +31,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 2
+  n_iterations: 20
   save_path: "./debug"
   integrator_r_min: 6.0
   integrator_r_max: 50000.0
