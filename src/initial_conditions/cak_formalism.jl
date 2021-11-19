@@ -54,7 +54,7 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
     T = disk_temperature(radiation.bh, r)
     vth = compute_thermal_velocity(T)
     s = vth^2 / (2 * B0 * r)
-    a = 1 + (z/r)^2
+    a = 1 + (z / r)^2
     gas_pressure_term = 4 * s * z / r / a
     radiation_no_tau_uv.fuv_grid .= fuv_copy
     return -(grav + fr) / B0 + gas_pressure_term
@@ -133,14 +133,20 @@ function get_initial_density(
 )
     sigmadot = mdot * CAK_Σ(radiation, r, K = K, alpha = alpha)
     return sigmadot / (compute_thermal_velocity(disk_temperature(radiation.bh, r)) * C) /
-           (mu * M_P)
+           (M_P)
 end
 
-function calculate_wind_mdots(radiation::Radiation; rmin = 6.1, rmax = 1500.0, nr = 100, nz=100)
+function calculate_wind_mdots(
+    radiation::Radiation;
+    rmin = 6.1,
+    rmax = 1500.0,
+    nr = 100,
+    nz = 100,
+)
     rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
-    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-1, nz=nz)
+    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-1, nz = nz)
     results = pmap(f, rr)
     zcs = [res[1] for res in results]
     mdots = [res[2] for res in results]

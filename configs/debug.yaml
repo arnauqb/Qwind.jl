@@ -15,12 +15,12 @@ radiation:
   relativistic: true
   f_uv: auto
   f_x: 0.15
-  n_r: 1000
+  n_r: 2000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost 
-  tau_uv_calculation: disk
+  tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
     update_grid_method: "average"
@@ -32,13 +32,13 @@ radiation:
 grid:
   # units of Rg
   r_min: 6.0
-  r_max: 50000.0
+  r_max: 10000.0
   z_min: 0.0
-  z_max: 50000.0
+  z_max: 10000.0
 
 initial_conditions:
   mode: CAKIC
-  r_in: 10.0
+  r_in: 40.0
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
@@ -50,7 +50,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 2
+  n_iterations: 1
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
