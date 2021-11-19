@@ -1,6 +1,7 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
-  n_cpus: 32
+  sysimage_path: /cosma/home/dp004/dc-quer1/sys_everywhere.so
+  n_cpus: 16
   partition: cosma6
   account: dp004
   max_time: 24:00:00
@@ -20,12 +21,12 @@ radiation:
   z_xray: 0.0
   disk_height: 0.0
   xray_opacity: boost
-  tau_uv_calculation: disk
+  tau_uv_calculation: no_tau_uv
   wind_interpolator:
     vacuum_density: 1e2
     n_integrator_interpolation: 10000
-    nz: 500 
-    nr: auto 
+    nz: 500
+    nr: "@vary grid 100,250,500,auto"
 
 grid:
   # units of Rg
@@ -37,7 +38,7 @@ grid:
 initial_conditions:
   mode: CAKIC #UniformIC
   #r_in: "@vary grid 12,14,16,18"
-  r_in: "@vary log 10.0 250 10"
+  r_in: 40 #"@vary log 10.0 250 10"
   r_fi: 1500.0
   n_lines: auto
   log_spaced: true
@@ -54,4 +55,5 @@ integrator:
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/cosma5/data/durham/covid19/arnau/qwind/final/rin_scan_ref"
-  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_ref"
+  #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/rin_scan_ref"
+  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/scattering/original_res_scan"
