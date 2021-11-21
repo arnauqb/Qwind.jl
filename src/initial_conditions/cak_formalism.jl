@@ -131,10 +131,9 @@ end
 
 function get_initial_density(radiation::Radiation, parameters; r, mdot)
     sigmadot = mdot * CAK_Σ(radiation, parameters, r)
-    return sigmadot / (
-        compute_thermal_velocity(disk_temperature(radiation.bh, r), parameters.mu_nucleon) *
-        C
-    ) / M_P
+    density = sigmadot / (compute_thermal_velocity(disk_temperature(radiation.bh, r), parameters.mu_nucleon) * C)
+    number_density = density / M_P / parameters.mu_nucleon
+    return number_density
 end
 
 function calculate_wind_mdots(
