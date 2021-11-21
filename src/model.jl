@@ -57,9 +57,9 @@ function run_integrators(model::Model, iterations_dict::Dict; it_num, parallel =
     if parallel
         if is_logging(stderr)
             # in an hpc, don't show progress bar
-            integrators = pmap(f, 1:length(lines_range), batch_size = 10)
+            integrators = pmap(f, 1:length(lines_range))
         else
-            integrators = @showprogress pmap(f, 1:length(lines_range), batch_size = 10)
+            integrators = @showprogress pmap(f, 1:length(lines_range))
         end
     else
         integrators = f.(1:length(lines_range))

@@ -1,7 +1,7 @@
 system:
   qwind_path: /cosma/home/dp004/dc-quer1/Qwind.jl
   sysimage_path: /cosma/home/dp004/dc-quer1/sys_everywhere.so
-  n_cpus: 16
+  n_cpus: 64
   partition: cosma6
   account: dp004
   max_time: 24:00:00
@@ -22,16 +22,16 @@ radiation:
   disk_height: 0.0
   uv_opacity: thomson
   xray_opacity: boost 
-  xray_scattering: false
+  xray_scattering: true
   tau_uv_calculation: no_tau_uv
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 500
-  grid_nr: auto #"@vary grid 100,250,500,auto"
+  grid_nz: 250
+  grid_nr: auto
 
 initial_conditions:
   mode: cak
-  r_in: 40.0
+  r_in: "@vary grid 6.1,10,20,50,100"
   r_fi: 1500.0
   n_trajs: auto
   z0: 0.0 
@@ -40,9 +40,9 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 1
-    #save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/scattering/new_res_scan"
-  save_path: "./debug"
+  n_iterations: 50
+  #save_path: "/cosma5/data/durham/covid19/arnau/qwind/scattering/rin_scan_scattering"
+  save_path: "/cosma6/data/dp004/dc-quer1/qwind_runs/scattering/rin_scan_scattering_250"
   integrator_r_min: 6.0
   integrator_r_max: 10000.0
   integrator_z_min: 0.0
