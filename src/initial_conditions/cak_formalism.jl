@@ -19,7 +19,7 @@ function gamma0(radiation, parameters, r)
     return ret
 end
 
-function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
+function f(radiation::Radiation, parameters, z; r, alpha = 0.6, zmax = 1e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     frad = compute_disc_radiation_field(
@@ -30,14 +30,13 @@ function f(radiation::Radiation, z; r, alpha = 0.6, zmax = 1e-1)
         vr_wind = 0.0,
         vz_wind = 0.0,
         max_z_vertical_flux = zmax,
-        rtol = 1e-4,
         maxevals = 100000,
     )[2]
-    f0 = gamma0(radiation, r)
+    f0 = gamma0(radiation, parameters, r)
     return cc * frad / f0
 end
 
-function g(radiation::Radiation, z; r, zmax = 1e-1)
+function g(radiation::Radiation, parameters, z; r, zmax = 1e-1)
     grav = compute_gravitational_acceleration(r, z + disk_height(radiation.bh, r))[2]
     fuv_copy = copy(radiation.fuv_grid)
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
@@ -50,7 +49,6 @@ function g(radiation::Radiation, z; r, zmax = 1e-1)
         vr_wind = 0.0,
         vz_wind = 0.0,
         max_z_vertical_flux = zmax,
-        rtol = 1e-4,
         maxevals = 100000,
     )[2]
     B0 = get_B0(r)
@@ -65,6 +63,7 @@ end
 
 function nozzle_function(
     radiation::Radiation,
+    parameters,
     z;
     r,
     alpha = 0.6,
@@ -77,15 +76,16 @@ function nozzle_function(
     else
         a = 1.0
     end
-    if g(radiation, z, r = r, zmax = zmax) <= 0
+    if g(radiation, parameters, z, r = r, zmax = zmax) <= 0
         return Inf
     end
-    return c * a * f(radiation, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
-           (g(radiation, z, r = r, zmax = zmax)^((1 - alpha) / alpha))
+    return c * a * f(radiation, parameters, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
+           (g(radiation, parameters, z, r = r, zmax = zmax)^((1 - alpha) / alpha))
 end
 
 function find_nozzle_function_minimum(
     radiation::Radiation,
+    parameters,
     r;
     alpha = 0.6,
     zmax = 1e-1,
@@ -101,6 +101,7 @@ function find_nozzle_function_minimum(
     n_range =
         nozzle_function.(
             Ref(radiation),
+            Ref(parameters),
             z_range,
             r = r,
             alpha = alpha,
@@ -137,7 +138,8 @@ function get_initial_density(radiation::Radiation, parameters; r, mdot)
 end
 
 function calculate_wind_mdots(
-    radiation::Radiation;
+    radiation::Radiation,
+    parameters;
     rmin = 6.1,
     rmax = 1500.0,
     nr = 100,
@@ -146,7 +148,7 @@ function calculate_wind_mdots(
     rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
-    f(r) = find_nozzle_function_minimum(radiation, r, alpha = 0.6, zmax = 1e-1, nz = nz)
+    f(r) = find_nozzle_function_minimum(radiation, parameters, r, alpha = 0.6, zmax = 1e-1, nz = nz)
     results = pmap(f, rr)
     zcs = [res[1] for res in results]
     mdots = [res[2] for res in results]

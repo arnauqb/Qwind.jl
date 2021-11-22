@@ -67,7 +67,7 @@ function CAKIC(radiation, parameters)
         filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
         critical_points_df = CSV.read(joinpath(@__DIR__, filename), DataFrame)
     else
-        rr, mdots, zcs = calculate_wind_mdots(radiation)
+        rr, mdots, zcs = calculate_wind_mdots(radiation, parameters)
         critical_points_df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
     end
     zc_interpolator = LinearInterpolation(
@@ -80,10 +80,12 @@ function CAKIC(radiation, parameters)
         critical_points_df[!, :mdot],
         extrapolation_bc = Line(),
     )
+    rin = max(parameters.wind_r_in, minimum(critical_points_df[!, :r]))
+    rfi = min(parameters.wind_r_fi, maximum(critical_points_df[!, :r]))
     return CAKIC(
         radiation,
-        parameters.wind_r_in,
-        parameters.wind_r_fi,
+        rin,
+        rfi,
         parameters.wind_n_trajs,
         parameters.wind_z_0,
         parameters.ic_K,

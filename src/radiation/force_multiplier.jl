@@ -57,7 +57,6 @@ function compute_tau_eff(number_density, dv_dr, mu_nucleon = 0.61, mu_electron =
     if dv_dr == 0
         return 1.0
     end
-    @assert number_density >= 0
     t = number_density * SIGMA_T * mu_electron / mu_nucleon * abs(v_thermal_sk / dv_dr)
     return t
 end

@@ -16,7 +16,7 @@ function compute_ionization_parameter(
     xray_luminosity,
     Rg,
     scattering_flag,
-    absorption_opacity = Boost(),
+    absorption_opacity = BoostOpacity(),
     zh = 0.0,
     mu_electron = 1.17,
     mu_nucleon = 0.61,
