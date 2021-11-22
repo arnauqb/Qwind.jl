@@ -12,6 +12,7 @@ include("black_hole.jl")
 include("distances.jl")
 include("utils.jl")
 include("cluster_utils.jl")
+include("coordinate_interpolation.jl")
 
 include("tables.jl")
 include("thermodynamics.jl")

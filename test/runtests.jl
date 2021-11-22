@@ -5,6 +5,7 @@ include("black_hole_tests.jl")
 include("parameters_tests.jl")
 
 include("grid_tests.jl")
+include("coordinate_interpolation_tests.jl")
 
 include("initial_conditions/initial_conditions_tests.jl")
 include("initial_conditions/cak_formalism_tests.jl")
