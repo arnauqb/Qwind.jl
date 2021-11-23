@@ -1,6 +1,6 @@
 black_hole:
-  M: 1e8 # solar masses
-  mdot: 0.5 # Eddington units
+  M: 1e9 # solar masses
+  mdot: 0.25 # Eddington units
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
@@ -13,12 +13,12 @@ radiation:
   disk_height: 0.0
   uv_opacity: thomson
   xray_opacity: boost 
-  xray_scattering: true
+  xray_scattering: false
   tau_uv_calculation: no_tau_uv
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 10
-  grid_nr: 11
+  grid_nz: 250
+  grid_nr: auto
 
 initial_conditions:
   mode: cak
@@ -31,7 +31,7 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-  n_iterations: 20
+  n_iterations: 1
   save_path: "./debug"
   integrator_r_min: 6.0
   integrator_r_max: 10000.0

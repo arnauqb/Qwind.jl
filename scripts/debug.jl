@@ -18,8 +18,8 @@ function get_model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/rin_scan.yaml");
-run!(model, iterations_dict, parallel = true)
+model, iterations_dict = get_model("./configs/debug.yaml");
+run!(model, iterations_dict, parallel = false)
 
 
 getn0(model, 100)
