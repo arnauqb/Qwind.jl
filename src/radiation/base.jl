@@ -8,11 +8,17 @@ struct Radiation{T<:AbstractFloat}
     mdot_grid::Vector{T}
     xray_luminosity::T
     scattered_lumin_grid::ScatteredLuminosityGrid
+    qsosed_model::Qsosed.QsosedModel
 end
 
 function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, nz, mu_nucleon)
     qsosed_parameters = Qsosed.Parameters(M=bh.M / M_SUN, mdot=bh.mdot, spin=bh.spin, mu_nucleon=mu_nucleon)
     qsosed_model = Qsosed.QsosedModel(qsosed_parameters)
+    if disk_r_in == "corona_radius"
+        disk_r_in = qsosed_model.corona.radius
+    elseif disk_r_in == "warm_radius"
+        disk_r_in = qsosed_model.warm.radius
+    end
     disk_grid = 10 .^ range(log10(disk_r_in), log10(disk_r_out), length = disk_nr)
     if fuv == "qsosed"
         _, uvf = Qsosed.radial_uv_fraction.(Ref(qsosed_model), r_min=disk_r_in, r_max=disk_r_out, n_r=disk_nr)
@@ -30,7 +36,7 @@ function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, n
     mdot_grid = bh.mdot .* ones(length(disk_grid))
     xray_luminosity = fx * compute_bolometric_luminosity(bh)
     scatt_lumin = ScatteredLuminosityGrid(nr, nz, 0.0)
-    return Radiation(bh, disk_grid, uvf, mdot_grid, xray_luminosity, scatt_lumin)
+    return Radiation(bh, disk_grid, uvf, mdot_grid, xray_luminosity, scatt_lumin, qsosed_model)
 end
 
 # read from config
@@ -67,6 +73,7 @@ function update_radiation(radiation::Radiation, new_wind::Wind, parameters)
         radiation.mdot_grid,
         radiation.xray_luminosity,
         new_lumin_grid,
+        radiation.qsosed_model,
     )
 end
 

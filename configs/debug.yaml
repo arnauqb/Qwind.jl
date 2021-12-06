@@ -8,7 +8,7 @@ radiation:
   f_uv: qsosed
   f_x: qsosed
   n_r: 2000
-  disk_r_in: 6.0
+  disk_r_in: corona_radius
   z_xray: 0.0
   disk_height: 0.0
   uv_opacity: thomson
@@ -17,19 +17,19 @@ radiation:
   tau_uv_calculation: no_tau_uv
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 500
-  grid_nr: auto
+  grid_nz: 50
+  grid_nr: 51
 
 initial_conditions:
   mode: cak
-  r_in: 25.0
+  r_in: warm_radius
   r_fi: 1500.0
   n_trajs: auto
   trajs_spacing: log
   z0: 0.0 
   K: 0.03
   alpha: 0.6
-  use_precalculated: true
+  use_precalculated: false
 
 integrator:
   n_iterations: 5
@@ -41,7 +41,7 @@ integrator:
 
 numerical_tolerances:
   disk_integral_atol: 0
-  disk_integral_rtol: 1e-3
+  disk_integral_rtol: 5e-4
   disk_integral_maxevals: 10000
   integrator_atol: 1e-8
   integrator_rtol: 1e-3

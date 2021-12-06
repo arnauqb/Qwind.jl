@@ -6,7 +6,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     M::T
     mdot::T
     spin::T
-    disk_r_in::T
+    disk_r_in::Union{T, W}
     disk_r_out::T
     disk_nr::V
     f_uv::Union{T, W}
@@ -20,7 +20,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     vacuum_density::T
     wind_n_trajs::Union{V,W}
     wind_trajs_spacing::W
-    wind_r_in::T
+    wind_r_in::Union{T, W}
     wind_r_fi::T
     wind_z_0::T
     wind_n_0::T

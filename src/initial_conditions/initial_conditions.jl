@@ -81,7 +81,12 @@ function CAKIC(radiation::Radiation, parameters::Parameters)
         critical_points_df[!, :mdot],
         extrapolation_bc = Line(),
     )
-    rin = max(parameters.wind_r_in, minimum(critical_points_df[!, :r]))
+    if parameters.wind_r_in == "warm_radius"
+        wind_r_in = radiation.qsosed_model.warm.radius
+    else
+        wind_r_in = parameters.wind_r_in
+    end
+    rin = max(wind_r_in, minimum(critical_points_df[!, :r]))
     rfi = min(parameters.wind_r_fi, maximum(critical_points_df[!, :r]))
     return CAKIC(
         radiation,

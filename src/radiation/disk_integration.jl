@@ -134,15 +134,10 @@ function integrate_radiation_force_integrand(
     z_wind,
     vr_wind,
     vz_wind,
-    #rmin_disk,
-    #rmax_disk = 1600,
-    #phimin_disk = 0.0,
-    #phimax_disk = π,
-    #z_disk = 0.0,
-    #atol = 0.0,
-    #rtol = 1e-4,
     norm = Cubature.INDIVIDUAL,
     maxevals = 50000,
+    disk_r_in,
+    disk_r_out,
 )
     beta = compute_beta(vr_wind, vz_wind)
     gamma = compute_gamma(beta)
@@ -162,8 +157,8 @@ function integrate_radiation_force_integrand(
     integrated, error = hcubature(
         2,
         f,
-        (parameters.disk_r_in, 0.0),
-        (parameters.disk_r_out, π),
+        (disk_r_in, 0.0),
+        (disk_r_out, π),
         abstol = parameters.disk_integral_atol,
         reltol = parameters.disk_integral_rtol,
         error_norm = norm,
@@ -213,19 +208,19 @@ function compute_disc_radiation_field(
     z_wind,
     vr_wind,
     vz_wind,
-    #z_disk,
-    #rmax_disk = 1600,
-    #atol = 0,
-    #rtol = 1e-3,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
     max_z_vertical_flux = 5e-1,
-    #disk_r_in = 6.0,
-    #disk_r_out = 1500
-
 )
+    if parameters.disk_r_in == "corona_radius"
+        disk_r_in = radiation.qsosed_model.corona.radius
+    elseif parameters.disk_r_in == "warm_radius"
+        disk_r_in = radiation.qsosed_model.warm.radius
+    else
+        disk_r_in = parameters.disk_r_in
+    end
     if (z_wind - parameters.z_disk) < max_z_vertical_flux
-        if r_wind < parameters.disk_r_in
+        if r_wind < disk_r_in
             return [0.0, 0.0]
         end
         force = compute_disc_radiation_field_small_heights(
@@ -244,13 +239,8 @@ function compute_disc_radiation_field(
             z_wind = z_wind,
             vr_wind = vr_wind,
             vz_wind = vz_wind,
-            #rmin_disk = disk_r_in,
-            #rmax_disk = disk_r_out,
-            #z_disk = z_disk,
-            #atol = atol,
-            #rtol = rtol,
-            #norm = norm,
-            #maxevals = maxevals,
+            disk_r_in = disk_r_in,
+            disk_r_out = parameters.disk_r_out,
         )
         prefactors = force_prefactors(
             radiation,
