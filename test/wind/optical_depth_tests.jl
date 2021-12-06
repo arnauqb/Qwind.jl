@@ -29,6 +29,7 @@ end
     @testset "Constant density" begin
         r_range = range(0, 1000.0, length = 11)
         z_range = range(0, 1000.0, length = 11)
+        iterator = GridIterator(r_range, z_range)
         rp_range_test = range(0.0, 1000, length = 10)
         r_range_test = range(0.0, 1000, length = 10)
         z_range_test = range(0.0, 1000, length = 10)
@@ -46,6 +47,8 @@ end
                         truesol = f_anl(rdp, pd, rp, zp)
                         qwsol = compute_optical_depth(
                             grid,
+                            iterator,
+                            ThomsonOpacity(),
                             ri = rdp,
                             phii = pd,
                             zi = 0.0,
@@ -54,6 +57,7 @@ end
                             zf = zp,
                             Rg = Rg,
                             max_tau = Inf,
+                            source_luminosity=1e40,
                             mu_electron = mu_electron,
                         )
                         @test qwsol ≈ truesol rtol = 1e-6
@@ -66,6 +70,7 @@ end
     @testset "Linear density" begin
         r_range = range(0, 100.0, length = 500)
         z_range = range(0, 100.0, length = 500)
+        iterator = GridIterator(r_range, z_range)
         rp_range_test = range(10, 90, length = 10)
         r_range_test = range(10, 90, length = 10)
         z_range_test = range(10, 90, length = 10)
@@ -107,6 +112,8 @@ end
                         truesol = f_anl(rdp, pd, rp, zp)
                         qwsol = compute_optical_depth(
                             grid,
+                            iterator,
+                            ThomsonOpacity(),
                             ri = rdp,
                             phii = pd,
                             zi = 0.0,
@@ -115,6 +122,7 @@ end
                             zf = zp,
                             Rg = Rg,
                             max_tau = Inf,
+                            source_luminosity=1e40,
                             mu_electron = mu_electron,
                         )
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
@@ -127,6 +135,7 @@ end
     @testset "Exponential density" begin
         r_range = range(0, 100.0, length = 500)
         z_range = range(0, 100.0, length = 500)
+        iterator = GridIterator(r_range, z_range)
         rp_range_test = range(10, 90, length = 10)
         r_range_test = range(10, 90, length = 10)
         z_range_test = range(10, 90, length = 10)
@@ -160,6 +169,8 @@ end
                         truesol = f_anl(rdp, pd, rp, zp)
                         qwsol = compute_optical_depth(
                             grid,
+                            iterator,
+                            ThomsonOpacity(),
                             ri = rdp,
                             phii = pd,
                             zi = 0,
@@ -168,6 +179,7 @@ end
                             zf = zp,
                             Rg = Rg,
                             max_tau = Inf,
+                            source_luminosity=1e40,
                             mu_electron = mu_electron,
                         )
                         @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
@@ -187,10 +199,11 @@ end
 
     @testset "Constant density" begin
 
-        r_range = range(0, 1000.0, length = 50)
-        z_range = range(0, 1000.0, length = 50)
-        r_range_test = range(0.0, 1000, length = 50)
-        z_range_test = range(0.0, 1000, length = 50)
+        r_range = range(0, 1000.0, length = 500)
+        z_range = range(0, 1000.0, length = 500)
+        iterator = GridIterator(r_range, z_range)
+        r_range_test = range(1, 1000, length = 50)
+        z_range_test = range(1, 1000, length = 50)
         density_grid = 2e8 .* ones((length(r_range), length(z_range)))
         grid = DensityGrid(r_range, z_range, density_grid)
         mu_electron = 2
@@ -200,17 +213,21 @@ end
             for rp in r_range_test
                 for zp in z_range_test
                     truesol = f_anl(rp, zp)
-                    qwsol = compute_tau_xray(
+                    qwsol = compute_optical_depth(
                         grid,
-                        Thomson(),
+                        iterator,
+                        ThomsonOpacity(),
                         ri = 0.0,
+                        phii=0.0,
                         zi = 0.0,
                         rf = rp,
+                        phif=0.0,
                         zf = zp,
-                        xray_luminosity = xl,
+                        source_luminosity = xl,
                         Rg = Rg,
                         mu_nucleon = mu_nucleon,
                         mu_electron = mu_electron,
+                        max_tau=Inf,
                     )
                     @test truesol ≈ qwsol rtol = 1e-3
                 end
@@ -223,7 +240,7 @@ end
                     10^5 -
                     xl / (density / mu_nucleon * (r * Rg)^2) *
                     exp(-r * density * mu_electron * SIGMA_T * Rg)
-                zero = find_zero(f, (10, 1000))
+                zero = find_zero(f, (10, 1000), atol=0, rtol=1e-4)
                 return zero
             end
             function f_anl(r, z, rx)
@@ -239,19 +256,23 @@ end
             for rp in r_range_test
                 for zp in z_range_test
                     truesol = f_anl(rp, zp, rx)
-                    qwsol = compute_tau_xray(
+                    qwsol = compute_optical_depth(
                         grid,
-                        Boost(),
+                        iterator,
+                        BoostOpacity(),
                         ri = 0.0,
+                        phii=0.0,
                         zi = 0.0,
                         rf = rp,
+                        phif=0.0,
                         zf = zp,
-                        xray_luminosity = xl,
+                        source_luminosity = xl,
                         Rg = Rg,
                         mu_electron = mu_electron,
                         mu_nucleon = mu_nucleon,
+                        max_tau=Inf,
                     )
-                    @test truesol ≈ qwsol rtol = 1e-3
+                    @test truesol ≈ qwsol rtol = 2e-1
                 end
             end
         end
@@ -267,6 +288,7 @@ end
     Rg = bh.Rg
     r_range = range(0, 100.0, length = 500)
     z_range = range(0, 100.0, length = 500)
+    iterator = GridIterator(r_range, z_range)
     r_range_test = range(10, 90, length = 100)
     z_range_test = range(10, 90, length = 100)
     density_grid = zeros((length(r_range), length(z_range)))
@@ -296,6 +318,8 @@ end
             truesol = f_anl(0.0, 0.0, rp, zp)
             qwsol = compute_optical_depth(
                 grid,
+                iterator,
+                ThomsonOpacity(),
                 ri = 0.0,
                 phii = 0.0,
                 zi = 0,
@@ -305,6 +329,7 @@ end
                 Rg = Rg,
                 max_tau = Inf,
                 mu_electron = mu_electron,
+                source_luminosity=1e40,
             )
             @test qwsol ≈ truesol rtol = 2e-2 atol = 1e-3
         end

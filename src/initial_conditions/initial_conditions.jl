@@ -34,7 +34,7 @@ function UniformIC(radiation, parameters)
         parameters.wind_n_trajs,
         parameters.wind_z_0,
         parameters.wind_n_0,
-        parameters.wind_v_0,
+        parameters.wind_v_0 / C,
         parameters.wind_trajs_spacing,
     )
 end
@@ -42,8 +42,9 @@ end
 
 getz0(ic::UniformIC, r) = ic.z0
 getn0(ic::UniformIC, r) = ic.n0
-getn0(ic::UniformIC, rad, r0) = ic.n0
-getv0(ic::UniformIC, parameters::Parameters, r) = ic.v0
+getn0(ic::UniformIC, rad, parameters, r0) = ic.n0
+getv0(ic::UniformIC, parameters, r) = ic.v0 
+getv0(ic::UniformIC, r; mu_nucleon=0.61) = ic.v0 
 ## CAK
 
 struct CAKIC{T} <: InitialConditions{T}
@@ -60,7 +61,7 @@ struct CAKIC{T} <: InitialConditions{T}
     mdot_interpolator::Any
 end
 
-function CAKIC(radiation, parameters)
+function CAKIC(radiation::Radiation, parameters::Parameters)
     M = parameters.M
     mdot = parameters.mdot
     if parameters.ic_use_precalculated
@@ -96,6 +97,10 @@ function CAKIC(radiation, parameters)
         mdot_interpolator,
     )
 end
+function CAKIC(radiation::Radiation, config::Dict)
+    parameters = Parameters(config)
+    return CAKIC(radiation, parameters)
+end
 
 getz0(ic::CAKIC, r0) = ic.z0
 function getn0(ic::CAKIC, radiation::Radiation, parameters, r0)
@@ -111,6 +116,6 @@ function get_initial_conditions(radiation, parameters)
     if parameters.initial_conditions_flag == CAKMode()
         return CAKIC(radiation, parameters)
     elseif parameters.initial_conditions_flag == UniformMode()
-        return UniformMode(radiation, parameters)
+        return UniformIC(radiation, parameters)
     end
 end

@@ -28,7 +28,6 @@ export FMInterpolationFlag,
 
 
 abstract type InitialConditions{T<:AbstractFloat} end
-abstract type Grid{T<:AbstractFloat} end
 abstract type InterpolationGrid end
 
 # Radiation flags

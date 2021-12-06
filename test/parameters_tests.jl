@@ -15,10 +15,10 @@ using Qwind, Test
     @test p.mu_nucleon == 0.61
     @test p.mu_electron == 1.17
     @test p.vacuum_density == 1e2
-    @test p.wind_r_min == 6.0
-    @test p.wind_r_max == 5e4
-    @test p.wind_z_min == 0
-    @test p.wind_z_max == 5e4
+    @test p.integrator_r_min == 6.0
+    @test p.integrator_r_max == 5e4
+    @test p.integrator_z_min == 0
+    @test p.integrator_z_max == 5e4
     @test p.wind_n_trajs == "auto"
     @test p.wind_trajs_spacing == "log"
     @test p.wind_r_in == 50

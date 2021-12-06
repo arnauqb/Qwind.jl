@@ -20,12 +20,12 @@ end
     @testset "angles" begin
         cell = Rectangle(rmin = 5, rmax = 10, zmin = 4, zmax = 11)
         angles = Qwind.compute_intercepting_angles(cell)
-        @test angles[1] ≈ 0.427 rtol=1e-2
-        @test angles[2] ≈ 1.19 rtol=1e-2
+        @test angles[1] ≈ 0.427 rtol = 1e-2
+        @test angles[2] ≈ 1.19 rtol = 1e-2
         cell = Rectangle(rmin = 1, rmax = 4, zmin = 1, zmax = 6)
         angles = Qwind.compute_intercepting_angles(cell, [9.09, 7.27])
-        @test angles[1] ≈ 3.823  rtol=1e-2
-        @test angles[2] ≈ 4.557  rtol=1e-2
+        @test angles[1] ≈ 3.823 rtol = 1e-2
+        @test angles[2] ≈ 4.557 rtol = 1e-2
     end
 
     @testset "intersections" begin
@@ -92,6 +92,7 @@ end
     bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     grid_values = 1e8 .* ones(length(rr), length(zz))
     dgrid = DensityGrid(rr, zz, grid_values)
+    iterator = GridIterator(rr, zz)
     cell = Rectangle(rmin = 5, rmax = 10, zmin = 4, zmax = 11)
     theta = 0.4638
     @test Qwind.compute_cell_optical_depth(
@@ -101,20 +102,28 @@ end
         Rg = bh.Rg,
         mu_electron = 1.17,
     ) ≈ 1.118 * SIGMA_T * 1.17 * 1e8 * bh.Rg rtol = 2e-1
+
     @test Qwind.compute_optical_depth_to_cell(
         dgrid,
-        origin = [0,0,0],
+        iterator,
+        origin = [0, 0, 0],
         rectangle = cell,
         theta = theta,
         Rg = bh.Rg,
         mu_electron = 1.17,
+        source_luminosity = 1e40,
+        absorption_opacity = ThomsonOpacity(),
     ) ≈ 11.18 * 1.17 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
+
     @test Qwind.compute_optical_depth_to_cell(
         dgrid,
+        iterator,
         origin = [13.89, 0, 11.25],
-        rectangle = Rectangle(rmin=3, rmax=7, zmin=4, zmax=7),
+        rectangle = Rectangle(rmin = 3, rmax = 7, zmin = 4, zmax = 7),
         theta = 4.218,
         Rg = bh.Rg,
+        source_luminosity = 1e40,
+        absorption_opacity = ThomsonOpacity(),
         mu_electron = 1.17,
     ) ≈ 8.96 * 1.17 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
 
@@ -125,11 +134,14 @@ end
         cell_density = 1e10
         tau_to_cell = Qwind.compute_optical_depth_to_cell(
             dgrid,
-            origin=[0,0,0],
+            iterator,
+            origin = [0, 0, 0],
             rectangle = cell,
             theta = theta,
             Rg = bh.Rg,
             mu_electron = 1.17,
+            source_luminosity = 1e40,
+            absorption_opacity = ThomsonOpacity(),
         )
         tau_cell = Qwind.compute_cell_optical_depth(
             cell,
@@ -139,15 +151,17 @@ end
             mu_electron = 1.17,
         )
         delta_theta = atan(cell.zmax / cell.rmin)
-        expected = lumin / (4π) * exp(-tau_to_cell) * (1 - exp(-tau_cell)) * delta_theta 
+        expected = lumin / (4π) * exp(-tau_to_cell) * (1 - exp(-tau_cell)) * delta_theta
         @test Qwind.compute_luminosity_absorbed_by_cell(
             dgrid,
-            source_position = [0,0,0],
+            iterator,
+            source_position = [0, 0, 0],
             cell = cell,
             Rg = bh.Rg,
             mu_electron = 1.17,
             cell_density = cell_density,
             source_luminosity = lumin,
+            absorption_opacity = ThomsonOpacity(),
         ) ≈ expected rtol = 1e-1
     end
 

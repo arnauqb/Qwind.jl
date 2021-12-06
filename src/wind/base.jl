@@ -38,6 +38,10 @@ function Wind(parameters::Parameters)
         update_grid_flag = parameters.update_grid_flag,
     )
 end
+function Wind(config::Dict)
+    parameters = Parameters(config)
+    return Wind(parameters)
+end
 
 function Wind(
     streamlines::Union{Streamlines,Nothing};

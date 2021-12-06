@@ -47,6 +47,10 @@ function Radiation(bh::BlackHole, parameters::Parameters)
         mu_nucleon=parameters.mu_nucleon
     )
 end
+function Radiation(bh::BlackHole, config::Dict) 
+    parameters = Parameters(config)
+    return Radiation(bh, parameters)
+end
 
 function update_radiation(radiation::Radiation, new_wind::Wind, parameters)
     new_lumin_grid = ScatteredLuminosityGrid(

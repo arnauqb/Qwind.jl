@@ -1,3 +1,5 @@
+export GridIterator, next_intersection!, set_iterator!
+
 using Distances
 
 function point_outside_grid(r_range, z_range, r, z)

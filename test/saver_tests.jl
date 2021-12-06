@@ -103,7 +103,7 @@ end
     end
     iterations_dict = Dict(1 => Dict())
     integrators, streamlines =
-        Qwind.run_integrators!(model, iterations_dict, it_num = 1, parallel = false)
+        Qwind.run_integrators(model, iterations_dict, it_num = 1, parallel = false)
     trajectories = [Qwind.Trajectory(integ) for integ in integrators]
     Qwind.save_hdf5(integrators, streamlines, model, "./saver_tests.hdf5", 1)
 
@@ -125,12 +125,12 @@ end
 
     @testset "Save wind hull" begin
         whull_saved = Hull("./saver_tests.hdf5")
-        @test whull_saved.vertices == model.rad.wi.wind_hull.vertices
+        @test whull_saved.vertices == model.wind.wind_hull.vertices
     end
 
     @testset "Save density grid" begin
         recovered = DensityGrid("./saver_tests.hdf5")
-        original = model.rad.wi.density_grid
+        original = model.wind.density_grid
         for fieldname in fieldnames(DensityGrid)
             if fieldname == :iterator
                 continue
@@ -141,7 +141,7 @@ end
 
     @testset "Save velocity grid" begin
         recovered = VelocityGrid("./saver_tests.hdf5")
-        original = model.rad.wi.velocity_grid
+        original = model.wind.velocity_grid
         for fieldname in fieldnames(VelocityGrid)
             if fieldname == :iterator
                 continue
@@ -150,16 +150,15 @@ end
         end
     end
 
-    @testset "Save ionization grid" begin
-        recovered = IonizationGrid("./saver_tests.hdf5")
-        original = model.rad.wi.ionization_grid
-        for fieldname in fieldnames(IonizationGrid)
-            if fieldname == :iterator
-                continue
-            end
-            @test getfield(original, fieldname) == getfield(recovered, fieldname)
-        end
-    end
-
+    #@testset "Save ionization grid" begin
+    #    recovered = IonizationGrid("./saver_tests.hdf5")
+    #    original = model.wind.ionization_grid
+    #    for fieldname in fieldnames(IonizationGrid)
+    #        if fieldname == :iterator
+    #            continue
+    #        end
+    #        @test getfield(original, fieldname) == getfield(recovered, fieldname)
+    #    end
+    #end
 end
 

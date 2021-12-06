@@ -4,43 +4,46 @@ black_hole:
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
-  mode: QsosedRadiation 
   relativistic: true
-  f_uv: 0.85 
+  f_uv: 0.85
   f_x: 0.15
-  n_r: 1000
+  n_r: 2000
   disk_r_in: 6.0
   z_xray: 0.0
   disk_height: 0.0
-  xray_opacity: boost
+  uv_opacity: thomson
+  mu_nucleon: 0.5
+  xray_opacity: boost 
+  xray_scattering: false
   tau_uv_calculation: no_tau_uv
-  disk_integral_rtol: 1e-3
-  wind_interpolator:
-    vacuum_density: 1e2
-    n_integrator_interpolation: 10000
-    nz: 50 
-    nr: 51
-
-grid:
-  # units of Rg
-  r_min: 6.0
-  r_max: 10000.0
-  z_min: 0.0
-  z_max: 10000.0
+  vacuum_density: 1e2
+  update_grid_method: "average"
+  grid_nz: 50
+  grid_nr: 51
 
 initial_conditions:
-  mode: UniformIC
+  mode: uniform
   r_in: 10.0
   r_fi: 1000.0
-  n_lines: auto
-  log_spaced: true
-  z0: 0.0 # Rg
-  n0: 1e9
+  n_trajs: auto
   v0: 2e6
-  mu: 0.5
+  z0: 0.0 
+  n0: 1e9
 
 integrator:
-  n_iterations: 1
-  atol: 1e-8
-  rtol: 1e-3
-  save_path: "./saver_tests"
+  n_iterations: 5
+  save_path: "./tests"
+  integrator_r_min: 6.0
+  integrator_r_max: 10000.0
+  integrator_z_min: 0.0
+  integrator_z_max: 10000.0
+
+numerical_tolerances:
+  disk_integral_atol: 0
+  disk_integral_rtol: 1e-3
+  disk_integral_maxevals: 10000
+  integrator_atol: 1e-8
+  integrator_rtol: 1e-3
+  scattering_atol: 0
+  scattering_rtol: 1e-3
+  

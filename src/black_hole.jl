@@ -25,6 +25,10 @@ function BlackHole(parameters::Parameters)
     M = parameters.M * M_SUN
     return BlackHole(M, parameters.mdot, parameters.spin)
 end
+function BlackHole(config::Dict)
+    parameters = Parameters(config)
+    return BlackHole(parameters)
+end
 
 
 """

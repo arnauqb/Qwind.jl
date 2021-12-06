@@ -354,7 +354,11 @@ function compute_radiation_acceleration(
     _, _, ar, az = du
     vt = sqrt(vr^2 + vz^2)
     at = sqrt(ar^2 + az^2)
-    dvdr = at / vt
+    if vt == 0
+        dvdr = 1e-6
+    else
+        dvdr = at / vt
+    end
     density = compute_density(r, z, vr, vz, integ_parameters)
     taux = compute_tau_xray(
         wind.density_grid,
@@ -375,8 +379,6 @@ function compute_radiation_acceleration(
         parameters,
         r = r,
         z = z,
-        vr = vr,
-        vz = vz,
         number_density = density,
         tau_x = taux,
     )

@@ -153,7 +153,8 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
 end
 
 function Parameters(config::Dict)
-    rp = config[:radiation]
+    bhp = get(config, :black_hole, Dict())
+    rp = get(config, :radiation, Dict())
     if get(rp, :relativistic, true)
         relativistic_flag = Relativistic()
     else
@@ -179,17 +180,17 @@ function Parameters(config::Dict)
             "interpolate",
         )]
 
-    np = config[:numerical_tolerances]
-    ip = config[:initial_conditions]
+    np = get(config, :numerical_tolerances, Dict())
+    ip = get(config, :initial_conditions, Dict())
     initial_conditions_flag =
         Dict("cak" => CAKMode(), "uniform" => UniformMode())[get(ip, :mode, "cak")]
-    intc = config[:integrator]
+    intc = get(config, :integrator, Dict())
 
     return Parameters(
         # floats
-        M = Float64(config[:black_hole][:M]),
-        mdot = Float64(config[:black_hole][:mdot]),
-        spin = Float64(config[:black_hole][:spin]),
+        M = Float64(get(bhp, :M, 1e8)),
+        mdot = Float64(get(bhp, :mdot, 0.5)),
+        spin = Float64(get(bhp, :spin, 0.0)),
         disk_r_in = get(rp, :disk_r_in, 6.0),
         disk_r_out = get(rp, :disk_r_out, 1600.0),
         disk_nr = get(rp, :n_r, 1000),
@@ -220,8 +221,8 @@ function Parameters(config::Dict)
         integrator_r_max = get(intc, :integrator_r_max, 5e4),
         integrator_z_min = get(intc, :integrator_z_min, 0.0),
         integrator_z_max = get(intc, :integrator_z_max, 5e4),
-        n_iterations = config[:integrator][:n_iterations],
-        save_path = config[:integrator][:save_path],
+        n_iterations = get(intc, :n_iterations, 50),
+        save_path = get(intc, :save_path, "./debug"),
 
         # flags
         relativistic_flag = relativistic_flag,

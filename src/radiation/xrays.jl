@@ -9,8 +9,6 @@ function compute_ionization_parameter(
     density_grid::DensityGrid;
     r,
     z,
-    vr,
-    vz,
     number_density,
     tau_x,
     xray_luminosity,
@@ -22,7 +20,7 @@ function compute_ionization_parameter(
     mu_nucleon = 0.61,
 )
     d = sqrt(r^2 + z^2)# * Rg
-    ret = xray_luminosity * exp(-tau_x) / (number_density * d^2 * Rg^2)# * flux_correction
+    ret = xray_luminosity * exp(-tau_x) / (number_density * d^2 * Rg^2)
     if scattering_flag == Scattering()
         ret +=
             scattered_flux_in_point(
@@ -46,8 +44,6 @@ compute_ionization_parameter(
     parameters::Parameters;
     r,
     z,
-    vr,
-    vz,
     number_density,
     tau_x,
 ) = compute_ionization_parameter(
@@ -56,8 +52,6 @@ compute_ionization_parameter(
     wind.density_grid,
     r = r,
     z = z,
-    vr = vr,
-    vz = vz,
     number_density = number_density,
     tau_x = tau_x,
     xray_luminosity = radiation.xray_luminosity,
