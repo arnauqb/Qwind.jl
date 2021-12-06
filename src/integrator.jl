@@ -19,7 +19,6 @@ export initialize_integrator,
 
 Base.length(integrator::Sundials.IDAIntegrator) = length(integrator.p.data[:r])
 
-
 function make_save_data(trajectory_id = -1)
     ret = Dict{Symbol,Any}(:trajectory_id => trajectory_id)
     keys = [:r, :z, :vr, :vphi, :vz, :n, :fm, :xi, :dvdr, :xi, :taueff, :taux, :tauuv]
@@ -467,14 +466,15 @@ function compute_lines_range(
                 rtol = 1e-6,
             )
         end
+        #max_delta_tau = 0.1
         if tau_total < 5
             max_delta_tau = 0.05
         elseif tau_total < 10
-            max_delta_tau = 0.5
+            max_delta_tau = 0.1
         elseif tau_total < 100
-            max_delta_tau = 5
+            max_delta_tau = 1
         else
-            max_delta_tau = 20
+            max_delta_tau = 10
         end
         if get_tau(1000) < max_delta_tau
             delta_r_tau = fill_delta

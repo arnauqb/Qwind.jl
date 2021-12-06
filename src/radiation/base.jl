@@ -1,3 +1,4 @@
+import Qsosed
 export Radiation, update_radiation, compute_tau_uv, compute_tau_xray
 
 struct Radiation{T<:AbstractFloat}
@@ -9,12 +10,19 @@ struct Radiation{T<:AbstractFloat}
     scattered_lumin_grid::ScatteredLuminosityGrid
 end
 
-function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, nz)
+function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, nz, mu_nucleon)
+    qsosed_parameters = Qsosed.Parameters(M=bh.M / M_SUN, mdot=bh.mdot, spin=bh.spin, mu_nucleon=mu_nucleon)
+    qsosed_model = Qsosed.QsosedModel(qsosed_parameters)
     disk_grid = 10 .^ range(log10(disk_r_in), log10(disk_r_out), length = disk_nr)
-    if fuv == "auto"
-        uvf = uv_fractions(bh, disk_grid)
+    if fuv == "qsosed"
+        _, uvf = Qsosed.radial_uv_fraction.(Ref(qsosed_model), r_min=disk_r_in, r_max=disk_r_out, n_r=disk_nr)
+    elseif fuv == "disk"
+        uvf = Qsosed.disk_uv_fraction.(Ref(bh), disk_grid)
     else
         uvf = fuv .* ones(length(disk_grid))
+    end
+    if fx == "qsosed"
+        fx = Qsosed.total_xray_fraction(qsosed_model)
     end
     if any(isnan.(uvf))
         error("UV fractions contain NaN, check radiation and boundaries")
@@ -36,6 +44,7 @@ function Radiation(bh::BlackHole, parameters::Parameters)
         disk_r_out = parameters.disk_r_out,
         nr = parameters.radiation_grid_nr,
         nz = parameters.radiation_grid_nz,
+        mu_nucleon=parameters.mu_nucleon
     )
 end
 

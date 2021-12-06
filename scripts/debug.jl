@@ -19,8 +19,7 @@ function get_model(config)
     return model, iterations_dict
 end
 model, iterations_dict = get_model("./configs/debug.yaml");
-run!(model, iterations_dict, parallel = false)
-
+run!(model, iterations_dict, parallel = true)
 
 getn0(model, 100)
 

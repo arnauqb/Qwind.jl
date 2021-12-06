@@ -10,7 +10,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     disk_r_out::T
     disk_nr::V
     f_uv::Union{T, W}
-    f_x::T
+    f_x::Union{T, W}
     radiation_grid_nr::Union{V,W}
     radiation_grid_nz::V
     z_xray::T
@@ -204,7 +204,7 @@ function Parameters(config::Dict)
         vacuum_density = get(rp, :vacuum_density, 1e2),
 
         # initial conditions
-        wind_n_trajs = get(ip, :n_lines, "auto"),
+        wind_n_trajs = get(ip, :n_trajs, "auto"),
         wind_trajs_spacing = get(ip, :trajs_spacing, "log"),
         wind_r_in = get(ip, :r_in, 20.0),
         wind_r_fi = get(ip, :r_fi, 1500.0),
