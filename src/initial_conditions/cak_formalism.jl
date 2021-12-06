@@ -93,7 +93,7 @@ function find_nozzle_function_minimum(
     include_a = true,
 )
     if zmax == Inf
-        z0 = 1e-2
+        z0 = -2
     else
         z0 = log10(zmax)
     end
@@ -153,7 +153,7 @@ function calculate_wind_mdots(
     zcs = [res[1] for res in results]
     mdots = [res[2] for res in results]
     rr = rr[.!isnan.(mdots)]
+    zcs = zcs[.!isnan.(mdots)]
     mdots = mdots[.!isnan.(mdots)]
-    zcs = zcs[zcs .!= Inf]
     return rr, mdots, zcs
 end
