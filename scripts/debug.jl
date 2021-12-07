@@ -21,6 +21,59 @@ end
 model, iterations_dict = get_model("./configs/debug.yaml");
 run!(model, iterations_dict, parallel = true)
 
+integrators = iterations_dict[5]["integrators"];
+times, merging = Qwind.get_intersection_times(integrators);
+
+streamlines = Qwind.interpolate_integrators(integrators, max_times=times);
+mdot_sl_before = Qwind.compute_wind_mdot(streamlines, model.bh.Rg)
+total_mass = 0
+for loser_id in keys(merging)
+    loser = streamlines[loser_id];
+    winner = streamlines[merging[loser_id]["winner_id"]];
+    if !escaped(loser)
+        continue
+    end
+    winner_time = merging[loser_id]["winner_time"];
+    loser_time = merging[loser_id]["loser_time"];
+    winner_idx = searchsortedfirst(winner.t, winner_time)-1
+    loser_idx = searchsortedfirst(loser.t, loser_time)-1
+    v_loser = sqrt(loser.vr[loser_idx]^2 + loser.vz[loser_idx]^2)
+    d_loser = sqrt(loser.r[loser_idx]^2 + loser.z[loser_idx]^2)
+    d_winner_vec = @. sqrt(winner.r[winner_idx:end]^2 + winner.z[winner_idx:end]^2)
+    v_winner_vec = @. sqrt(winner.vr[winner_idx:end]^2 + winner.vz[winner_idx:end]^2)
+    loser_mass = 2π * loser.n[loser_idx] * d_loser * loser.width[loser_idx] * v_loser 
+    v_winner = sqrt(winner.vr[winner_idx]^2 + winner.vz[winner_idx]^2)
+    d_winner = sqrt(winner.r[winner_idx]^2 + winner.z[winner_idx]^2)
+    winner_mass = 2π * winner.n[winner_idx] * d_winner * winner.width[winner_idx] * v_winner
+    total_mass += loser_mass
+    new_area = (loser.width[loser_idx] * d_loser + winner.width[winner_idx] * d_winner) 
+    new_width = new_area / d_winner
+    new_width = new_width * (d_winner_vec ./ d_winner)
+    winner.width[winner_idx:end] .= new_width
+    new_mass = winner_mass + loser_mass
+    new_density = new_mass / (2π * d_winner * winner.width[winner_idx] * v_winner) # with the new width
+    scaling_factor = d_winner^2 * v_winner * 1 ./ (d_winner_vec.^2 .* v_winner_vec)
+    winner.n[winner_idx:end] = new_density * scaling_factor
+end
+escaping_sls = [streamline for streamline in streamlines if streamline.id ∉ collect(keys(merging))];
+Qwind.compute_wind_mdot(escaping_sls, model.bh.Rg)
+mdot_integ = Qwind.compute_wind_mdot(integrators, model.bh.Rg)
+total_mass * C * M_P * 0.61 * model.bh.Rg^2
+#println(mdot_integ - mdot_sl_before)
+
+fig, ax = plt.subplots()
+for integ in integrators
+    ax.plot(integ.p.data[:r], integ.p.data[:z])
+end
+
+fig, ax = plt.subplots()
+for integ in streamlines
+    ax.plot(integ.r, integ.z)
+end
+
+
+
+
 getn0(model, 100)
 
 compute_optical_depth(

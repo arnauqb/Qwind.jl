@@ -1,5 +1,5 @@
 black_hole:
-  M: 1e8 # solar masses
+  M: 1e7 # solar masses
   mdot: 0.5 # Eddington units
   spin: 0.0 # spin parameter (-1,1)
 
@@ -17,8 +17,8 @@ radiation:
   tau_uv_calculation: no_tau_uv
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 50
-  grid_nr: 51
+  grid_nz: 500
+  grid_nr: auto
 
 initial_conditions:
   mode: cak
@@ -29,7 +29,7 @@ initial_conditions:
   z0: 0.0 
   K: 0.03
   alpha: 0.6
-  use_precalculated: false
+  use_precalculated: true
 
 integrator:
   n_iterations: 5

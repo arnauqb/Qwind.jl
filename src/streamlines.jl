@@ -6,7 +6,7 @@ with other trajectories. A streamline thus is a trajectory that does not interse
 using Sundials
 export Streamline, Streamlines
 
-struct Streamline{T<:Vector{<:AbstractFloat}}
+mutable struct Streamline{T<:Vector{<:AbstractFloat}}
     id::Int
     t::T
     r::T
@@ -16,6 +16,7 @@ struct Streamline{T<:Vector{<:AbstractFloat}}
     vz::T
     n::T
     width::T
+    escaped::Bool
 end
 
 struct Streamlines
@@ -38,6 +39,7 @@ function Streamline(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:n],
         sqrt.(integrator.p.data[:r] .^ 2 + integrator.p.data[:z] .^ 2) .*
         integrator.p.lwnorm,
+        escaped(integrator),
     )
 end
 
@@ -52,6 +54,7 @@ function Streamline(tdata::Dict)
         tdata["vz"],
         tdata["n"],
         tdata["line_width"],
+        tdata["escaped"],
     )
 end
 
@@ -94,12 +97,13 @@ function slice_streamline(streamline::Streamline; in = 1, fi = nothing)
         streamline.vphi[in:fi],
         streamline.vz[in:fi],
         streamline.n[in:fi],
+        streamline.escaped,
     )
 end
 
 function escaped(streamline::Streamline)
-    vt = sqrt.(streamline.vr .^ 2 + streamline.vz .^ 2)
-    d = sqrt.(streamline.r .^ 2 + streamline.z .^ 2)
+    vt = @. sqrt(streamline.vr ^ 2 + streamline.vz ^ 2)
+    d = @. sqrt(streamline.r ^ 2 + streamline.z ^ 2)
     return maximum(vt .> compute_escape_velocity.(d))
 end
 
@@ -135,6 +139,7 @@ function interpolate_integrator(
             [0.0],
             [0.0],
             [0.0],
+            false,
         )
     end
     if log
@@ -158,6 +163,7 @@ function interpolate_integrator(
             [0.0],
             [0.0],
             [0.0],
+            false,
         )
     end
     dense_solution = integrator.sol(t_range)
@@ -179,13 +185,14 @@ function interpolate_integrator(
         vz_dense,
         density_dense,
         line_width_dense,
+        escaped(integrator),
     )
 end
 
 function interpolate_integrators(
     integrators::Vector{<:Sundials.IDAIntegrator};
     n_timesteps::Int = 1000,
-    max_times = nothing,
+    max_times,
     log = true,
 )
     ret = []

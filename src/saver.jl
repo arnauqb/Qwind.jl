@@ -1,3 +1,4 @@
+import Sundials
 using CSV, DataFrames, YAML, HDF5, Printf, JLD2
 export save_wind
 
@@ -7,14 +8,24 @@ function save_integrators(integrators, save_path)
 end
 
 function compute_streamline_mdot(streamline::Streamline, Rg; mu_nucleon = 0.61)
-    n0 = streamline.n[1]
-    v0 = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
-    lw = streamline.width[1]
-    mw = 2π * streamline.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
+    n = streamline.n[end]
+    v = sqrt(streamline.vr[end]^2 + streamline.vz[end]^2)
+    d = sqrt(streamline.r[end]^2 + streamline.z[end]^2)
+    lw = streamline.width[end]
+    mw = 2π * d * lw * Rg^2 * n * v * C * M_P * mu_nucleon
     return mw
 end
 
-function compute_wind_mdot(streamlines::Streamlines, Rg; mu_nucleon = 0.61)
+function compute_streamline_mdot(streamline::Sundials.IDAIntegrator, Rg; mu_nucleon = 0.61)
+    n0 = streamline.p.n0
+    v0 = streamline.p.v0
+    r0 = streamline.p.r0
+    lw = streamline.p.lwnorm * r0
+    mw = 2π * r0 * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
+    return mw
+end
+
+function compute_wind_mdot(streamlines, Rg; mu_nucleon = 0.61)
     mdot_wind = 0.0
     for streamline in streamlines
         if escaped(streamline)
@@ -183,6 +194,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         tgroup["vphi"] = trajectory.vphi
         tgroup["vz"] = trajectory.vz
         tgroup["n"] = trajectory.n
+        tgroup["escaped"] = trajectory.escaped
     end
 
     for (i, streamline) in enumerate(streamlines)
@@ -196,6 +208,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         sgroup["vz"] = streamline.vz
         sgroup["n"] = streamline.n
         sgroup["line_width"] = streamline.width
+        sgroup["escaped"] = streamline.escaped
     end
     return
 end

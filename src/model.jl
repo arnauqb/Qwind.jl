@@ -65,7 +65,7 @@ function run_integrators(model::Model, iterations_dict::Dict; it_num, parallel =
         integrators = f.(1:length(lines_range))
     end
     # Resolve intersections.
-    max_times = get_intersection_times(integrators)
+    max_times, mergers = get_intersection_times(integrators)
     streamlines = interpolate_integrators(
         integrators,
         max_times = max_times,
