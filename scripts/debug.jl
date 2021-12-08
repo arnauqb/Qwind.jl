@@ -2,6 +2,7 @@ using Distributed
 @everywhere using DrWatson
 @everywhere @quickactivate "Qwind"
 @everywhere using Qwind
+
 using YAML, HDF5, CSV, DataFrames, PyPlot
 include("scripts/plotting.jl")
 using Profile, PProf, TimerOutputs, BenchmarkTools, ProgressMeter
@@ -18,11 +19,57 @@ function get_model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./configs/proga.yaml");
 run!(model, iterations_dict, parallel = true)
+
+Qwind.compute_proga_density(model.bh, 100)
+
+getn0(model, 100)
 
 integrators = iterations_dict[5]["integrators"];
 times, merging = Qwind.get_intersection_times(integrators);
+
+
+
+data = CSV.read("/home/arnau/code/qwind_experiments/data/james_rho.csv", DataFrame);
+data[!, :r] = data.r / model.bh.Rg
+data[!, :z] = data.z / model.bh.Rg
+data[!, :rho] = data.rho / (model.parameters.mu_nucleon * M_P)
+points = hcat(log10.(data.r), log10.(data.z));
+interp = Qwind.scipy_interpolate.LinearNDInterpolator(points, log10.(data.rho), fill_value=2);
+r_range = 10 .^ range(log10(minimum(data[!, :r])), log10(maximum(data[!, :r])), length=250);
+z_range = 10 .^ range(log10(minimum(data[!, :z])), log10(maximum(data[!, :z])), length=251);
+values = zeros(length(r_range), length(z_range));
+for (i, r) in enumerate(r_range)
+    for (j, z) in enumerate(z_range)
+        values[i, j] = max(1e2, 10 .^ interp(log10(r), log10(z))[1])
+    end
+end
+density_grid = DensityGrid(r_range, z_range, values);
+
+fig, ax = plt.subplots()
+ax.pcolormesh(density_grid.r_range, density_grid.z_range, density_grid.grid', norm=LogNorm())
+ax.set_ylim(0, 50)
+
+r_range = 10 .^ range(log10(60), log10(1500), length=250)
+density_profile = []
+for r in r_range
+    value = 1e2
+    z = 0
+    while value == 1e2
+        value = get_density(density_grid, r, z)
+        z += 1e-2
+        if z > 50
+            break
+        end
+    end
+    push!(density_profile, value)
+end
+fig, ax = plt.subplots()
+ax.loglog(r_range, density_profile)
+
+
+
 
 streamlines = Qwind.interpolate_integrators(integrators, max_times=times);
 mdot_sl_before = Qwind.compute_wind_mdot(streamlines, model.bh.Rg)
@@ -61,10 +108,14 @@ mdot_integ = Qwind.compute_wind_mdot(integrators, model.bh.Rg)
 total_mass * C * M_P * 0.61 * model.bh.Rg^2
 #println(mdot_integ - mdot_sl_before)
 
+integrators = iterations_dict[1]["integrators"];
 fig, ax = plt.subplots()
 for integ in integrators
+    #ax.plot(integ.p.data[:r], sqrt.(integ.p.data[:vr] .^2 + integ.p.data[:vz] .^2))
     ax.plot(integ.p.data[:r], integ.p.data[:z])
 end
+#ax.set_xlim(0,3000)
+#ax.set_ylim(0,3000)
 
 fig, ax = plt.subplots()
 for integ in streamlines

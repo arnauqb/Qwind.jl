@@ -3,16 +3,17 @@ using Optim: optimize, Brent
 export InitialConditions,
     UniformIC,
     CAKIC,
-    getz0,
     getrin,
     getrfi,
     getn0,
+    getz0,
     getv0,
     getnlines,
     getl0,
     get_initial_conditions
 
 getl0(ic::InitialConditions, r) = sqrt(r)
+getz0(ic::InitialConditions, r) = ic.z0
 getrin(ic::InitialConditions) = ic.rin
 getrfi(ic::InitialConditions) = ic.rfi
 getnlines(ic::InitialConditions) = ic.nlines
@@ -23,7 +24,7 @@ struct UniformIC{T} <: InitialConditions{T}
     nlines::Union{Int,String}
     z0::T
     n0::T
-    v0::T
+    v0::Union{T, String}
     trajs_spacing::String
 end
 
@@ -34,17 +35,21 @@ function UniformIC(radiation, parameters)
         parameters.wind_n_trajs,
         parameters.wind_z_0,
         parameters.wind_n_0,
-        parameters.wind_v_0 / C,
+        parameters.wind_v_0,
         parameters.wind_trajs_spacing,
     )
 end
 
 
-getz0(ic::UniformIC, r) = ic.z0
 getn0(ic::UniformIC, r) = ic.n0
-getn0(ic::UniformIC, rad, parameters, r0) = ic.n0
-getv0(ic::UniformIC, parameters, r) = ic.v0 
-getv0(ic::UniformIC, r; mu_nucleon=0.61) = ic.v0 
+getn0(ic::UniformIC, rad, wind, parameters, r0) = ic.n0
+function getv0(bh, ic::UniformIC, r; mu_nucleon=0.61)
+    if ic.v0 == "thermal"
+        return compute_thermal_velocity(disk_temperature(bh, r), mu_nucleon)
+    else
+        return ic.v0 / C
+    end
+end
 ## CAK
 
 struct CAKIC{T} <: InitialConditions{T}
@@ -107,15 +112,15 @@ function CAKIC(radiation::Radiation, config::Dict)
     return CAKIC(radiation, parameters)
 end
 
-getz0(ic::CAKIC, r0) = ic.z0
-function getn0(ic::CAKIC, radiation::Radiation, parameters, r0)
+function getn0(ic::CAKIC, radiation::Radiation, wind, parameters, r0)
     mdot = ic.mdot_interpolator(r0)
-    return get_initial_density(radiation, parameters, r = r0, mdot = mdot)
+    zc = ic.zc_interpolator(r0)
+    return get_initial_density(radiation, wind, parameters, r = r0, mdot = mdot, zc=zc)
 end
-getn0(model, r0) = getn0(model.ic, model.rad, model.parameters, r0)
-getv0(ic::CAKIC, r0; mu_nucleon = 0.61) =
+getn0(model, r0) = getn0(model.ic, model.rad, model.wind, model.parameters, r0)
+getv0(bh, ic::CAKIC, r0; mu_nucleon = 0.61) =
     compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0), mu_nucleon)
-getv0(model, r0) = getv0(model.ic, r0, mu_nucleon = model.parameters.mu_nucleon)
+getv0(model, r0) = getv0(model.bh, model.ic, r0, mu_nucleon = model.parameters.mu_nucleon)
 
 function get_initial_conditions(radiation, parameters)
     if parameters.initial_conditions_flag == CAKMode()

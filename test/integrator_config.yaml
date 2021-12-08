@@ -27,7 +27,7 @@ initial_conditions:
   r_fi: 1000.0
   n_trajs: auto
   v0: 2e6
-  z0: 0.0 
+  z0: # z0 = earth_radius + 1e4 / earth.Rg
   n0: 1e9
 
 integrator:

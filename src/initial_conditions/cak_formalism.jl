@@ -79,7 +79,9 @@ function nozzle_function(
     if g(radiation, parameters, z, r = r, zmax = zmax) <= 0
         return Inf
     end
-    return c * a * f(radiation, parameters, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
+    return c *
+           a *
+           f(radiation, parameters, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
            (g(radiation, parameters, z, r = r, zmax = zmax)^((1 - alpha) / alpha))
 end
 
@@ -118,9 +120,11 @@ function find_nozzle_function_minimum(
     return z_range[mina], minv
 end
 
-function CAK_Σ(radiation::Radiation, parameters, r)
+function CAK_Σ(radiation::Radiation, parameters, r; K = nothing)
+    if K == nothing
+        K = parameters.ic_K
+    end
     alpha = parameters.ic_alpha
-    K = parameters.ic_K
     mu_e = parameters.mu_electron
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
@@ -130,9 +134,42 @@ function CAK_Σ(radiation::Radiation, parameters, r)
     return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 
-function get_initial_density(radiation::Radiation, parameters; r, mdot)
-    sigmadot = mdot * CAK_Σ(radiation, parameters, r)
-    density = sigmadot / (compute_thermal_velocity(disk_temperature(radiation.bh, r), parameters.mu_nucleon) * C)
+function get_initial_density(radiation::Radiation, wind, parameters; r, mdot, zc)
+    if parameters.ic_K == "auto"
+        tau_x = compute_tau_xray(
+            wind.density_grid,
+            wind.grid_iterator,
+            radiation,
+            parameters,
+            ri = 0.0,
+            phii = 0.0,
+            zi = parameters.z_xray,
+            rf = r,
+            phif = 0.0,
+            zf = zc,
+        )
+        n = interpolate_density(wind.density_grid, r, zc)
+        xi = compute_ionization_parameter(
+            radiation,
+            wind,
+            parameters,
+            r = r,
+            z = zc,
+            number_density = n,
+            tau_x = tau_x,
+        )
+        K = compute_force_multiplier_k(xi, FMNoInterp())
+    else
+        K = parameters.ic_K
+    end
+    sigmadot = mdot * CAK_Σ(radiation, parameters, r, K=K)
+    density =
+        sigmadot / (
+            compute_thermal_velocity(
+                disk_temperature(radiation.bh, r),
+                parameters.mu_nucleon,
+            ) * C
+        )
     number_density = density / M_P / parameters.mu_nucleon
     return number_density
 end
@@ -148,7 +185,14 @@ function calculate_wind_mdots(
     rr = 10 .^ range(log10(rmin), log10(rmax), length = nr)
     mdots = []
     zcs = []
-    f(r) = find_nozzle_function_minimum(radiation, parameters, r, alpha = 0.6, zmax = 1e-1, nz = nz)
+    f(r) = find_nozzle_function_minimum(
+        radiation,
+        parameters,
+        r,
+        alpha = 0.6,
+        zmax = 1e-1,
+        nz = nz,
+    )
     results = pmap(f, rr)
     zcs = [res[1] for res in results]
     mdots = [res[2] for res in results]

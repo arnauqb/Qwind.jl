@@ -67,3 +67,14 @@ function disk_height(bh::BlackHole, r; mu_e = 1.17)
     return SIGMA_E * mu_e * SIGMA_SB * disk_temperature(bh, r)^4 * (r * bh.Rg)^3 /
            (G * bh.M * C) / bh.Rg
 end
+
+function compute_proga_density(bh, r; mu_nucleon = 0.61)
+    temp = disk_temperature(bh, r)
+    cs = compute_thermal_velocity(temp) * C
+    z0 = 3 * bh.mdot * bh.Rg
+    r = r * bh.Rg
+    ttheta = tan(r/z0)
+    rho0 = 1e-9 # g / cm^3
+    rho = rho0 * exp(-(G * bh.M) / (2 * cs^2 * r * ttheta^2))
+    return rho / (M_P * mu_nucleon)
+end

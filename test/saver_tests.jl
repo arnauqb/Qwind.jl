@@ -15,29 +15,31 @@ using Qwind, Test, HDF5
     n = [1e8, 1e9]
     widths = [1.0, 2.0]
     streamlines = []
-    push!(streamlines, Streamline(1, t, r, z, vr1, vphi, vz1, n, widths)) # this escapes
-    push!(streamlines, Streamline(2, t, r, z, vr2, vphi, vz2, n, widths)) # this doesn't
+    push!(streamlines, Streamline(1, t, r, z, vr1, vphi, vz1, n, widths, true)) # this escapes
+    push!(streamlines, Streamline(2, t, r, z, vr2, vphi, vz2, n, widths, false)) # this doesn't
     streamlines = Streamlines(streamlines)
     bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     @test escaped(streamlines[1]) == true
     @test escaped(streamlines[2]) == false
+    @test streamlines[1].escaped == true
+    @test streamlines[2].escaped == false
 
     @testset "Mass loss rate" begin
         sl = streamlines[1]
         calculated = Qwind.compute_streamline_mdot(sl, bh.Rg)
         expected =
             2π *
-            r[1] *
-            widths[1] *
+            r[2] *
+            widths[2] *
             bh.Rg^2 *
-            n[1] *
-            sqrt(vr1[1]^2 + vz1[1]^2) *
+            n[2] *
+            sqrt(vr1[2]^2 + vz1[2]^2) *
             C *
             M_P *
             0.61
-        @test calculated ≈ expected
+        @test calculated ≈ expected rtol = 1e-2
         wind = Qwind.compute_wind_mdot(streamlines, bh.Rg)
-        @test wind ≈ expected # 2nd streamline doesn't escape
+        @test wind ≈ expected rtol = 1e-2 # 2nd streamline doesn't escape
     end
 
     @testset "Kinetic luminosity" begin

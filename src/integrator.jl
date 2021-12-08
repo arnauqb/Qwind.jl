@@ -1,4 +1,4 @@
-using DiffEqBase, DiffEqCallbacks, Sundials, Printf
+using DiffEqCallbacks, Sundials, Printf
 using Statistics: std, mean
 using Roots: find_zero, Bisection
 using Distributed
@@ -79,8 +79,8 @@ function initialize_integrator(
 )
     l0 = getl0(ic, r0)
     z0 = getz0(ic, r0)
-    n0 = getn0(ic, rad, params, r0)
-    v0 = getv0(ic, r0, mu_nucleon = params.mu_nucleon)
+    n0 = getn0(ic, rad, wind, params, r0)
+    v0 = getv0(rad.bh, ic, r0, mu_nucleon = params.mu_nucleon)
     lwnorm = linewidth / sqrt(r0^2 + z0^2)
     termination_callback = DiscreteCallback(
         termination_condition,

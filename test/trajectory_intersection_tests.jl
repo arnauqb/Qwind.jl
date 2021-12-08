@@ -91,6 +91,7 @@ end
             [1.0, 1.0, 1.0],
             [1.0, 1.0, 1.0],
             [1e8, 1e8, 1e8],
+            false,
         )
         push!(trajectories, traj)
     end
@@ -104,9 +105,10 @@ end
         50.0 .* ones(n),
         50.0 .* ones(n),
         1e8 .* ones(n),
+        false
     )
     push!(trajectories, traj)
-    times = Qwind.get_intersection_times(trajectories)
+    times, _ = Qwind.get_intersection_times(trajectories)
     for i in 1:5
         @test times[i] == i
     end

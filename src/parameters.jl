@@ -24,8 +24,8 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     wind_r_fi::T
     wind_z_0::T
     wind_n_0::T
-    wind_v_0::T
-    ic_K::T
+    wind_v_0::Union{T, W}
+    ic_K::Union{T, W}
     ic_alpha::T
     ic_use_precalculated::U
     integrator_r_min::T
