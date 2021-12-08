@@ -14,6 +14,8 @@ export InitialConditions,
 
 getl0(ic::InitialConditions, r) = sqrt(r)
 getz0(ic::InitialConditions, r) = ic.z0
+getv0(bh, ic::InitialConditions, r; mu_nucleon=0.61) = ic.v0
+getn0(ic::InitialConditions; rad, wind, parameters, r) = ic.n0
 getrin(ic::InitialConditions) = ic.rin
 getrfi(ic::InitialConditions) = ic.rfi
 getnlines(ic::InitialConditions) = ic.nlines
@@ -24,7 +26,7 @@ struct UniformIC{T} <: InitialConditions{T}
     nlines::Union{Int,String}
     z0::T
     n0::T
-    v0::Union{T, String}
+    v0::T
     trajs_spacing::String
 end
 
@@ -40,16 +42,30 @@ function UniformIC(radiation, parameters)
     )
 end
 
-
-getn0(ic::UniformIC, r) = ic.n0
-getn0(ic::UniformIC, rad, wind, parameters, r0) = ic.n0
-function getv0(bh, ic::UniformIC, r; mu_nucleon=0.61)
-    if ic.v0 == "thermal"
-        return compute_thermal_velocity(disk_temperature(bh, r), mu_nucleon)
-    else
-        return ic.v0 / C
-    end
+struct SSIC{T} <: InitialConditions{T}
+    rin::T
+    rfi::T
+    nlines::Union{Int,String}
+    z0::T
+    n0::Union{T,String}
+    v0::Union{T,String}
+    trajs_spacing::String
 end
+function SSIC(radiation, parameters)
+    return SSIC(
+        parameters.wind_r_in,
+        parameters.wind_r_fi,
+        parameters.wind_n_trajs,
+        parameters.wind_z_0,
+        parameters.wind_n_0,
+        parameters.wind_v_0,
+        parameters.wind_trajs_spacing,
+    )
+end
+function getn0(ic::SSIC; radiation, wind, parameters, r)
+    return compute_ss_number_density(radiation.bh, r; mu_nucleon = parameters.mu_nucleon)
+end
+
 ## CAK
 
 struct CAKIC{T} <: InitialConditions{T}
@@ -58,6 +74,7 @@ struct CAKIC{T} <: InitialConditions{T}
     rfi::T
     nlines::Union{Int,String}
     z0::T
+    v0::Union{T, String}
     K::Union{T,String}
     alpha::Union{T,String}
     trajs_spacing::String
@@ -99,6 +116,7 @@ function CAKIC(radiation::Radiation, parameters::Parameters)
         rfi,
         parameters.wind_n_trajs,
         parameters.wind_z_0,
+        parameters.wind_v_0,
         parameters.ic_K,
         parameters.ic_alpha,
         parameters.wind_trajs_spacing,
@@ -112,20 +130,32 @@ function CAKIC(radiation::Radiation, config::Dict)
     return CAKIC(radiation, parameters)
 end
 
-function getn0(ic::CAKIC, radiation::Radiation, wind, parameters, r0)
-    mdot = ic.mdot_interpolator(r0)
-    zc = ic.zc_interpolator(r0)
-    return get_initial_density(radiation, wind, parameters, r = r0, mdot = mdot, zc=zc)
+function getn0(ic::CAKIC; radiation, wind, parameters, r)
+    mdot = ic.mdot_interpolator(r)
+    zc = ic.zc_interpolator(r)
+    return get_initial_density(radiation, wind, parameters, r = r, mdot = mdot, zc = zc)
 end
-getn0(model, r0) = getn0(model.ic, model.rad, model.wind, model.parameters, r0)
-getv0(bh, ic::CAKIC, r0; mu_nucleon = 0.61) =
-    compute_thermal_velocity(disk_temperature(ic.radiation.bh, r0), mu_nucleon)
+
+function getv0(bh, ic::Union{CAKIC,SSIC}, r0; mu_nucleon = 0.61)
+    if ic.v0 == "thermal"
+        compute_thermal_velocity(disk_temperature(bh, r0), mu_nucleon)
+    else
+        return ic.v0
+    end
+end
+
+# model calls
 getv0(model, r0) = getv0(model.bh, model.ic, r0, mu_nucleon = model.parameters.mu_nucleon)
+getn0(model, r0) = getn0(model.ic, radiation=model.rad, wind=model.wind, parameters=model.parameters, r=r0)
 
 function get_initial_conditions(radiation, parameters)
     if parameters.initial_conditions_flag == CAKMode()
         return CAKIC(radiation, parameters)
     elseif parameters.initial_conditions_flag == UniformMode()
         return UniformIC(radiation, parameters)
+    elseif parameters.initial_conditions_flag == SSMode()
+        return SSIC(radiation, parameters)
+    else
+        throw()
     end
 end

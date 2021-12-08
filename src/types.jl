@@ -21,6 +21,7 @@ export FMInterpolationFlag,
     NoScattering,
     ICFlag,
     CAKMode,
+    SSMode,
     UniformMode,
     UpdateGridFlag,
     AverageGrid,
@@ -75,3 +76,4 @@ struct NoScattering <: XRayScatteringFlag end
 abstract type ICFlag end
 struct CAKMode <: ICFlag end
 struct UniformMode <: ICFlag end
+struct SSMode <: ICFlag end

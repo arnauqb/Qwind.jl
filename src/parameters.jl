@@ -6,11 +6,11 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     M::T
     mdot::T
     spin::T
-    disk_r_in::Union{T, W}
+    disk_r_in::Union{T,W}
     disk_r_out::T
     disk_nr::V
-    f_uv::Union{T, W}
-    f_x::Union{T, W}
+    f_uv::Union{T,W}
+    f_x::Union{T,W}
     radiation_grid_nr::Union{V,W}
     radiation_grid_nz::V
     z_xray::T
@@ -20,12 +20,12 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     vacuum_density::T
     wind_n_trajs::Union{V,W}
     wind_trajs_spacing::W
-    wind_r_in::Union{T, W}
+    wind_r_in::Union{T,W}
     wind_r_fi::T
     wind_z_0::T
-    wind_n_0::T
-    wind_v_0::Union{T, W}
-    ic_K::Union{T, W}
+    wind_n_0::Union{T,W}
+    wind_v_0::Union{T,W}
+    ic_K::Union{T,W}
     ic_alpha::T
     ic_use_precalculated::U
     integrator_r_min::T
@@ -183,7 +183,11 @@ function Parameters(config::Dict)
     np = get(config, :numerical_tolerances, Dict())
     ip = get(config, :initial_conditions, Dict())
     initial_conditions_flag =
-        Dict("cak" => CAKMode(), "uniform" => UniformMode())[get(ip, :mode, "cak")]
+        Dict("cak" => CAKMode(), "uniform" => UniformMode(), "ss" => SSMode())[get(
+            ip,
+            :mode,
+            "cak",
+        ),]
     intc = get(config, :integrator, Dict())
 
     return Parameters(
@@ -256,5 +260,5 @@ function change_parameter(parameters::Parameters, key, value)
             dd[field] = getfield(parameters, field)
         end
     end
-    return Parameters(;dd...)
+    return Parameters(; dd...)
 end

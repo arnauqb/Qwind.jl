@@ -22,6 +22,13 @@ end
 model, iterations_dict = get_model("./configs/proga.yaml");
 run!(model, iterations_dict, parallel = true)
 
+rr = range(60, 1500, length=500);
+n0s = getn0.(Ref(model), rr);
+
+fig, ax = plt.subplots()
+ax.loglog(rr, n0s)
+
+
 Qwind.compute_proga_density(model.bh, 100)
 
 getn0(model, 100)
@@ -32,9 +39,9 @@ times, merging = Qwind.get_intersection_times(integrators);
 
 
 data = CSV.read("/home/arnau/code/qwind_experiments/data/james_rho.csv", DataFrame);
-data[!, :r] = data.r / model.bh.Rg
-data[!, :z] = data.z / model.bh.Rg
-data[!, :rho] = data.rho / (model.parameters.mu_nucleon * M_P)
+data[!, :r] = data.r / model.bh.Rg;
+data[!, :z] = data.z / model.bh.Rg;
+data[!, :rho] = data.rho / (model.parameters.mu_nucleon * M_P);
 points = hcat(log10.(data.r), log10.(data.z));
 interp = Qwind.scipy_interpolate.LinearNDInterpolator(points, log10.(data.rho), fill_value=2);
 r_range = 10 .^ range(log10(minimum(data[!, :r])), log10(maximum(data[!, :r])), length=250);
@@ -47,11 +54,7 @@ for (i, r) in enumerate(r_range)
 end
 density_grid = DensityGrid(r_range, z_range, values);
 
-fig, ax = plt.subplots()
-ax.pcolormesh(density_grid.r_range, density_grid.z_range, density_grid.grid', norm=LogNorm())
-ax.set_ylim(0, 50)
-
-r_range = 10 .^ range(log10(60), log10(1500), length=250)
+r_range = 10 .^ range(log10(60), log10(1500), length=250);
 density_profile = []
 for r in r_range
     value = 1e2
@@ -67,6 +70,7 @@ for r in r_range
 end
 fig, ax = plt.subplots()
 ax.loglog(r_range, density_profile)
+ax.loglog(rr, n0s)
 
 
 
