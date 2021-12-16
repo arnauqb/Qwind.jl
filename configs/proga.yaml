@@ -1,0 +1,54 @@
+black_hole:
+  M: 1e8 # solar masses
+  mdot: 0.5 # Eddington units
+  spin: 0.0 # spin parameter (-1,1)
+
+radiation:
+  relativistic: false
+  f_uv: disk
+  f_x: 0.1
+  n_r: 2000
+  disk_r_in: 6.0
+  z_xray: 1.5
+  disk_height: 1.5
+  xray_opacity: thomson
+  uv_opacity: thomson
+  xray_scattering: false
+  tau_uv_calculation: no_tau_uv
+  vacuum_density: 1e2
+  update_grid_method: "average"
+  grid_nz: 250
+  grid_nr: auto
+  mu_nucleon: 1.0
+  mu_electron: 1.0
+
+initial_conditions:
+  mode: cak
+  r_in: 60.0
+  r_fi: 1500.0
+  n_trajs: auto
+  trajs_spacing: log
+  z_0: 1.5
+  v_0: thermal
+  K: 0.03
+  alpha: 0.6
+  z_disk: 1.5
+  use_precalculated: false
+
+integrator:
+  n_iterations: 50
+  save_path: "./proga2"
+  integrator_r_min: 6.0
+  integrator_r_max: 3000.0
+  integrator_z_min: 0.0
+  integrator_z_max: 3000.0
+
+numerical_tolerances:
+  disk_integral_atol: 0
+  disk_integral_rtol: 1e-3
+  disk_integral_maxevals: 10000
+  integrator_atol: 1e-8
+  integrator_rtol: 1e-3
+  scattering_atol: 0
+  scattering_rtol: 1e-3
+  

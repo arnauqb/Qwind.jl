@@ -37,7 +37,12 @@ function f(radiation::Radiation, parameters, z; r, alpha = 0.6, zmax = 1e-1)
 end
 
 function g(radiation::Radiation, parameters, z; r, zmax = 1e-1)
-    grav = compute_gravitational_acceleration(r, z + disk_height(radiation.bh, r))[2]
+    if parameters.z_disk == "auto"
+        z_disk = disk_height(radiation.bh, r)
+    else
+        z_disk = parameters.z_disk
+    end
+    grav = compute_gravitational_acceleration(r, z + z_disk)[2]
     fuv_copy = copy(radiation.fuv_grid)
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     radiation.fuv_grid .= 1.0
@@ -81,8 +86,15 @@ function nozzle_function(
     end
     return c *
            a *
-           f(radiation, parameters, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) /
-           (g(radiation, parameters, z, r = r, zmax = zmax)^((1 - alpha) / alpha))
+           f(radiation, parameters, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) / (
+        g(
+            radiation,
+            parameters,
+            z,
+            r = r,
+            zmax = zmax,
+        )^((1 - alpha) / alpha)
+    )
 end
 
 function find_nozzle_function_minimum(
@@ -162,7 +174,7 @@ function get_initial_density(radiation::Radiation, wind, parameters; r, mdot, zc
     else
         K = parameters.ic_K
     end
-    sigmadot = mdot * CAK_Σ(radiation, parameters, r, K=K)
+    sigmadot = mdot * CAK_Σ(radiation, parameters, r, K = K)
     density =
         sigmadot / (
             compute_thermal_velocity(

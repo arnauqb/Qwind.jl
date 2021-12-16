@@ -27,6 +27,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
     wind_v_0::Union{T,W}
     ic_K::Union{T,W}
     ic_alpha::T
+    ic_z_disk::Union{T, W}
     ic_use_precalculated::U
     integrator_r_min::T
     integrator_r_max::T
@@ -75,6 +76,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
         wind_v_0,
         ic_K,
         ic_alpha,
+        ic_z_disk,
         ic_use_precalculated,
         integrator_r_min,
         integrator_r_max,
@@ -125,6 +127,7 @@ struct Parameters{T<:AbstractFloat,S<:Flag,U<:Bool,V<:Int,W<:String}
             wind_v_0,
             ic_K,
             ic_alpha,
+            ic_z_disk,
             ic_use_precalculated,
             integrator_r_min,
             integrator_r_max,
@@ -218,6 +221,7 @@ function Parameters(config::Dict)
         wind_v_0 = get(ip, :v_0, 1e7),
         ic_K = get(ip, :K, 0.03),
         ic_alpha = get(ip, :alpha, 0.6),
+        ic_z_disk = get(ip, :z_disk, "auto"),
         ic_use_precalculated = get(ip, :use_precalculated, true),
 
         # integrators
