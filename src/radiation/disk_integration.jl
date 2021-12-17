@@ -3,19 +3,24 @@ export compute_disc_radiation_field
 
 
 function compute_tau_uv_integrand(
-    radiation::Radiation,
+    density_grid,
+    iterator,
+    parameters,
+    radiation,
     tau_uv_calculation::TauUVDisk;
     r_disk,
     phi_disk,
     r_wind,
     z_wind,
-    z_disk,
 )
     return compute_tau_uv(
+        density_grid,
+        iterator,
         radiation,
+        parameters,
         ri = r_disk,
         phii = phi_disk,
-        zi = z_disk,
+        zi = parameters.z_disk,
         rf = r_wind,
         phif = 0.0,
         zf = z_wind,
@@ -23,37 +28,23 @@ function compute_tau_uv_integrand(
 end
 
 compute_tau_uv_integrand(
-    radiation::Radiation,
+    density_grid,
+    iterator,
+    parameters,
+    radiation,
     tau_uv_calculation::Union{TauUVCenter,NoTauUV};
     r_disk,
     phi_disk,
     r_wind,
     z_wind,
-    z_disk,
 ) = 0.0
-
-compute_tau_uv_integrand(
-    radiation,
-    tau_uv_calculation;
-    r_disk,
-    phi_disk,
-    r_wind,
-    z_wind,
-    z_disk,
-) = compute_tau_uv_integrand(
-    radiation,
-    tau_uv_calculation,
-    r_disk = r_disk,
-    phi_disk = phi_disk,
-    r_wind = r_wind,
-    z_wind = z_wind,
-    z_disk = z_disk,
-)
 
 function radiation_force_integrand!(
     v,
-    radiation::Radiation,
-    parameters::Parameters;
+    density_grid,
+    iterator,
+    parameters,
+    radiation;
     r_disk,
     phi_disk,
     r_wind,
@@ -87,13 +78,15 @@ function radiation_force_integrand!(
         delta = delta,
     )
     tau_uv = compute_tau_uv_integrand(
+        density_grid,
+        iterator,
+        parameters,
         radiation,
         parameters.tau_uv_calculation_flag,
         r_disk = r_disk,
         phi_disk = phi_disk,
         r_wind = r_wind,
         z_wind = z_wind,
-        z_disk = parameters.z_disk,
     )
     fuv, mdot = get_fuv_mdot(radiation, r_disk)
     factors = fuv * mdot * rel * nt * exp(-tau_uv) * common_projection
@@ -101,16 +94,34 @@ function radiation_force_integrand!(
     v[2] = factors * (z_wind - parameters.z_disk)
 end
 
-force_prefactors(radiation::Radiation, flag::TauUVCalculationFlag, r_wind, z_wind, z_disk) =
-    3 / (π * radiation.bh.efficiency)
+force_prefactors(
+    density_grid,
+    iterator,
+    parameters,
+    radiation,
+    ::TauUVCalculationFlag,
+    r_wind,
+    z_wind,
+) = 3 / (π * radiation.bh.efficiency)
 
-function force_prefactors(radiation::Radiation, ::TauUVCenter, r_wind, z_wind, z_disk)
+function force_prefactors(
+    density_grid,
+    iterator,
+    parameters,
+    radiation,
+    ::TauUVCenter,
+    r_wind,
+    z_wind,
+)
     constant = 3 / (π * radiation.bh.efficiency)
     tau_uv = compute_tau_uv(
+        density_grid,
+        iterator,
         radiation,
+        parameters,
         ri = 0.0,
         phii = 0.0,
-        zi = z_disk,
+        zi = parameters.z_disk,
         rf = r_wind,
         phif = 0.0,
         zf = z_wind,
@@ -128,8 +139,10 @@ Integrates the radiation acceleration integrand on the disc.
 -
 """
 function integrate_radiation_force_integrand(
-    radiation,
-    parameters;
+    density_grid,
+    iterator,
+    parameters,
+    radiation;
     r_wind,
     z_wind,
     vr_wind,
@@ -143,8 +156,10 @@ function integrate_radiation_force_integrand(
     gamma = compute_gamma(beta)
     f(x, v) = radiation_force_integrand!(
         v,
-        radiation,
+        density_grid,
+        iterator,
         parameters,
+        radiation,
         r_disk = x[1],
         phi_disk = x[2],
         r_wind = r_wind,
@@ -168,8 +183,10 @@ function integrate_radiation_force_integrand(
 end
 
 function compute_disc_radiation_field_small_heights(
-    radiation::Radiation,
-    parameters::Parameters;
+    density_grid,
+    iterator,
+    parameters,
+    radiation;
     r_wind,
     z_wind,
     vr_wind,
@@ -178,13 +195,15 @@ function compute_disc_radiation_field_small_heights(
     constant = 3 / (2 * radiation.bh.efficiency)
     fuv, mdot = get_fuv_mdot(radiation, r_wind)
     tau_uv = compute_tau_uv_integrand(
+        density_grid,
+        iterator,
+        parameters,
         radiation,
         parameters.tau_uv_calculation_flag,
         r_disk = r_wind,
         phi_disk = 0.0,
         r_wind = r_wind,
         z_wind = z_wind,
-        z_disk = parameters.z_disk,
     )
     beta = compute_beta(vr_wind, vz_wind)
     rel = ((1 - beta) / (1 + beta))^2
@@ -202,8 +221,10 @@ an integral over the disc.
 - radiative_efficiency: accretion radiative efficiency
 """
 function compute_disc_radiation_field(
-    radiation::Radiation,
-    parameters::Parameters;
+    density_grid,
+    iterator,
+    parameters,
+    radiation;
     r_wind,
     z_wind,
     vr_wind,
@@ -224,8 +245,10 @@ function compute_disc_radiation_field(
             return [0.0, 0.0]
         end
         force = compute_disc_radiation_field_small_heights(
-            radiation,
+            density_grid,
+            iterator,
             parameters,
+            radiation;
             r_wind = r_wind,
             z_wind = z_wind,
             vr_wind = vr_wind,
@@ -233,8 +256,10 @@ function compute_disc_radiation_field(
         )
     else
         integration = integrate_radiation_force_integrand(
-            radiation,
+            density_grid,
+            iterator,
             parameters,
+            radiation;
             r_wind = r_wind,
             z_wind = z_wind,
             vr_wind = vr_wind,
@@ -243,11 +268,13 @@ function compute_disc_radiation_field(
             disk_r_out = parameters.disk_r_out,
         )
         prefactors = force_prefactors(
+            density_grid,
+            iterator,
+            parameters,
             radiation,
             parameters.tau_uv_calculation_flag,
             r_wind,
             z_wind,
-            parameters.z_disk,
         )
         force = (z_wind - parameters.z_disk) .* prefactors .* integration
     end

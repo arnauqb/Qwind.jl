@@ -387,8 +387,10 @@ function compute_radiation_acceleration(
     #taueff = 1.0
     forcemultiplier = compute_force_multiplier(taueff, ξ)
     disc_radiation_field = compute_disc_radiation_field(
-        radiation,
+        wind.density_grid,
+        wind.grid_iterator,
         parameters,
+        radiation,
         r_wind = r,
         z_wind = z,
         vr_wind = vr,

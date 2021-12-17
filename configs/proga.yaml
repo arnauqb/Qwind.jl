@@ -18,9 +18,8 @@ radiation:
   vacuum_density: 1e2
   update_grid_method: "average"
   grid_nz: 250
-  grid_nr: auto
+  grid_nr: 250
   mu_nucleon: 1.0
-  mu_electron: 1.0
 
 initial_conditions:
   mode: cak
@@ -36,8 +35,8 @@ initial_conditions:
   use_precalculated: false
 
 integrator:
-  n_iterations: 50
-  save_path: "./proga2"
+  n_iterations: 20
+  save_path: "./proga"
   integrator_r_min: 6.0
   integrator_r_max: 3000.0
   integrator_z_min: 0.0
@@ -45,7 +44,7 @@ integrator:
 
 numerical_tolerances:
   disk_integral_atol: 0
-  disk_integral_rtol: 1e-3
+  disk_integral_rtol: 5e-4
   disk_integral_maxevals: 10000
   integrator_atol: 1e-8
   integrator_rtol: 1e-3

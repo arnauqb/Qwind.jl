@@ -11,8 +11,23 @@ struct Radiation{T<:AbstractFloat}
     qsosed_model::Qsosed.QsosedModel
 end
 
-function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, nz, mu_nucleon)
-    qsosed_parameters = Qsosed.Parameters(M=bh.M / M_SUN, mdot=bh.mdot, spin=bh.spin, mu_nucleon=mu_nucleon)
+function Radiation(
+    bh::BlackHole;
+    disk_nr,
+    fx,
+    fuv,
+    disk_r_in,
+    disk_r_out,
+    nr,
+    nz,
+    mu_nucleon,
+)
+    qsosed_parameters = Qsosed.Parameters(
+        M = bh.M / M_SUN,
+        mdot = bh.mdot,
+        spin = bh.spin,
+        mu_nucleon = mu_nucleon,
+    )
     qsosed_model = Qsosed.QsosedModel(qsosed_parameters)
     if disk_r_in == "corona_radius"
         disk_r_in = qsosed_model.corona.radius
@@ -21,7 +36,13 @@ function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, n
     end
     disk_grid = 10 .^ range(log10(disk_r_in), log10(disk_r_out), length = disk_nr)
     if fuv == "qsosed"
-        _, uvf = Qsosed.radial_uv_fraction.(Ref(qsosed_model), r_min=disk_r_in, r_max=disk_r_out, n_r=disk_nr)
+        _, uvf =
+            Qsosed.radial_uv_fraction.(
+                Ref(qsosed_model),
+                r_min = disk_r_in,
+                r_max = disk_r_out,
+                n_r = disk_nr,
+            )
     elseif fuv == "disk"
         uvf = Qsosed.disk_uv_fraction.(Ref(bh), disk_grid)
     else
@@ -36,7 +57,15 @@ function Radiation(bh::BlackHole; disk_nr, fx, fuv, disk_r_in, disk_r_out, nr, n
     mdot_grid = bh.mdot .* ones(length(disk_grid))
     xray_luminosity = fx * compute_bolometric_luminosity(bh)
     scatt_lumin = ScatteredLuminosityGrid(nr, nz, 0.0)
-    return Radiation(bh, disk_grid, uvf, mdot_grid, xray_luminosity, scatt_lumin, qsosed_model)
+    return Radiation(
+        bh,
+        disk_grid,
+        uvf,
+        mdot_grid,
+        xray_luminosity,
+        scatt_lumin,
+        qsosed_model,
+    )
 end
 
 # read from config
@@ -50,10 +79,10 @@ function Radiation(bh::BlackHole, parameters::Parameters)
         disk_r_out = parameters.disk_r_out,
         nr = parameters.radiation_grid_nr,
         nz = parameters.radiation_grid_nz,
-        mu_nucleon=parameters.mu_nucleon
+        mu_nucleon = parameters.mu_nucleon,
     )
 end
-function Radiation(bh::BlackHole, config::Dict) 
+function Radiation(bh::BlackHole, config::Dict)
     parameters = Parameters(config)
     return Radiation(bh, parameters)
 end

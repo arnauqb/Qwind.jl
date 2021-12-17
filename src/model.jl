@@ -16,7 +16,7 @@ function Model(config::Dict)
     bh = BlackHole(parameters)
     rad = Radiation(bh, parameters)
     wind = Wind(parameters)
-    ic = get_initial_conditions(rad, parameters)
+    ic = get_initial_conditions(rad, parameters, wind)
     return Model(parameters, bh, wind, rad, ic)
 end
 

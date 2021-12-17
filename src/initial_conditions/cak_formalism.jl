@@ -3,11 +3,13 @@ export calculate_wind_mdots
 
 get_B0(r) = 1.0 / r^2
 
-function gamma0(radiation, parameters, r)
+function gamma0(density_grid, iterator, parameters, radiation, r)
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     ret = compute_disc_radiation_field_small_heights(
-        radiation,
+        density_grid,
+        iterator,
         parameters_no_tau,
+        radiation,
         r_wind = r,
         z_wind = 1.0,
         vr_wind = 0.0,
@@ -19,12 +21,14 @@ function gamma0(radiation, parameters, r)
     return ret
 end
 
-function f(radiation::Radiation, parameters, z; r, alpha = 0.6, zmax = 1e-1)
+function f(density_grid, iterator, parameters, radiation, z; r, alpha = 0.6, zmax = 1e-1)
     cc = 1 / (alpha^alpha * (1 - alpha)^(1 - alpha))
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     frad = compute_disc_radiation_field(
-        radiation,
+        density_grid,
+        iterator,
         parameters_no_tau,
+        radiation,
         r_wind = r,
         z_wind = z,
         vr_wind = 0.0,
@@ -32,11 +36,11 @@ function f(radiation::Radiation, parameters, z; r, alpha = 0.6, zmax = 1e-1)
         max_z_vertical_flux = zmax,
         maxevals = 100000,
     )[2]
-    f0 = gamma0(radiation, parameters, r)
+    f0 = gamma0(density_grid, iterator, parameters, radiation, r)
     return cc * frad / f0
 end
 
-function g(radiation::Radiation, parameters, z; r, zmax = 1e-1)
+function g(density_grid, iterator, parameters, radiation, z; r, zmax = 1e-1)
     if parameters.z_disk == "auto"
         z_disk = disk_height(radiation.bh, r)
     else
@@ -47,8 +51,10 @@ function g(radiation::Radiation, parameters, z; r, zmax = 1e-1)
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     radiation.fuv_grid .= 1.0
     fr = compute_disc_radiation_field(
-        radiation,
+        density_grid,
+        iterator,
         parameters_no_tau,
+        radiation,
         r_wind = r,
         z_wind = z,
         vr_wind = 0.0,
@@ -67,8 +73,10 @@ function g(radiation::Radiation, parameters, z; r, zmax = 1e-1)
 end
 
 function nozzle_function(
-    radiation::Radiation,
+    density_grid,
+    iterator,
     parameters,
+    radiation,
     z;
     r,
     alpha = 0.6,
@@ -81,15 +89,26 @@ function nozzle_function(
     else
         a = 1.0
     end
-    if g(radiation, parameters, z, r = r, zmax = zmax) <= 0
+    if g(density_grid, iterator, parameters, radiation, z, r = r, zmax = zmax) <= 0
         return Inf
     end
     return c *
            a *
-           f(radiation, parameters, z, r = r, alpha = alpha, zmax = zmax)^(1 / alpha) / (
+           f(
+               density_grid,
+               iterator,
+               parameters,
+               radiation,
+               z,
+               r = r,
+               alpha = alpha,
+               zmax = zmax,
+           )^(1 / alpha) / (
         g(
-            radiation,
+            density_grid,
+            iterator,
             parameters,
+            radiation,
             z,
             r = r,
             zmax = zmax,
@@ -98,8 +117,10 @@ function nozzle_function(
 end
 
 function find_nozzle_function_minimum(
-    radiation::Radiation,
+    density_grid,
+    iterator,
     parameters,
+    radiation,
     r;
     alpha = 0.6,
     zmax = 1e-1,
@@ -114,8 +135,10 @@ function find_nozzle_function_minimum(
     z_range = 10 .^ range(z0, 3, length = nz)
     n_range =
         nozzle_function.(
-            Ref(radiation),
+            Ref(density_grid),
+            Ref(iterator),
             Ref(parameters),
+            Ref(radiation),
             z_range,
             r = r,
             alpha = alpha,
@@ -132,7 +155,7 @@ function find_nozzle_function_minimum(
     return z_range[mina], minv
 end
 
-function CAK_Σ(radiation::Radiation, parameters, r; K = nothing)
+function CAK_Σ(density_grid, iterator, parameters, radiation, r; K = nothing)
     if K == nothing
         K = parameters.ic_K
     end
@@ -142,7 +165,7 @@ function CAK_Σ(radiation::Radiation, parameters, r; K = nothing)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / radiation.bh.Rg
     constant = K * (1 / (SIGMA_E / mu_e * vth))^alpha * C^2 / radiation.bh.Rg
-    γ0 = gamma0(radiation, parameters, r) * constant
+    γ0 = gamma0(density_grid, iterator, parameters, radiation, r) * constant
     return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
 
@@ -174,7 +197,8 @@ function get_initial_density(radiation::Radiation, wind, parameters; r, mdot, zc
     else
         K = parameters.ic_K
     end
-    sigmadot = mdot * CAK_Σ(radiation, parameters, r, K = K)
+    sigmadot =
+        mdot * CAK_Σ(wind.density_grid, wind.grid_iterator, parameters, radiation, r, K = K)
     density =
         sigmadot / (
             compute_thermal_velocity(
@@ -187,8 +211,10 @@ function get_initial_density(radiation::Radiation, wind, parameters; r, mdot, zc
 end
 
 function calculate_wind_mdots(
-    radiation::Radiation,
-    parameters;
+    density_grid,
+    iterator,
+    parameters,
+    radiation;
     rmin = 6.1,
     rmax = 1500.0,
     nr = 100,
@@ -198,8 +224,10 @@ function calculate_wind_mdots(
     mdots = []
     zcs = []
     f(r) = find_nozzle_function_minimum(
-        radiation,
+        density_grid,
+        iterator,
         parameters,
+        radiation,
         r,
         alpha = 0.6,
         zmax = 1e-1,

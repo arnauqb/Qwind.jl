@@ -14,7 +14,7 @@ export InitialConditions,
 
 getl0(ic::InitialConditions, r) = sqrt(r)
 getz0(ic::InitialConditions, r) = ic.z0
-getv0(bh, ic::InitialConditions, r; mu_nucleon=0.61) = ic.v0
+getv0(bh, ic::InitialConditions, r; mu_nucleon = 0.61) = ic.v0
 getn0(ic::InitialConditions; rad, wind, parameters, r) = ic.n0
 getrin(ic::InitialConditions) = ic.rin
 getrfi(ic::InitialConditions) = ic.rfi
@@ -74,7 +74,7 @@ struct CAKIC{T} <: InitialConditions{T}
     rfi::T
     nlines::Union{Int,String}
     z0::T
-    v0::Union{T, String}
+    v0::Union{T,String}
     K::Union{T,String}
     alpha::Union{T,String}
     trajs_spacing::String
@@ -83,14 +83,19 @@ struct CAKIC{T} <: InitialConditions{T}
     mdot_interpolator::Any
 end
 
-function CAKIC(radiation::Radiation, parameters::Parameters)
+function CAKIC(radiation::Radiation, parameters::Parameters, wind)
     M = parameters.M
     mdot = parameters.mdot
     if parameters.ic_use_precalculated
         filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
         critical_points_df = CSV.read(joinpath(@__DIR__, filename), DataFrame)
     else
-        rr, mdots, zcs = calculate_wind_mdots(radiation, parameters)
+        rr, mdots, zcs = calculate_wind_mdots(
+            wind.density_grid,
+            wind.grid_iterator,
+            parameters,
+            radiation,
+        )
         critical_points_df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
     end
     zc_interpolator = LinearInterpolation(
@@ -127,7 +132,8 @@ function CAKIC(radiation::Radiation, parameters::Parameters)
 end
 function CAKIC(radiation::Radiation, config::Dict)
     parameters = Parameters(config)
-    return CAKIC(radiation, parameters)
+    wind = Wind(parameters)
+    return CAKIC(radiation, parameters, wind)
 end
 
 function getn0(ic::CAKIC; radiation, wind, parameters, r)
@@ -146,11 +152,17 @@ end
 
 # model calls
 getv0(model, r0) = getv0(model.bh, model.ic, r0, mu_nucleon = model.parameters.mu_nucleon)
-getn0(model, r0) = getn0(model.ic, radiation=model.rad, wind=model.wind, parameters=model.parameters, r=r0)
+getn0(model, r0) = getn0(
+    model.ic,
+    radiation = model.rad,
+    wind = model.wind,
+    parameters = model.parameters,
+    r = r0,
+)
 
-function get_initial_conditions(radiation, parameters)
+function get_initial_conditions(radiation, parameters, wind)
     if parameters.initial_conditions_flag == CAKMode()
-        return CAKIC(radiation, parameters)
+        return CAKIC(radiation, parameters, wind)
     elseif parameters.initial_conditions_flag == UniformMode()
         return UniformIC(radiation, parameters)
     elseif parameters.initial_conditions_flag == SSMode()
