@@ -5,7 +5,7 @@ black_hole:
 
 radiation:
   relativistic: false
-  f_uv: disk
+  f_uv: 0.9
   f_x: 0.1
   n_r: 2000
   disk_r_in: 6.0
@@ -19,13 +19,13 @@ radiation:
   update_grid_method: "average"
   grid_nz: 250
   grid_nr: 250
-  mu_nucleon: 1.0
+    #mu_nucleon: 1.0
 
 initial_conditions:
   mode: cak
   r_in: 60.0
   r_fi: 1500.0
-  n_trajs: auto
+  n_trajs: 50
   trajs_spacing: log
   z_0: 1.5
   v_0: thermal
