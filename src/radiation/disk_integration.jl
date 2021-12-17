@@ -231,7 +231,7 @@ function compute_disc_radiation_field(
     vz_wind,
     norm = Cubature.INDIVIDUAL,
     maxevals = 10000,
-    max_z_vertical_flux = 5e-1,
+    max_z_vertical_flux = 1e-2,
 )
     if parameters.disk_r_in == "corona_radius"
         disk_r_in = radiation.qsosed_model.corona.radius

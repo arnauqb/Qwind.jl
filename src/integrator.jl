@@ -79,7 +79,7 @@ function initialize_integrator(
 )
     l0 = getl0(ic, r0)
     z0 = getz0(ic, r0)
-    n0 = getn0(ic, radiation=rad, wind=wind, parameters=params, r=r0)
+    n0 = getn0(ic, radiation = rad, wind = wind, parameters = params, r = r0)
     v0 = getv0(rad.bh, ic, r0, mu_nucleon = params.mu_nucleon)
     lwnorm = linewidth / sqrt(r0^2 + z0^2)
     termination_callback = DiscreteCallback(
@@ -263,27 +263,24 @@ function save(
         zf = z,
         phif = 0.0,
     )
-    #ξ = compute_ionization_parameter(radiation, r, z, vr, vz, density, taux)
-    #ξ = compute_ionization_parameter(
-    #    r = r,
-    #    z = z,
-    #    vr = vr,
-    #    vz = vz,
-    #    number_density = density,
-    #    tau_x = taux,
-    #    xray_luminosity = radiation.xray_luminosity,
-    #    Rg = radiation.bh.Rg,
-    #    include_scattering = radiation.xray_scattering,
-    #    scattered_luminosity_grid = radiation.wi.scattered_lumin_grid,
-    #    density_grid = radiation.wi.density_grid,
-    #    absorption_opacity = radiation.xray_opacity,
-    #    zh = radiation.z_xray,
-    #    mu_electron = radiation.mu_electron,
-    #    mu_nucleon = radiation.mu_nucleon,
-    #)
-    #ξ = interpolate_ionization_parameter(radiation.wi.ionization_grid, r, z)
+    ξ = compute_ionization_parameter(
+        radiation.scattered_lumin_grid,
+        wind.grid_iterator,
+        wind.density_grid,
+        r = r,
+        z = z,
+        number_density = density,
+        tau_x = taux,
+        xray_luminosity = radiation.xray_luminosity,
+        Rg = radiation.bh.Rg,
+        scattering_flag = NoScattering(),
+        absorption_opacity = parameters.xray_opacity_flag,
+        zh = parameters.z_xray,
+        mu_electron = parameters.mu_electron,
+        mu_nucleon = parameters.mu_nucleon,
+    )
     taueff = compute_tau_eff(density, dvdr)
-    #forcemultiplier = compute_force_multiplier(taueff, ξ)
+    forcemultiplier = compute_force_multiplier(taueff, ξ)
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
@@ -291,11 +288,11 @@ function save(
     push!(data[:vz], vz)
     push!(data[:n], density)
     push!(data[:dvdr], dvdr)
-    #push!(data[:taux], taux)
+    push!(data[:taux], taux)
     push!(data[:tauuv], 0.0)
-    #push!(data[:xi], ξ)
+    push!(data[:xi], ξ)
     push!(data[:taueff], taueff)
-    #push!(data[:fm], forcemultiplier)
+    push!(data[:fm], forcemultiplier)
     return 0.0
 end
 
