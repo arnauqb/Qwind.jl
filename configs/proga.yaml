@@ -18,9 +18,10 @@ radiation:
   fm_interp_method_flag: analytic
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 250
-  grid_nr: 250
-    #mu_nucleon: 1.0
+  grid_nz: 500
+  grid_nr: auto
+  mu_nucleon: 1.0
+  mu_electron: 1.0
 
 initial_conditions:
   mode: cak
@@ -30,12 +31,10 @@ initial_conditions:
   trajs_spacing: log
   z_0: 1.5
   v_0: thermal
-  K: 0.03
+  K: 0.06
   alpha: 0.6
   z_disk: 1.5
   use_precalculated: false
-  mu_nucleon: 1.0
-  mu_electron: 1.0
 
 integrator:
   n_iterations: 50
