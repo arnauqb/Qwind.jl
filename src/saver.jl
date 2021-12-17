@@ -8,10 +8,10 @@ function save_integrators(integrators, save_path)
 end
 
 function compute_streamline_mdot(streamline::Streamline, Rg; mu_nucleon = 0.61)
-    n = streamline.n[end]
-    v = sqrt(streamline.vr[end]^2 + streamline.vz[end]^2)
-    d = sqrt(streamline.r[end]^2 + streamline.z[end]^2)
-    lw = streamline.width[end]
+    n = streamline.n[1]
+    v = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
+    d = sqrt(streamline.r[1]^2 + streamline.z[1]^2)
+    lw = streamline.width[1]
     mw = 2π * d * lw * Rg^2 * n * v * C * M_P * mu_nucleon
     return mw
 end
@@ -28,7 +28,7 @@ end
 function compute_wind_mdot(streamlines, Rg; mu_nucleon = 0.61)
     mdot_wind = 0.0
     for streamline in streamlines
-        if escaped(streamline)
+        if streamline.escaped
             mdot_wind += compute_streamline_mdot(streamline, Rg, mu_nucleon = mu_nucleon)
         end
     end
@@ -48,7 +48,7 @@ end
 function compute_kinetic_luminosity(streamlines::Streamlines, Rg; mu_nucleon = 0.61)
     kin_lumin = 0.0
     for streamline in streamlines
-        if escaped(streamline)
+        if streamline.escaped
             kin_lumin += compute_kinetic_luminosity(streamline, Rg, mu_nucleon = mu_nucleon)
         end
     end
