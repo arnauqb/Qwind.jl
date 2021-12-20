@@ -28,7 +28,7 @@ end
 function compute_wind_mdot(streamlines, Rg; mu_nucleon = 0.61)
     mdot_wind = 0.0
     for streamline in streamlines
-        if streamline.escaped
+        if escaped(streamline)
             mdot_wind += compute_streamline_mdot(streamline, Rg, mu_nucleon = mu_nucleon)
         end
     end
@@ -91,14 +91,13 @@ function create_wind_properties(
     streamlines::Streamlines,
     bh::BlackHole;
     mu_nucleon = 0.61,
-    mu_electron = 1.17,
 )
     ret = Dict()
     ret["eddington_luminosity"] =
-        compute_eddington_luminosity(bh, mu_electron = mu_electron)
+        compute_eddington_luminosity(bh)
     ret["bolometric_luminosity"] =
-        compute_bolometric_luminosity(bh, mu_electron = mu_electron)
-    ret["mass_accretion_rate"] = compute_mass_accretion_rate(bh, mu_electron = mu_electron)
+        compute_bolometric_luminosity(bh)
+    ret["mass_accretion_rate"] = compute_mass_accretion_rate(bh)
     ret["kinetic_luminosity"] =
         compute_kinetic_luminosity(streamlines, bh.Rg, mu_nucleon = mu_nucleon)
     ret["mass_loss"] = compute_wind_mdot(streamlines, bh.Rg, mu_nucleon = mu_nucleon)
@@ -113,13 +112,11 @@ function save_wind_properties(
     save_path,
     bh::BlackHole;
     mu_nucleon = 0.61,
-    mu_electron = 1.17,
 )
     ret = create_wind_properties(
         streamlines,
         bh,
         mu_nucleon = mu_nucleon,
-        mu_electron = mu_electron,
     )
     YAML.write_file(save_path, ret)
     return ret
@@ -139,7 +136,6 @@ function save_wind(integrators, streamlines, model, save_path, it_num)
         properties_save_path,
         model.bh,
         mu_nucleon = model.parameters.mu_nucleon,
-        mu_electron = model.parameters.mu_electron,
     )
     return properties
 end

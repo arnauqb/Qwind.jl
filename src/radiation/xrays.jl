@@ -16,8 +16,6 @@ function compute_ionization_parameter(
     scattering_flag,
     absorption_opacity = BoostOpacity(),
     zh = 0.0,
-    mu_electron = 1.17,
-    mu_nucleon = 0.61,
 )
     d = sqrt(r^2 + z^2)# * Rg
     ret = xray_luminosity * exp(-tau_x) / (number_density * d^2 * Rg^2)
@@ -29,8 +27,6 @@ function compute_ionization_parameter(
                 iterator,
                 r = r,
                 z = z,
-                mu_electron = mu_electron,
-                mu_nucleon = mu_nucleon,
                 absorption_opacity = absorption_opacity,
                 Rg = Rg,
             ) / number_density
@@ -59,8 +55,6 @@ compute_ionization_parameter(
     scattering_flag = parameters.xray_scattering_flag,
     absorption_opacity = parameters.xray_opacity_flag,
     zh = parameters.z_xray,
-    mu_electron = parameters.mu_electron,
-    mu_nucleon = parameters.mu_nucleon,
 )
 
 """

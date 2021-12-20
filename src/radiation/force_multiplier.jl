@@ -52,12 +52,12 @@ function compute_force_multiplier_eta(ionization_parameter, mode::FMNoInterp)
 end
 
 "This is the sobolev optical depth parameter for the force multiplier"
-function compute_tau_eff(number_density, dv_dr, mu_nucleon = 0.61, mu_electron = 1.17)
+function compute_tau_eff(number_density, dv_dr)
     v_thermal_sk = 6.77652505049944e-5 # thermal velocity at T=25e3 K in C units
     if dv_dr == 0
         return 1.0
     end
-    t = number_density * SIGMA_T * mu_electron / mu_nucleon * abs(v_thermal_sk / dv_dr)
+    t = number_density * SIGMA_T * abs(v_thermal_sk / dv_dr)
     return t
 end
 

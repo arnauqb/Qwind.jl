@@ -6,8 +6,6 @@ function ionization_cell_xi_kernel(;
     distance_from_source,
     taux0,
     dx,
-    mu_nucleon,
-    mu_electron,
     target_ionization_parameter = 1e5,
 )
     if dx < distance_from_source
@@ -16,8 +14,8 @@ function ionization_cell_xi_kernel(;
         ret =
             log(
                 xray_luminosity /
-                (target_ionization_parameter * cell_density / mu_nucleon * dx^2),
-            ) - cell_density * mu_electron * SIGMA_T * (dx - distance_from_source) - taux0
+                (target_ionization_parameter * cell_density * dx^2),
+            ) - cell_density * SIGMA_T * (dx - distance_from_source) - taux0
         return ret
     end
 end
@@ -26,8 +24,6 @@ function compute_optical_depth_cell(
     density_grid::DensityGrid,
     iterator::GridIterator,
     ::BoostOpacity2;
-    mu_electron = 1.17,
-    mu_nucleon = 0.61,
     r_idx,
     z_idx,
     ri,
@@ -55,8 +51,6 @@ function compute_optical_depth_cell(
         cell_density = cell_density,
         distance_from_source = distance_to_source,
         taux0 = tau_to_cell,
-        mu_nucleon = mu_nucleon,
-        mu_electron = mu_electron,
         dx = t,
     )
     x1 = distance_to_source
@@ -64,13 +58,12 @@ function compute_optical_depth_cell(
     f1 = f(x1)
     f2 = f(x2)
     if f1 > 0 && f2 > 0
-        return cell_density * mu_electron * intersection_size * SIGMA_T
+        return cell_density * intersection_size * SIGMA_T
     elseif f1 < 0 && f2 < 0
-        return cell_density * mu_electron * intersection_size * 100 * SIGMA_T
+        return cell_density * intersection_size * 100 * SIGMA_T
     else
         dx0 = find_zero(f, (x1, x2), Bisection())
         return cell_density *
-               mu_electron *
                (
                    (dx0 - distance_to_source) +
                    100 * (distance_to_source + intersection_size - dx0)
@@ -83,8 +76,6 @@ function compute_optical_depth_cell(
     density_grid::DensityGrid,
     iterator::GridIterator,
     ::BoostOpacity;
-    mu_electron = 1.17,
-    mu_nucleon = 0.61,
     r_idx,
     z_idx,
     ri,
@@ -98,7 +89,7 @@ function compute_optical_depth_cell(
     Rg,
 )
     cell_density = density_grid.grid[r_idx, z_idx]
-    dx = sqrt(source_luminosity * exp(-tau_to_cell) / cell_density * mu_nucleon / 1e5)
+    dx = sqrt(source_luminosity * exp(-tau_to_cell) / cell_density / 1e5)
     distance_to_source = compute_distance_cylindrical(
         ri,
         phii,
@@ -108,7 +99,7 @@ function compute_optical_depth_cell(
         iterator.previous_point[3],
     ) * Rg
     intersection_size = dist_to_intersection(iterator, iterator.previous_point) * Rg
-    ret = cell_density * mu_electron * SIGMA_T
+    ret = cell_density * SIGMA_T
     if distance_to_source > dx
         ret = 100 * ret * intersection_size
     else
@@ -130,8 +121,6 @@ function compute_optical_depth_cell(
     density_grid::DensityGrid,
     iterator::GridIterator,
     ::ThomsonOpacity;
-    mu_electron = 1.17,
-    mu_nucleon = 0.61,
     r_idx,
     z_idx,
     ri,
@@ -146,7 +135,7 @@ function compute_optical_depth_cell(
 )
     cell_density = density_grid.grid[r_idx, z_idx]
     intersection_size = dist_to_intersection(iterator, iterator.previous_point)
-    return intersection_size * cell_density * mu_electron * SIGMA_T * Rg
+    return intersection_size * cell_density * SIGMA_T * Rg
 end
 
 function compute_optical_depth(
@@ -160,8 +149,6 @@ function compute_optical_depth(
     phif,
     zf,
     Rg,
-    mu_electron = 1.17,
-    mu_nucleon = 0.61,
     max_tau = 50.0,
     source_luminosity,
 )
@@ -177,8 +164,6 @@ function compute_optical_depth(
                 density_grid,
                 iterator,
                 opacity,
-                mu_electron = mu_electron,
-                mu_nucleon = mu_nucleon,
                 tau_to_cell = ret,
                 r_idx = r_idx,
                 z_idx = z_idx,
