@@ -9,6 +9,7 @@ radiation:
   f_x: 0.1
   n_r: 2000
   disk_r_in: 6.0
+  disk_r_out: 3000.0
   z_xray: 1.5
   disk_height: 1.5
   xray_opacity: thomson
@@ -18,26 +19,26 @@ radiation:
   fm_interp_method_flag: analytic
   vacuum_density: 1e2
   update_grid_method: "average"
-  grid_nz: 500
-  grid_nr: auto
+  grid_nz: 250
+  grid_nr: 250
   mu_nucleon: 1.0
   mu_electron: 1.0
 
 initial_conditions:
   mode: cak
   r_in: 60.0
-  r_fi: 1500.0
+  r_fi: 3000.0
   n_trajs: auto
   trajs_spacing: log
   z_0: 1.5
   v_0: thermal
-  K: 0.06
+  K: 0.03
   alpha: 0.6
   z_disk: 1.5
   use_precalculated: false
 
 integrator:
-  n_iterations: 50
+  n_iterations: 25
   save_path: "./proga2"
   integrator_r_min: 6.0
   integrator_r_max: 3000.0
