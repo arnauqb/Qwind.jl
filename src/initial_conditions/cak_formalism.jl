@@ -163,7 +163,7 @@ function CAK_Σ(density_grid, iterator, parameters, radiation, r; K = nothing)
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / radiation.bh.Rg
-    constant = K * (1 / (SIGMA_E / vth))^alpha * C^2 / radiation.bh.Rg
+    constant = K * (1 / (SIGMA_E * vth))^alpha * C^2 / radiation.bh.Rg
     γ0 = gamma0(density_grid, iterator, parameters, radiation, r) * constant
     return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end
