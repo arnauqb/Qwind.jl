@@ -156,8 +156,6 @@ function compute_tau_uv(
         phif = phif,
         zf = zf,
         max_tau = max_tau,
-        mu_nucleon = parameters.mu_nucleon,
-        mu_electron = parameters.mu_electron,
         Rg = radiation.bh.Rg,
         source_luminosity = radiation.xray_luminosity,
     )
@@ -188,8 +186,6 @@ function compute_tau_xray(
         phif = phif,
         zf = zf,
         max_tau = max_tau,
-        mu_nucleon = parameters.mu_nucleon,
-        mu_electron = parameters.mu_electron,
         Rg = radiation.bh.Rg,
         source_luminosity = radiation.xray_luminosity,
     )

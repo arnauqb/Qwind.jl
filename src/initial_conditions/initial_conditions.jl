@@ -95,6 +95,7 @@ function CAKIC(radiation::Radiation, parameters::Parameters, wind)
             wind.grid_iterator,
             parameters,
             radiation,
+            rmax=parameters.wind_r_fi
         )
         critical_points_df = DataFrame(:r => rr, :mdot => mdots, :zc => zcs)
     end

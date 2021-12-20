@@ -46,7 +46,7 @@ function g(density_grid, iterator, parameters, radiation, z; r, zmax = 1e-1)
     else
         z_disk = parameters.z_disk
     end
-    grav = compute_gravitational_acceleration(r, z + z_disk)[2]
+    grav = compute_gravitational_acceleration(r, z)[2]
     fuv_copy = copy(radiation.fuv_grid)
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     radiation.fuv_grid .= 1.0
@@ -160,11 +160,10 @@ function CAK_Σ(density_grid, iterator, parameters, radiation, r; K = nothing)
         K = parameters.ic_K
     end
     alpha = parameters.ic_alpha
-    mu_e = parameters.mu_electron
     cc = alpha * (1 - alpha)^((1 - alpha) / alpha)
     vth = compute_thermal_velocity(25e3) * C
     B0 = get_B0(r) * C^2 / radiation.bh.Rg
-    constant = K * (1 / (SIGMA_E / mu_e * vth))^alpha * C^2 / radiation.bh.Rg
+    constant = K * (1 / (SIGMA_E / vth))^alpha * C^2 / radiation.bh.Rg
     γ0 = gamma0(density_grid, iterator, parameters, radiation, r) * constant
     return cc * γ0^(1 / alpha) / B0^((1 - alpha) / alpha)
 end

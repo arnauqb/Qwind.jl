@@ -276,8 +276,6 @@ function save(
         scattering_flag = NoScattering(),
         absorption_opacity = parameters.xray_opacity_flag,
         zh = parameters.z_xray,
-        mu_electron = parameters.mu_electron,
-        mu_nucleon = parameters.mu_nucleon,
     )
     taueff = compute_tau_eff(density, dvdr)
     forcemultiplier = compute_force_multiplier(taueff, ξ)
