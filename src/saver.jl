@@ -12,7 +12,7 @@ function compute_streamline_mdot(streamline::Streamline, Rg; mu_nucleon = 0.61)
     v = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
     d = sqrt(streamline.r[1]^2 + streamline.z[1]^2)
     lw = streamline.width[1]
-    mw = 2π * d * lw * Rg^2 * n * v * C * M_P * mu_nucleon
+    mw = 4π * d * lw * Rg^2 * n * v * C * M_P * mu_nucleon
     return mw
 end
 
@@ -21,7 +21,7 @@ function compute_streamline_mdot(streamline::Sundials.IDAIntegrator, Rg; mu_nucl
     v0 = streamline.p.v0
     r0 = streamline.p.r0
     lw = streamline.p.lwnorm * r0
-    mw = 2π * r0 * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
+    mw = 4π * r0 * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
     return mw
 end
 
