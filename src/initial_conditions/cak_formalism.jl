@@ -205,10 +205,6 @@ function get_initial_density(radiation::Radiation, wind, parameters; r, mdot, zc
                 parameters.mu_nucleon,
             ) * C
         )
-    vs = compute_thermal_velocity(
-                disk_temperature(radiation.bh, r),
-                parameters.mu_nucleon,
-            ) * C
     number_density = density / M_P / parameters.mu_nucleon
     return number_density
 end

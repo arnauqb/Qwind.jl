@@ -46,8 +46,8 @@ initial_conditions:
   use_precalculated: false
 
 integrator:
-  n_iterations: 25
-  save_path: "/cosma7/data/dp004/dc-quer1/qwind/proga2"
+  n_iterations: 50
+  save_path: "/cosma7/data/dp004/dc-quer1/qwind/proga_honest"
   integrator_r_min: 6.0
   integrator_r_max: 3000.0
   integrator_z_min: 0.0

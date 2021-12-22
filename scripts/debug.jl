@@ -13,7 +13,7 @@ Normalize = matplotlib.colors.Normalize
 function get_model(config)
     model = Model(config)
     try
-        mv(model.parameters.save_path, "backup", force = true)
+        mv(model.parameters.save_path, "/cosma7/data/dp004/dc-quer1/backup", force = true)
     catch
     end
     model = Model(config)
