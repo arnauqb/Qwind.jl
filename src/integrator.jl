@@ -442,7 +442,7 @@ function compute_lines_range(
         ridx = min(searchsortedfirst(r_range, r), length(r_range))
         n0 = density_range[ridx]
         v0 = getv0(model, r)
-        return n0 * M_P * v0 * C * 2π * r * model.bh.Rg^2
+        return n0 * M_P * v0 * C * 4π * r * model.bh.Rg^2
     end
     function tau_kernel(model; r)
         ridx = min(searchsortedfirst(r_range, r), length(r_range))

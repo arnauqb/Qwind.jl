@@ -14,7 +14,7 @@ export InitialConditions,
 
 getl0(ic::InitialConditions, r) = sqrt(r)
 getz0(ic::InitialConditions, r) = ic.z0
-getv0(bh, ic::InitialConditions, r; mu_nucleon = 0.61) = ic.v0
+getv0(bh, ic::InitialConditions, r; mu_nucleon = 0.61) = ic.v0 / C
 getn0(ic::InitialConditions; rad, wind, parameters, r) = ic.n0
 getrin(ic::InitialConditions) = ic.rin
 getrfi(ic::InitialConditions) = ic.rfi
@@ -148,7 +148,7 @@ function getv0(bh, ic::Union{CAKIC,SSIC}, r0; mu_nucleon = 0.61)
     if ic.v0 == "thermal"
         compute_thermal_velocity(disk_temperature(bh, r0), mu_nucleon)
     else
-        return ic.v0
+        return ic.v0 / C
     end
 end
 
