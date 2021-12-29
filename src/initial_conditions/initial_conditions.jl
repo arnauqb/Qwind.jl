@@ -87,7 +87,8 @@ function CAKIC(radiation::Radiation, parameters::Parameters, wind)
     M = parameters.M
     mdot = parameters.mdot
     if parameters.ic_use_precalculated
-        filename = "critical_points_data/M_$(M)_mdot_$(mdot).csv"
+        mdot_string = @sprintf "%.4f" mdot
+        filename = "critical_points_data/M_$(M)_mdot_$(mdot_string).csv"
         critical_points_df = CSV.read(joinpath(@__DIR__, filename), DataFrame)
     else
         rr, mdots, zcs = calculate_wind_mdots(
