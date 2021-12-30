@@ -10,7 +10,7 @@ function compute_streamline_mdot(streamline::Streamline, Rg; mu_nucleon = 0.61)
     n0 = streamline.n[1]
     v0 = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
     lw = streamline.width[1]
-    mw = 2π * streamline.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
+    mw = 4π * streamline.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
     return mw
 end
 
