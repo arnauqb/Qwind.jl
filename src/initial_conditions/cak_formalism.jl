@@ -132,6 +132,7 @@ function find_nozzle_function_minimum(
     else
         z0 = log10(zmax)
     end
+    z0 = max(-2, log10(parameters.z_disk))
     z_range = 10 .^ range(z0, 3, length = nz)
     n_range =
         nozzle_function.(
