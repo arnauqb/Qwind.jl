@@ -277,7 +277,6 @@ function load_trajectories(tsdata::Dict)
     ret = Trajectory[]
     for i in t_ids
         tdata = tsdata[i]
-        tdata["escaped"] = true
         trajectory = load_trajectory(tdata)
         push!(ret, trajectory)
     end
