@@ -1,7 +1,8 @@
 using Qwind, Test
 
 @testset "Test read parameters" begin
-    p = Parameters("./configs/config_base.yaml")
+    cbase_path = String(@__DIR__) * "/../configs/config_base.yaml"
+    p = Parameters(cbase_path)
     @test p.M == 1e8
     @test p.mdot == 0.5
     @test p.spin == 0.0
