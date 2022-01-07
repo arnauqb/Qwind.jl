@@ -25,7 +25,6 @@ include("wind/optical_depth_tests.jl")
 include("wind/wind_hull_tests.jl")
 include("wind/density_grid_tests.jl")
 include("wind/velocity_grid_tests.jl")
-#include("wind/ionization_grid_tests.jl")
 include("wind/base_tests.jl")
 
 include("thermodynamics_tests.jl")

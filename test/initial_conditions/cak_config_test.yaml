@@ -27,7 +27,8 @@ initial_conditions:
   r_fi: 800.0
   n_trajs: 10
   trajs_spacing: log
-  z0: 0.0 
+  z_0: 0.0 
+  v_0: "thermal"
   K: 0.03
   alpha: 0.6
   use_precalculated: true

@@ -28,12 +28,12 @@ using Qwind, Test, HDF5
         sl = streamlines[1]
         calculated = Qwind.compute_streamline_mdot(sl, bh.Rg)
         expected =
-            2π *
-            r[2] *
-            widths[2] *
+            4π *
+            r[1] *
+            widths[1] *
             bh.Rg^2 *
-            n[2] *
-            sqrt(vr1[2]^2 + vz1[2]^2) *
+            n[1] *
+            sqrt(vr1[1]^2 + vz1[1]^2) *
             C *
             M_P *
             0.61
@@ -69,19 +69,17 @@ using Qwind, Test, HDF5
 
     @testset "Wind properties" begin
         mu_n = 2
-        mu_e = 3
         props = Qwind.create_wind_properties(
             streamlines,
             bh,
-            mu_electron = mu_e,
             mu_nucleon = mu_n,
         )
         @test props["eddington_luminosity"] ≈
-              compute_eddington_luminosity(bh, mu_electron = mu_e)
+              compute_eddington_luminosity(bh)
         @test props["bolometric_luminosity"] ≈
-              compute_bolometric_luminosity(bh, mu_electron = mu_e)
+              compute_bolometric_luminosity(bh)
         @test props["mass_accretion_rate"] ≈
-              compute_mass_accretion_rate(bh, mu_electron = mu_e)
+              compute_mass_accretion_rate(bh)
         @test props["mass_loss"] ≈
               Qwind.compute_wind_mdot(streamlines, bh.Rg, mu_nucleon = mu_n)
         @test props["kinetic_luminosity"] ≈

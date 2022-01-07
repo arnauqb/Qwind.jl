@@ -2,7 +2,7 @@ using Qwind
 using Test
 
 @testset "Ionization Parameter" begin
-    path = String(@__DIR__) * "/../../configs/config_test.yaml"
+    path = String(@__DIR__) * "/../../configs/config_base.yaml"
     model = Model(path)
     @test compute_ionization_parameter(
         model.rad,

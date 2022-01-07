@@ -15,7 +15,7 @@ export InitialConditions,
 getl0(ic::InitialConditions, r) = sqrt(r)
 getz0(ic::InitialConditions, r) = ic.z0
 getv0(bh, ic::InitialConditions, r; mu_nucleon = 0.61) = ic.v0 / C
-getn0(ic::InitialConditions; rad, wind, parameters, r) = ic.n0
+getn0(ic::InitialConditions; radiation=Nothing, wind=Nothing, parameters=Nothing, r) = ic.n0
 getrin(ic::InitialConditions) = ic.rin
 getrfi(ic::InitialConditions) = ic.rfi
 getnlines(ic::InitialConditions) = ic.nlines

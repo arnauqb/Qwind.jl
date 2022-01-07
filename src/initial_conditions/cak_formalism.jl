@@ -41,12 +41,12 @@ function f(density_grid, iterator, parameters, radiation, z; r, alpha = 0.6, zma
 end
 
 function g(density_grid, iterator, parameters, radiation, z; r, zmax = 1e-1)
-    if parameters.z_disk == "auto"
+    if parameters.ic_z_disk == "auto"
         z_disk = disk_height(radiation.bh, r)
     else
-        z_disk = parameters.z_disk
+        z_disk = parameters.ic_z_disk
     end
-    grav = compute_gravitational_acceleration(r, z)[2]
+    grav = compute_gravitational_acceleration(r, z + z_disk)[2]
     fuv_copy = copy(radiation.fuv_grid)
     parameters_no_tau = change_parameter(parameters, :tau_uv_calculation_flag, NoTauUV())
     radiation.fuv_grid .= 1.0

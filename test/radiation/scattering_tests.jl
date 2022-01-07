@@ -100,8 +100,7 @@ end
         theta,
         density = 1e8,
         Rg = bh.Rg,
-        mu_electron = 1.17,
-    ) ≈ 1.118 * SIGMA_T * 1.17 * 1e8 * bh.Rg rtol = 2e-1
+    ) ≈ 1.118 * SIGMA_T * 1e8 * bh.Rg rtol = 2e-1
 
     @test Qwind.compute_optical_depth_to_cell(
         dgrid,
@@ -110,10 +109,9 @@ end
         rectangle = cell,
         theta = theta,
         Rg = bh.Rg,
-        mu_electron = 1.17,
         source_luminosity = 1e40,
         absorption_opacity = ThomsonOpacity(),
-    ) ≈ 11.18 * 1.17 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
+    ) ≈ 11.18 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
 
     @test Qwind.compute_optical_depth_to_cell(
         dgrid,
@@ -124,8 +122,7 @@ end
         Rg = bh.Rg,
         source_luminosity = 1e40,
         absorption_opacity = ThomsonOpacity(),
-        mu_electron = 1.17,
-    ) ≈ 8.96 * 1.17 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
+    ) ≈ 8.96 * SIGMA_T * 1e8 * bh.Rg rtol = 1e-2
 
     @testset "cell absorption" begin
         lumin = compute_bolometric_luminosity(bh)
@@ -139,7 +136,6 @@ end
             rectangle = cell,
             theta = theta,
             Rg = bh.Rg,
-            mu_electron = 1.17,
             source_luminosity = 1e40,
             absorption_opacity = ThomsonOpacity(),
         )
@@ -148,7 +144,6 @@ end
             theta,
             density = cell_density,
             Rg = bh.Rg,
-            mu_electron = 1.17,
         )
         delta_theta = atan(cell.zmax / cell.rmin)
         expected = lumin / (4π) * exp(-tau_to_cell) * (1 - exp(-tau_cell)) * delta_theta
@@ -158,22 +153,10 @@ end
             source_position = [0, 0, 0],
             cell = cell,
             Rg = bh.Rg,
-            mu_electron = 1.17,
             cell_density = cell_density,
             source_luminosity = lumin,
             absorption_opacity = ThomsonOpacity(),
         ) ≈ expected rtol = 1e-1
     end
 
-end
-
-@testset "luminosity in cell" begin
-    bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
-    lumin_source = compute_bolometric_luminosity(bh)
-    r_source = 10
-    phi_source = 1
-    z_source = 20
-    r_wind = 30
-    z_wind = 40
-    delta = compute_distance_cylindrical(r_source, phi_source, z_source, r_wind, 0, z_wind)
 end

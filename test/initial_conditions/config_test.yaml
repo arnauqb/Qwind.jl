@@ -27,9 +27,10 @@ initial_conditions:
   r_fi: 800.0
   n_trajs: 10
   trajs_spacing: log
-  v0: 2e6
-  z0: 0.0 
-  n0: 1e8
+  v_0: 2e6
+  z_0: 0.0 
+  n_0: 1e8
+  z_disk: "auto"
 
 integrator:
   n_iterations: 5

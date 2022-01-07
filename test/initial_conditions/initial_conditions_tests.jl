@@ -8,8 +8,8 @@ using YAML
     @test getrin(ic) == 1.0
     @test getrfi(ic) == 50
     @test getnlines(ic) == 30
-    @test getn0(ic, 3) == 1e8
-    @test getn0(ic, 30) == 1e8
+    @test getn0(ic, r=3) == 1e8
+    @test getn0(ic, r=30) == 1e8
     @test getv0(nothing, ic, nothing, mu_nucleon = 3) == 1e6 / C
     @test getv0(nothing, ic, nothing, mu_nucleon = 30) == 1e6 / C
 end
