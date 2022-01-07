@@ -277,6 +277,7 @@ function load_trajectories(tsdata::Dict)
     ret = Trajectory[]
     for i in t_ids
         tdata = tsdata[i]
+        tdata["escaped"] = true
         trajectory = load_trajectory(tdata)
         push!(ret, trajectory)
     end
@@ -326,7 +327,7 @@ function slice_trajectory(trajectory::Trajectory; in = 1, fi = nothing)
         trajectory.vphi[in:fi],
         trajectory.vz[in:fi],
         trajectory.n[in:fi],
-        escaped(trajectory),
+        trajectory.escaped,
     )
 end
 
