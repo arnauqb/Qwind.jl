@@ -160,11 +160,6 @@ function compute_second_intersection(rectangle, theta)
     end
 
 end
-function compute_second_intersection(rectangle, theta, point)
-    rectangle_centered_point = change_origin(rectangle, point[1], point[end])
-    intersection = compute_second_intersection(rectangle_centered_point, theta)
-    return intersection + point[1], intersection + point[end]
-end
 
 """
     compute_intersection_size(rectangle, theta)
@@ -265,12 +260,7 @@ function compute_luminosity_absorbed_by_cell(
             absorption_opacity = absorption_opacity,
             source_luminosity = source_luminosity,
         )
-        tau_cell = compute_cell_optical_depth(
-            cell,
-            theta,
-            density = cell_density,
-            Rg = Rg,
-        )
+        tau_cell = compute_cell_optical_depth(cell, theta, density = cell_density, Rg = Rg)
         return sin(theta) * exp(-tau_to_cell) * (1 - exp(-tau_cell))
     end
     integ, _ = quadgk(f, theta_min, theta_max, atol = 0, rtol = 1e-2)
@@ -393,7 +383,7 @@ struct ScatteredLuminosityGrid{T,U,V} <: InterpolationGrid
         end
         interpolator =
             Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
-        interpolator = Interpolations.extrapolate(interpolator, 1e2)
+        interpolator = Interpolations.extrapolate(interpolator, 0)
         return new{typeof(r_range[1]),Int,Bool}(
             r_range,
             z_range,
@@ -431,7 +421,12 @@ function ScatteredLuminosityGrid(
     return ScatteredLuminosityGrid(rr, zz, grid, density_grid.nr, density_grid.nz)
 end
 
-ScatteredLuminosityGrid(density_grid::DensityGrid, iterator::GridIterator, rad, parameters::Parameters) = ScatteredLuminosityGrid(
+ScatteredLuminosityGrid(
+    density_grid::DensityGrid,
+    iterator::GridIterator,
+    rad,
+    parameters::Parameters,
+) = ScatteredLuminosityGrid(
     density_grid,
     iterator,
     Rg = rad.bh.Rg,
@@ -466,7 +461,8 @@ function scattered_flux_in_point_integrand!(
     absorption_opacity,
 )
     #source_luminosity = interpolate_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
-    source_luminosity = get_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
+    source_luminosity =
+        get_scattered_luminosity(scattered_luminosity_grid, r_source, z_source)
     distance =
         compute_distance_cylindrical(
             r_source,

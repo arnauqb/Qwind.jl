@@ -260,7 +260,22 @@ end
                         Rg = Rg,
                         max_tau=Inf,
                     )
+                    qwsol2 = compute_optical_depth(
+                        grid,
+                        iterator,
+                        Qwind.BoostOpacity2(),
+                        ri = 0.0,
+                        phii=0.0,
+                        zi = 0.0,
+                        rf = rp,
+                        phif=0.0,
+                        zf = zp,
+                        source_luminosity = xl,
+                        Rg = Rg,
+                        max_tau=Inf,
+                    )
                     @test truesol ≈ qwsol rtol = 2e-1
+                    @test truesol ≈ qwsol2 rtol = 2e-1
                 end
             end
         end
@@ -321,4 +336,3 @@ end
         end
     end
 end
-

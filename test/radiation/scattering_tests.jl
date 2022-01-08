@@ -95,12 +95,8 @@ end
     iterator = GridIterator(rr, zz)
     cell = Rectangle(rmin = 5, rmax = 10, zmin = 4, zmax = 11)
     theta = 0.4638
-    @test Qwind.compute_cell_optical_depth(
-        cell,
-        theta,
-        density = 1e8,
-        Rg = bh.Rg,
-    ) ≈ 1.118 * SIGMA_T * 1e8 * bh.Rg rtol = 2e-1
+    @test Qwind.compute_cell_optical_depth(cell, theta, density = 1e8, Rg = bh.Rg) ≈
+          1.118 * SIGMA_T * 1e8 * bh.Rg rtol = 2e-1
 
     @test Qwind.compute_optical_depth_to_cell(
         dgrid,
@@ -158,5 +154,28 @@ end
             absorption_opacity = ThomsonOpacity(),
         ) ≈ expected rtol = 1e-1
     end
+end
 
+@testset "test ScatteredLuminosityGrid" begin
+    dgrid_r = [1,5,10] #range(0, 10, length = 50)
+    dgrid_z = [1,2,3] #range(0, 10, length = 50)
+    dgrid = DensityGrid(dgrid_r, dgrid_z, [[1,4,7] [2,5,8] [3,6,9]])
+    iterator = GridIterator(dgrid_r, dgrid_z)
+    Rg = 1e14
+    xl = 1e40
+    sgrid = ScatteredLuminosityGrid(
+        dgrid,
+        iterator,
+        Rg = Rg,
+        source_luminosity = xl,
+        source_position = (0, 0, 1),
+    )
+    @test sgrid.r_range == [3, 7.5]
+    @test sgrid.z_range == [1.5, 2.5]
+    @test sgrid.nr == 3
+    @test sgrid.nz == 3
+    @test Qwind.get_scattered_luminosity(sgrid, 10, 20) == 0
+    @test Qwind.get_scattered_luminosity(sgrid, 5, 2) > 0
+    @test Qwind.interpolate_scattered_luminosity(sgrid, 10, 20) == 0
+    @test Qwind.interpolate_scattered_luminosity(sgrid, 5, 2) > 0
 end
