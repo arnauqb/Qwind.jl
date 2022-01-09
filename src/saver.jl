@@ -1,3 +1,4 @@
+import Sundials
 using CSV, DataFrames, YAML, HDF5, Printf, JLD2
 export save_wind
 
@@ -7,14 +8,24 @@ function save_integrators(integrators, save_path)
 end
 
 function compute_streamline_mdot(streamline::Streamline, Rg; mu_nucleon = 0.61)
-    n0 = streamline.n[1]
-    v0 = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
+    n = streamline.n[1]
+    v = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
+    d = sqrt(streamline.r[1]^2 + streamline.z[1]^2)
     lw = streamline.width[1]
-    mw = 2π * streamline.r[1] * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
+    mw = 4π * d * lw * Rg^2 * n * v * C * M_P * mu_nucleon
     return mw
 end
 
-function compute_wind_mdot(streamlines::Streamlines, Rg; mu_nucleon = 0.61)
+function compute_streamline_mdot(streamline::Sundials.IDAIntegrator, Rg; mu_nucleon = 0.61)
+    n0 = streamline.p.n0
+    v0 = streamline.p.v0
+    r0 = streamline.p.r0
+    lw = streamline.p.lwnorm * r0
+    mw = 4π * r0 * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
+    return mw
+end
+
+function compute_wind_mdot(streamlines, Rg; mu_nucleon = 0.61)
     mdot_wind = 0.0
     for streamline in streamlines
         if escaped(streamline)
@@ -37,7 +48,7 @@ end
 function compute_kinetic_luminosity(streamlines::Streamlines, Rg; mu_nucleon = 0.61)
     kin_lumin = 0.0
     for streamline in streamlines
-        if escaped(streamline)
+        if streamline.escaped
             kin_lumin += compute_kinetic_luminosity(streamline, Rg, mu_nucleon = mu_nucleon)
         end
     end
@@ -80,14 +91,13 @@ function create_wind_properties(
     streamlines::Streamlines,
     bh::BlackHole;
     mu_nucleon = 0.61,
-    mu_electron = 1.17,
 )
     ret = Dict()
     ret["eddington_luminosity"] =
-        compute_eddington_luminosity(bh, mu_electron = mu_electron)
+        compute_eddington_luminosity(bh)
     ret["bolometric_luminosity"] =
-        compute_bolometric_luminosity(bh, mu_electron = mu_electron)
-    ret["mass_accretion_rate"] = compute_mass_accretion_rate(bh, mu_electron = mu_electron)
+        compute_bolometric_luminosity(bh)
+    ret["mass_accretion_rate"] = compute_mass_accretion_rate(bh)
     ret["kinetic_luminosity"] =
         compute_kinetic_luminosity(streamlines, bh.Rg, mu_nucleon = mu_nucleon)
     ret["mass_loss"] = compute_wind_mdot(streamlines, bh.Rg, mu_nucleon = mu_nucleon)
@@ -102,13 +112,11 @@ function save_wind_properties(
     save_path,
     bh::BlackHole;
     mu_nucleon = 0.61,
-    mu_electron = 1.17,
 )
     ret = create_wind_properties(
         streamlines,
         bh,
         mu_nucleon = mu_nucleon,
-        mu_electron = mu_electron,
     )
     YAML.write_file(save_path, ret)
     return ret
@@ -127,8 +135,7 @@ function save_wind(integrators, streamlines, model, save_path, it_num)
         streamlines,
         properties_save_path,
         model.bh,
-        mu_nucleon = model.rad.mu_nucleon,
-        mu_electron = model.rad.mu_electron,
+        mu_nucleon = model.parameters.mu_nucleon,
     )
     return properties
 end
@@ -160,6 +167,15 @@ function save_velocity_grid!(velocity_grid::VelocityGrid, group)
     return
 end
 
+function save_scattered_lumin_grid!(grid::ScatteredLuminosityGrid, group)
+    dg = create_group(group, "scattered_luminosity_grid")
+    dg["r"] = grid.r_range
+    dg["z"] = grid.z_range
+    dg["nr"] = grid.nr
+    dg["nz"] = grid.nz
+    return
+end
+
 function save_streamlines_and_trajectories!(integrators, streamlines, group)
     g = create_group(group, "trajectories")
     gg = create_group(group, "streamlines")
@@ -174,6 +190,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         tgroup["vphi"] = trajectory.vphi
         tgroup["vz"] = trajectory.vz
         tgroup["n"] = trajectory.n
+        tgroup["escaped"] = trajectory.escaped
     end
 
     for (i, streamline) in enumerate(streamlines)
@@ -187,6 +204,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         sgroup["vz"] = streamline.vz
         sgroup["n"] = streamline.n
         sgroup["line_width"] = streamline.width
+        sgroup["escaped"] = streamline.escaped
     end
     return
 end
@@ -203,14 +221,15 @@ save_wind_hull!(hull::Nothing, group) = nothing
 
 function save_hdf5(integrators, streamlines, model, hdf5_save_path, it_num)
     iteration = @sprintf "iteration_%03d" it_num
-    density_grid = model.rad.wi.density_grid
-    velocity_grid = model.rad.wi.velocity_grid
-    wind_hull = model.rad.wi.wind_hull
+    density_grid = model.wind.density_grid
+    velocity_grid = model.wind.velocity_grid
+    wind_hull = model.wind.wind_hull
     bh = model.bh
     h5open(hdf5_save_path, isfile(hdf5_save_path) ? "r+" : "w") do file
         g = create_group(file, iteration)
         save_density_grid!(density_grid, g)
         save_velocity_grid!(velocity_grid, g)
+        save_scattered_lumin_grid!(model.rad.scattered_lumin_grid, g)
         save_streamlines_and_trajectories!(integrators, streamlines, g)
         save_wind_hull!(wind_hull, g)
         g["eddington_luminosity"] = compute_eddington_luminosity(bh)

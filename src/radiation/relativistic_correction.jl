@@ -36,7 +36,7 @@ function relativistic_correction(rd, phid, zd, r, z, vr, vz)
     beta = compute_beta(vr, vz)
     gamma = compute_gamma(beta)
     r_projection = (r - rd * cos(phid))
-    delta = distance_from_disk(rd, phid, zd, r, 0.0, z)
+    delta = compute_distance_cylindrical(rd, phid, zd, r, 0.0, z)
     return relativistic_correction(
         Relativistic(),
         r = r,
