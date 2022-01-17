@@ -112,12 +112,14 @@ function Base.intersect!(
     z1::Array{T},
     n1::Array{T},
     v1::Array{T},
+    escaped1::Bool,
     id2::Int,
     t2::Array{T},
     r2::Array{T},
     z2::Array{T},
     n2::Array{T},
     v2::Array{T},
+    escaped2::Bool,
 ) where {T<:AbstractFloat}
     A = zeros((2, 2))
     b = zeros(2)
@@ -129,16 +131,50 @@ function Base.intersect!(
             m2 = sign(v2[j]) * n2[j] * v2[j]^2
             do_intersect = intersect!(s1, s2, A, b)
             if do_intersect
-                if m1 > m2
-                    intersection = Intersection("winner", id1, id2, t1[i], t2[j])
-                    insert_intersection!(intersections_dict, id1, intersection)
-                    intersection = Intersection("loser", id2, id1, t2[j], t1[i])
-                    insert_intersection!(intersections_dict, id2, intersection)
+                if escaped1
+                    if escaped2
+                        if m1 > m2
+                            # 1 wins
+                            intersection = Intersection("winner", id1, id2, t1[i], t2[j])
+                            insert_intersection!(intersections_dict, id1, intersection)
+                            intersection = Intersection("loser", id2, id1, t2[j], t1[i])
+                            insert_intersection!(intersections_dict, id2, intersection)
+                        else
+                            # 2 wins
+                            intersection = Intersection("winner", id2, id1, t2[j], t1[i])
+                            insert_intersection!(intersections_dict, id2, intersection)
+                            intersection = Intersection("loser", id1, id2, t1[i], t2[j])
+                            insert_intersection!(intersections_dict, id1, intersection)
+                        end
+                    else
+                        # 1 wins
+                        intersection = Intersection("winner", id1, id2, t1[i], t2[j])
+                        insert_intersection!(intersections_dict, id1, intersection)
+                        intersection = Intersection("loser", id2, id1, t2[j], t1[i])
+                        insert_intersection!(intersections_dict, id2, intersection)
+                    end
                 else
-                    intersection = Intersection("winner", id2, id1, t2[j], t1[i])
-                    insert_intersection!(intersections_dict, id2, intersection)
-                    intersection = Intersection("loser", id1, id2, t1[i], t2[j])
-                    insert_intersection!(intersections_dict, id1, intersection)
+                    if escaped2
+                        # 2 wins
+                        intersection = Intersection("winner", id2, id1, t2[j], t1[i])
+                        insert_intersection!(intersections_dict, id2, intersection)
+                        intersection = Intersection("loser", id1, id2, t1[i], t2[j])
+                        insert_intersection!(intersections_dict, id1, intersection)
+                    else
+                        if m1 > m2
+                            # 1 wins
+                            intersection = Intersection("winner", id1, id2, t1[i], t2[j])
+                            insert_intersection!(intersections_dict, id1, intersection)
+                            intersection = Intersection("loser", id2, id1, t2[j], t1[i])
+                            insert_intersection!(intersections_dict, id2, intersection)
+                        else
+                            # 2 wins
+                            intersection = Intersection("winner", id2, id1, t2[j], t1[i])
+                            insert_intersection!(intersections_dict, id2, intersection)
+                            intersection = Intersection("loser", id1, id2, t1[i], t2[j])
+                            insert_intersection!(intersections_dict, id1, intersection)
+                        end
+                    end
                 end
             end
         end
@@ -175,6 +211,7 @@ struct Trajectory{T<:Vector{<:AbstractFloat}}
     vphi::T
     vz::T
     n::T
+    escaped::Bool
 end
 
 function Base.intersect!(
@@ -182,9 +219,11 @@ function Base.intersect!(
     trajectory1::Trajectory,
     trajectory2::Trajectory,
 )
-    v1 = trajectory1.vz #sign.(trajectory1.vz) .* sqrt.(trajectory1.vr .^ 2 + trajectory1.vz .^ 2) #trajectory1.vz 
-    v2 = trajectory2.vz #sign.(trajectory2.vz) .* sqrt.(trajectory2.vr .^ 2 + trajectory2.vz .^ 2) #trajectory2.vz
-    intersect!(
+    v1 = @. sign(trajectory1.vz) * sqrt.(trajectory1.vr ^ 2 + trajectory1.vz ^ 2) #trajectory1.vz 
+    v2 = @. sign(trajectory2.vz) * sqrt.(trajectory2.vr ^ 2 + trajectory2.vz ^ 2) #trajectory2.vz
+    #v1 = @. sign(trajectory1.vz) * trajectory1.vz 
+    #v2 = @. sign(trajectory2.vz) * trajectory2.vz 
+    n_intersections = intersect!(
         intersections_dict,
         trajectory1.id,
         trajectory1.t,
@@ -192,13 +231,16 @@ function Base.intersect!(
         trajectory1.z,
         trajectory1.n,
         v1,
+        trajectory1.escaped,
         trajectory2.id,
         trajectory2.t,
         trajectory2.r,
         trajectory2.z,
         trajectory2.n,
         v2,
+        trajectory2.escaped,
     )
+    return n_intersections
 end
 
 function Trajectory(integrator::Sundials.IDAIntegrator)
@@ -211,6 +253,7 @@ function Trajectory(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vphi],
         integrator.p.data[:vz],
         integrator.p.data[:n],
+        escaped(integrator)
     )
 end
 
@@ -224,6 +267,7 @@ function load_trajectory(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
+        tdata["escaped"]
     )
 end
 
@@ -282,11 +326,13 @@ function slice_trajectory(trajectory::Trajectory; in = 1, fi = nothing)
         trajectory.vphi[in:fi],
         trajectory.vz[in:fi],
         trajectory.n[in:fi],
+        trajectory.escaped,
     )
 end
 
 function get_intersections(trajectories::Vector{<:Trajectory})
     intersections_dict = Dict{Int,SortedSet{Intersection}}()
+    n_inters = 0
     for i = 1:length(trajectories)
         intersections = SortedSet{Intersection}()
         for j = (i + 1):length(trajectories)
@@ -349,8 +395,9 @@ function clear_remaining_trajectory_intersections!(intersections_dict, traj_id, 
     end
 end
 
-function resolve_intersections!(intersection_times, intersections_dict)
+function resolve_intersections(intersection_times, intersections_dict)
     n_inters = length(intersections_dict)
+    merging_streamlines = Dict()
     while length(intersections_dict) > 0
         all_keys = keys(intersections_dict)
         stuck = true
@@ -363,15 +410,20 @@ function resolve_intersections!(intersection_times, intersections_dict)
                 end
                 stuck = false
                 loser_id = intersection.id2
+                winner_id = intersection.id1
                 max_time = intersection.t2
-                intersection_times[loser_id] = min(intersection_times[loser_id], max_time)
+                winner_time = intersection.t1
+                if max_time < intersection_times[loser_id] 
+                    intersection_times[loser_id] = max_time 
+                    merging_streamlines[loser_id] = Dict("winner_id" => winner_id, "winner_time" => winner_time, "loser_time" => max_time)
+                end
                 clear_remaining_trajectory_intersections!(
                     intersections_dict,
                     loser_id,
                     max_time,
                 )
                 found = true
-                break# to clear index
+                break # to clear index
             end
             (found == true) && break
         end
@@ -381,8 +433,12 @@ function resolve_intersections!(intersection_times, intersections_dict)
             key = minimum(all_keys)
             intersection = first(intersections_dict[key])
             loser_id = intersection.id2
+            winner_id = intersection.id1
             max_time = intersection.t2
-            intersection_times[loser_id] = min(intersection_times[loser_id], max_time)
+            if max_time < intersection_times[loser_id] 
+                intersection_times[loser_id] = max_time 
+                merging_streamlines[loser_id] = winner_id
+            end
             clear_remaining_trajectory_intersections!(
                 intersections_dict,
                 loser_id,
@@ -390,15 +446,15 @@ function resolve_intersections!(intersection_times, intersections_dict)
             )
         end
     end
-    return intersection_times
+    return intersection_times, merging_streamlines
 end
 
 function get_intersection_times(integrators::Vector{<:Trajectory})
     intersection_times =
         Dict(integrator.id => integrator.t[end] for integrator in integrators)
     intersections_dict = get_intersections(integrators)
-    resolve_intersections!(intersection_times, intersections_dict)
-    return intersection_times
+    intersection_times, merging_streamlines = resolve_intersections(intersection_times, intersections_dict)
+    return intersection_times, merging_streamlines
 end
 
 get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator}) =

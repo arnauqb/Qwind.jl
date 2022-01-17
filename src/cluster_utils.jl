@@ -85,7 +85,8 @@ function make_cosma_scripts(
 end
 
 function create_running_script(save_path; n_cpus, max_time, account, partition)
-    text = """using Distributed, ClusterManagers
+    text = """ENV["JULIA_WORKER_TIMEOUT"] = 250
+    using Distributed, ClusterManagers
     pids = addprocs_slurm($(n_cpus-1),
                           topology=:master_worker,
                           p=\"$partition\",

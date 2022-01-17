@@ -5,36 +5,41 @@ const timer = TimerOutput()
 disable_timer!(timer)
 export timer
 
-include("black_hole.jl")
 include("types.jl")
+include("constants.jl")
+include("parameters.jl")
+include("black_hole.jl")
+include("distances.jl")
 include("utils.jl")
 include("cluster_utils.jl")
-include("grid.jl")
+include("coordinate_interpolation.jl")
 
-include("constants.jl")
 include("tables.jl")
 include("thermodynamics.jl")
-
-
+#
+#
 # Streamline struct
 include("streamlines.jl")
 
-# wind interpolator
-include("radiation/wind_interpolator/grids.jl")
-include("radiation/wind_interpolator/wind_hull.jl")
-include("radiation/wind_interpolator/ray_tracing.jl")
-include("radiation/wind_interpolator/density_grid.jl")
-include("radiation/wind_interpolator/velocity_grid.jl")
-include("radiation/wind_interpolator/base.jl")
+# wind
+include("wind/grids.jl")
+include("wind/wind_hull.jl")
+include("wind/density_grid.jl")
+include("wind/velocity_grid.jl")
+include("wind/iterator.jl")
+include("wind/base.jl")
 
 # radiation
-include("radiation/base.jl")
-include("radiation/distances.jl")
 include("radiation/disk.jl")
 include("radiation/force_multiplier.jl")
+include("radiation/scattering.jl")
+include("radiation/base.jl")
 include("radiation/xrays.jl")
 include("radiation/relativistic_correction.jl")
 include("radiation/disk_integration.jl")
+include("radiation/optical_depths.jl")
+
+# radiation
 
 # initial conditions
 include("initial_conditions/initial_conditions.jl")

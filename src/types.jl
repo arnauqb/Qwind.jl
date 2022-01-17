@@ -1,9 +1,9 @@
 # general pieces of a model
 
-export DensityInterpolator,
-    GridInterpolator,
+export FMInterpolationFlag,
     FMNoInterp,
     FMInterp,
+    RelativisticFlag,
     Relativistic,
     NoRelativistic,
     ConstantUVFraction,
@@ -12,11 +12,23 @@ export DensityInterpolator,
     TauUVCenter,
     TauUVDisk,
     NoTauUV,
-    Boost,
-    Thomson
+    OpacityFlag,
+    BoostOpacity,
+    ThomsonOpacity,
+    NoOpacity,
+    XRayScatteringFlag,
+    Scattering,
+    NoScattering,
+    ICFlag,
+    CAKMode,
+    SSMode,
+    UniformMode,
+    UpdateGridFlag,
+    AverageGrid,
+    ReplaceGrid
+
 
 abstract type InitialConditions{T<:AbstractFloat} end
-abstract type Grid{T<:AbstractFloat} end
 abstract type InterpolationGrid end
 
 # Radiation flags
@@ -27,10 +39,12 @@ abstract type FMInterpolationFlag <: Flag end
 struct FMNoInterp <: FMInterpolationFlag end
 struct FMInterp <: FMInterpolationFlag end
 
-# type of X-Ray opacity
-abstract type XRayOpacityFlag <: Flag end
-struct Thomson <: XRayOpacityFlag end
-struct Boost <: XRayOpacityFlag end
+# opacity types
+abstract type OpacityFlag <: Flag end
+struct NoOpacity <: OpacityFlag end
+struct ThomsonOpacity <: OpacityFlag end
+struct BoostOpacity <: OpacityFlag end
+struct BoostOpacity2 <: OpacityFlag end
 
 # Relativistic correction to luminosity
 abstract type RelativisticFlag <: Flag end
@@ -52,3 +66,14 @@ struct NoTauUV <: TauUVCalculationFlag end
 abstract type UpdateGridFlag end
 struct AverageGrid <: UpdateGridFlag end
 struct ReplaceGrid <: UpdateGridFlag end
+
+# X-ray scattering
+abstract type XRayScatteringFlag end
+struct Scattering <: XRayScatteringFlag end
+struct NoScattering <: XRayScatteringFlag end
+
+# Initial conditions flags
+abstract type ICFlag end
+struct CAKMode <: ICFlag end
+struct UniformMode <: ICFlag end
+struct SSMode <: ICFlag end

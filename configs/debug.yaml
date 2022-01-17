@@ -1,25 +1,26 @@
-system:
-  qwind_path: /cosma7/data/dp004/dc-quer1/Qwind.jl
-  n_cpus: 16
-  partition: cosma7-shm
-  account: dp004
-  max_time: 72:00:00
-  job_name: qwind
-  
 black_hole:
-  M: 1e8 # solar masses
+  M: 1e7 # solar masses
   mdot: 0.5 # Eddington units
   spin: 0.0 # spin parameter (-1,1)
 
 radiation:
   relativistic: true
+<<<<<<< HEAD
   f_uv: auto
   f_x: 0.15
   n_r: 2000
   disk_r_in: 6.0
+=======
+  f_uv: qsosed
+  f_x: qsosed
+  n_r: 2000
+  disk_r_in: corona_radius
+>>>>>>> 932c8759fd85744b75d705a44ebd5200d01b2f43
   z_xray: 0.0
   disk_height: 0.0
+  uv_opacity: thomson
   xray_opacity: boost 
+<<<<<<< HEAD
   tau_uv_calculation: no_tau_uv
   disk_integral_rtol: 1e-3
   wind_interpolator:
@@ -39,19 +40,48 @@ grid:
 initial_conditions:
   mode: CAKIC
   r_in: 40.0
+=======
+  xray_scattering: false
+  tau_uv_calculation: no_tau_uv
+  vacuum_density: 1e2
+  update_grid_method: "average"
+  grid_nz: 500
+  grid_nr: auto
+
+initial_conditions:
+  mode: cak
+  r_in: warm_radius
+>>>>>>> 932c8759fd85744b75d705a44ebd5200d01b2f43
   r_fi: 1500.0
-  n_lines: auto
-  log_spaced: true
-  z0: 0.0 # Rg
+  n_trajs: auto
+  trajs_spacing: log
+  z0: 0.0 
   K: 0.03
   alpha: 0.6
-  mu: 0.61
-  interpolation_mode: interpolation
   use_precalculated: true
 
 integrator:
+<<<<<<< HEAD
   n_iterations: 1
   atol: 1e-8
   rtol: 1e-3
   #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
   save_path: "./debug"
+=======
+  n_iterations: 5
+  save_path: "./tests"
+  integrator_r_min: 6.0
+  integrator_r_max: 10000.0
+  integrator_z_min: 0.0
+  integrator_z_max: 10000.0
+
+numerical_tolerances:
+  disk_integral_atol: 0
+  disk_integral_rtol: 5e-4
+  disk_integral_maxevals: 10000
+  integrator_atol: 1e-8
+  integrator_rtol: 1e-3
+  scattering_atol: 0
+  scattering_rtol: 1e-3
+  
+>>>>>>> 932c8759fd85744b75d705a44ebd5200d01b2f43
