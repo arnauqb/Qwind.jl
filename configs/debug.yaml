@@ -5,42 +5,14 @@ black_hole:
 
 radiation:
   relativistic: true
-<<<<<<< HEAD
-  f_uv: auto
-  f_x: 0.15
-  n_r: 2000
-  disk_r_in: 6.0
-=======
   f_uv: qsosed
   f_x: qsosed
   n_r: 2000
   disk_r_in: corona_radius
->>>>>>> 932c8759fd85744b75d705a44ebd5200d01b2f43
   z_xray: 0.0
   disk_height: 0.0
   uv_opacity: thomson
   xray_opacity: boost 
-<<<<<<< HEAD
-  tau_uv_calculation: no_tau_uv
-  disk_integral_rtol: 1e-3
-  wind_interpolator:
-    update_grid_method: "average"
-    vacuum_density: 1e2
-    n_integrator_interpolation: 10000
-    nz: 500
-    nr: auto 
-
-grid:
-  # units of Rg
-  r_min: 6.0
-  r_max: 10000.0
-  z_min: 0.0
-  z_max: 10000.0
-
-initial_conditions:
-  mode: CAKIC
-  r_in: 40.0
-=======
   xray_scattering: false
   tau_uv_calculation: no_tau_uv
   vacuum_density: 1e2
@@ -51,7 +23,6 @@ initial_conditions:
 initial_conditions:
   mode: cak
   r_in: warm_radius
->>>>>>> 932c8759fd85744b75d705a44ebd5200d01b2f43
   r_fi: 1500.0
   n_trajs: auto
   trajs_spacing: log
@@ -61,13 +32,6 @@ initial_conditions:
   use_precalculated: true
 
 integrator:
-<<<<<<< HEAD
-  n_iterations: 1
-  atol: 1e-8
-  rtol: 1e-3
-  #save_path: "/home/arnau/code/Qwind.jl/runs/tests"
-  save_path: "./debug"
-=======
   n_iterations: 5
   save_path: "./tests"
   integrator_r_min: 6.0
@@ -83,5 +47,3 @@ numerical_tolerances:
   integrator_rtol: 1e-3
   scattering_atol: 0
   scattering_rtol: 1e-3
-  
->>>>>>> 932c8759fd85744b75d705a44ebd5200d01b2f43
