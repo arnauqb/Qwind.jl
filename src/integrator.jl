@@ -278,7 +278,7 @@ function save(
         zh = parameters.z_xray,
     )
     taueff = compute_tau_eff(density, dvdr)
-    forcemultiplier = compute_force_multiplier(taueff, ξ)
+    forcemultiplier = compute_force_multiplier(taueff, ξ, parameters.fm_interp_method_flag)
     push!(data[:r], r)
     push!(data[:z], z)
     push!(data[:vr], vr)
@@ -380,7 +380,7 @@ function compute_radiation_acceleration(
     #ξ = 0.0
     taueff = compute_tau_eff(density, dvdr)
     #taueff = 1.0
-    forcemultiplier = compute_force_multiplier(taueff, ξ)
+    forcemultiplier = compute_force_multiplier(taueff, ξ, parameters.fm_interp_method_flag)
     disc_radiation_field = compute_disc_radiation_field(
         wind.density_grid,
         wind.grid_iterator,

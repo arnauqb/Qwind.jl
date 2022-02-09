@@ -32,7 +32,7 @@ initial_conditions:
   use_precalculated: false
 
 integrator:
-  n_iterations: 40
+  n_iterations: 5
   save_path: "./example"
   integrator_r_min: 6.0
   integrator_r_max: 10000.0

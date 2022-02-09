@@ -11,6 +11,14 @@ mutable struct Model{T<:AbstractFloat,U<:Int,V<:Bool,S<:Flag,W<:String}
     ic::InitialConditions{T}
 end
 
+function Model(parameters::Parameters)
+    bh = BlackHole(parameters)
+    rad = Radiation(bh, parameters)
+    wind = Wind(parameters)
+    ic = get_initial_conditions(rad, parameters, wind)
+    return Model(parameters, bh, wind, rad, ic)
+end
+
 function Model(config::Dict)
     parameters = Parameters(config)
     bh = BlackHole(parameters)
@@ -127,5 +135,5 @@ function run!(
     for it = start_it:(start_it + n_iterations - 1)
         run_iteration!(model, iterations_dict, it_num = it, parallel = parallel)
     end
-    return
+    return iterations_dict
 end
