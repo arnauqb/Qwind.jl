@@ -28,7 +28,7 @@ using Qwind, Test
     @test p.ic_K == 0.03
     @test p.ic_alpha == 0.6
     @test p.ic_use_precalculated == false
-    @test p.n_iterations == 40
+    @test p.n_iterations == 5
     @test p.save_path == "./example"
     @test p.relativistic_flag == Relativistic()
     @test p.uv_opacity_flag == ThomsonOpacity()
