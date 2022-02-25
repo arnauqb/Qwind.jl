@@ -1,7 +1,7 @@
 name = "Qwind"
 uuid = "988db7c6-b368-4d8d-9ee1-ae26d5771fb3"
 authors = ["Arnau Quera-Bofarull"]
-version = "1.0.0"
+version = "2.0.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
