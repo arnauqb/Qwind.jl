@@ -1,4 +1,4 @@
-using QuadGK, ProgressMeter, LinearAlgebra, FastGaussQuadrature, Cubature
+using QuadGK, ProgressMeter, LinearAlgebra, Cubature
 
 export Rectangle,
     compute_luminosity_absorbed_by_cell,
