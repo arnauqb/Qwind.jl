@@ -21,5 +21,5 @@ function get_model(config)
     iterations_dict = Dict()
     return model, iterations_dict
 end
-model, iterations_dict = get_model("./configs/debug.yaml");
+model, iterations_dict = get_model("./to_debug.yaml");
 run!(model, iterations_dict)

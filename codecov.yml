@@ -1,3 +1,12 @@
 ignore:
   - src/plotting.jl
   - src/cluster_utils.jl
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  status:
+    project:
+      default:
+        threshold: 10%

@@ -43,7 +43,7 @@ YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [compat]
 ArgParse = "^1.1.4"
-CSV = "^0.9.11"
+CSV = "^0.8.5"
 ClusterManagers = "^0.4.1"
 ConcaveHull = "^1.1.0"
 Conda = "^1.5.2"
