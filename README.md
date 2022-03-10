@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/arnauqb/Qwind.jl/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/arnauqb/Qwind.jl/branch/main/graph/badge.svg?token=KQPtxMDMAm)](https://codecov.io/gh/arnauqb/Qwind.jl)
-[![Documentation](https://github.com/arnauqb/Qwind.jl/actions/workflows/docs.yml/badge.svg)](https://arnauqb.github.io/Qwind.jl/)
+[![Documentation](https://github.com/arnauqb/Qwind.jl/actions/workflows/docs.yml/badge.svg)](https://arnauqb.github.io/Qwind.jl/dev/)
 [![TagBot](https://github.com/arnauqb/Qwind.jl/actions/workflows/tagbot.yml/badge.svg)](https://github.com/arnauqb/Qwind.jl/actions/workflows/tagbot.yml)
 [![DOI](https://zenodo.org/badge/271830057.svg)](https://zenodo.org/badge/latestdoi/271830057)
 
