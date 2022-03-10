@@ -14,7 +14,7 @@ end
 
 function cosma_script(;
     qwind_path,
-    sysimage_path,
+    sysimage_path=nothing,
     n_cpus = 1,
     job_name = "qwind",
     script_number = 1,
@@ -25,6 +25,11 @@ function cosma_script(;
     save_path = nothing,
     run_script_path = nothing,
 )
+    if sysimage_path === nothing
+        sysimage_str = ""
+    else
+        sysimage_str = "--sysimage \"$sysimage_path\""
+    end
     script = """
     #!/bin/bash -l
     #SBATCH --ntasks $n_cpus
@@ -37,7 +42,7 @@ function cosma_script(;
     
     export JULIA_PROJECT=$qwind_path
 
-    julia --sysimage "$sysimage_path" $run_script_path -m $script_number
+    julia $sysimage_str $run_script_path -m $script_number
     """
     open(save_path, "w") do io
         write(io, script)
@@ -47,7 +52,7 @@ end
 function make_cosma_scripts(
     n_models;
     qwind_path,
-    sysimage_path,
+    sysimage_path=nothing,
     n_cpus = 1,
     path = nothing,
     job_name = "qwind",
