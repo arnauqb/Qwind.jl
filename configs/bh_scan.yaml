@@ -1,0 +1,52 @@
+black_hole:
+  M: "@vary grid 1e6,1e7,1e8,1e9,1e10" # solar masses
+  mdot: "@vary log 0.025 0.5 5" # Eddington units
+  spin: 0.0 # spin parameter (-1,1)
+
+radiation:
+  relativistic: true
+  f_uv: disk
+  f_x: 0.15
+  n_r: 2000
+  disk_r_in: 6.0
+  z_xray: 0.0
+  disk_height: 0.0
+  uv_opacity: thomson
+  xray_opacity: boost 
+  xray_scattering: false
+  tau_uv_calculation: disk
+  vacuum_density: 1e2
+  update_grid_method: "average"
+  grid_nz: 500
+  grid_nr: auto
+  mu_nucleon: 0.61
+
+initial_conditions:
+  mode: cak
+  r_in: 20.0
+  r_fi: 1500.0
+  n_trajs: auto
+  v_0: "thermal"
+  z_0: 0.0 
+  ic_z_disk: auto
+  K: 0.03
+  alpha: 0.6
+  use_precalculated: false
+
+integrator:
+  n_iterations: 10
+  save_path: "./test_paper_notau"
+  integrator_r_min: 6.0
+  integrator_r_max: 10000.0
+  integrator_z_min: 0.0
+  integrator_z_max: 10000.0
+
+numerical_tolerances:
+  disk_integral_atol: 0
+  disk_integral_rtol: 1e-3
+  disk_integral_maxevals: 10000
+  integrator_atol: 1e-8
+  integrator_rtol: 1e-3
+  scattering_atol: 0
+  scattering_rtol: 1e-3
+  
