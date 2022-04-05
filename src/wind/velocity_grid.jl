@@ -151,7 +151,6 @@ function VelocityGrid(
         r0,
         nr = nr,
         nz = nz,
-        log = false,
     )
 end
 
