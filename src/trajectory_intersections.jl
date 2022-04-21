@@ -1,9 +1,5 @@
 using LinearAlgebra, ProgressMeter, DataStructures
-export Segment,
-    Intersection,
-    reduce_trajectories,
-    get_intersection_times,
-    load_trajectories
+export Segment, Intersection, reduce_trajectories, get_intersection_times, load_trajectories
 
 struct Segment{T<:AbstractFloat}
     p1x::T
@@ -219,10 +215,8 @@ function Base.intersect!(
     trajectory1::Trajectory,
     trajectory2::Trajectory,
 )
-    v1 = @. sign(trajectory1.vz) * sqrt.(trajectory1.vr ^ 2 + trajectory1.vz ^ 2) #trajectory1.vz 
-    v2 = @. sign(trajectory2.vz) * sqrt.(trajectory2.vr ^ 2 + trajectory2.vz ^ 2) #trajectory2.vz
-    #v1 = @. sign(trajectory1.vz) * trajectory1.vz 
-    #v2 = @. sign(trajectory2.vz) * trajectory2.vz 
+    v1 = @. sign(trajectory1.vz) * sqrt.(trajectory1.vr^2 + trajectory1.vz^2)
+    v2 = @. sign(trajectory2.vz) * sqrt.(trajectory2.vr^2 + trajectory2.vz^2)
     n_intersections = intersect!(
         intersections_dict,
         trajectory1.id,
@@ -253,7 +247,7 @@ function Trajectory(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vphi],
         integrator.p.data[:vz],
         integrator.p.data[:n],
-        escaped(integrator)
+        escaped(integrator),
     )
 end
 
@@ -267,7 +261,7 @@ function load_trajectory(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
-        tdata["escaped"]
+        tdata["escaped"],
     )
 end
 
@@ -413,9 +407,13 @@ function resolve_intersections(intersection_times, intersections_dict)
                 winner_id = intersection.id1
                 max_time = intersection.t2
                 winner_time = intersection.t1
-                if max_time < intersection_times[loser_id] 
-                    intersection_times[loser_id] = max_time 
-                    merging_streamlines[loser_id] = Dict("winner_id" => winner_id, "winner_time" => winner_time, "loser_time" => max_time)
+                if max_time < intersection_times[loser_id]
+                    intersection_times[loser_id] = max_time
+                    merging_streamlines[loser_id] = Dict(
+                        "winner_id" => winner_id,
+                        "winner_time" => winner_time,
+                        "loser_time" => max_time,
+                    )
                 end
                 clear_remaining_trajectory_intersections!(
                     intersections_dict,
@@ -435,8 +433,8 @@ function resolve_intersections(intersection_times, intersections_dict)
             loser_id = intersection.id2
             winner_id = intersection.id1
             max_time = intersection.t2
-            if max_time < intersection_times[loser_id] 
-                intersection_times[loser_id] = max_time 
+            if max_time < intersection_times[loser_id]
+                intersection_times[loser_id] = max_time
                 merging_streamlines[loser_id] = winner_id
             end
             clear_remaining_trajectory_intersections!(
@@ -453,9 +451,47 @@ function get_intersection_times(integrators::Vector{<:Trajectory})
     intersection_times =
         Dict(integrator.id => integrator.t[end] for integrator in integrators)
     intersections_dict = get_intersections(integrators)
-    intersection_times, merging_streamlines = resolve_intersections(intersection_times, intersections_dict)
+    intersection_times, merging_streamlines =
+        resolve_intersections(intersection_times, intersections_dict)
     return intersection_times, merging_streamlines
 end
 
 get_intersection_times(integrators::Vector{<:Sundials.IDAIntegrator}) =
     get_intersection_times(Trajectory.(integrators))
+
+
+# Line widths calculations
+
+function get_distance_between_segments(
+    s1::Segment,
+    s2::Segment,
+    A::Matrix{Float64},
+    b::Vector{Float64},
+)
+    s1_mid_x = s1.p1x + (s1.p2x - s1.p1x) / 2.0
+    s1_mid_y = s1.p1y + (s1.p2y - s1.p1y) / 2.0
+    s1_vec_x = s1.p2x - s1.p1x
+    s1_vec_y = s1.p2y - s1.p1y
+
+    s2_vec_x = s2.p2x - s2.p1x
+    s2_vec_y = s2.p2y - s2.p1y
+
+    s1_perp_vec_x = 1.0
+    s1_perp_vec_y = -s1_vec_y / s1_vec_x
+
+    A[1, 1] = s1_perp_vec_x
+    A[1, 2] = -s2_vec_x
+    A[2, 1] = s1_perp_vec_y
+    A[2, 2] = -s2_vec_y
+    b[1] = s2.p1x - s1_mid_x
+    b[2] = s2.p1y - s1_mid_y
+    sol = A \ b
+    if (0 < sol[2] < 1)
+        int_x = s2.p1x + sol[2] * s2_vec_x
+        int_y = s2.p1y + sol[2] * s2_vec_y
+        distance = sqrt((int_x - s1_mid_x)^2 + (int_y - s1_mid_y)^2)
+    else
+        distance = 0.0
+    end
+    return distance
+end

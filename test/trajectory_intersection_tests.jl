@@ -115,3 +115,18 @@ end
     @test times[0] == 10
 end
 
+@testset "Test determine line widths" begin
+
+    @testset "Test distance between segments" begin
+        s1 = Segment(4, 0, 7, 7)
+        s2 = Segment(15, 0, 12, 6)
+        s3 = Segment(7, 7, 10, 10)
+        A = zeros((2,2))
+        b = zeros(2)
+        distance = Qwind.get_distance_between_segments(s1, s2, A, b)
+        @test distance == 0.
+        distance = Qwind.get_distance_between_segments(s3, s2, A, b)
+        @test distance ≈ sqrt(2) * 4.5
+    end
+
+end
