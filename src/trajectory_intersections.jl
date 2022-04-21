@@ -472,13 +472,10 @@ function get_distance_between_segments(
     s1_mid_y = s1.p1y + (s1.p2y - s1.p1y) / 2.0
     s1_vec_x = s1.p2x - s1.p1x
     s1_vec_y = s1.p2y - s1.p1y
-
     s2_vec_x = s2.p2x - s2.p1x
     s2_vec_y = s2.p2y - s2.p1y
-
     s1_perp_vec_x = 1.0
-    s1_perp_vec_y = -s1_vec_y / s1_vec_x
-
+    s1_perp_vec_y = -s1_vec_x / s1_vec_y
     A[1, 1] = s1_perp_vec_x
     A[1, 2] = -s2_vec_x
     A[2, 1] = s1_perp_vec_y
@@ -491,7 +488,41 @@ function get_distance_between_segments(
         int_y = s2.p1y + sol[2] * s2_vec_y
         distance = sqrt((int_x - s1_mid_x)^2 + (int_y - s1_mid_y)^2)
     else
-        distance = 0.0
+        distance = Inf
     end
     return distance
+end
+
+function turn_streamline_to_segments(sl)
+    ret = Array{Segment{typeof(sl.r[1])}}(undef, length(sl.r) - 1)
+    for i = 1:(length(sl.r) - 1)
+        seg = Segment(sl.r[i], sl.z[i], sl.r[i + 1], sl.z[i + 1])
+        ret[i] = seg
+    end
+    return ret
+end
+
+
+function get_width_pairs(centre, left, right, A, b)
+    centre_segs = turn_streamline_to_segments(centre)
+    left_segs = turn_streamline_to_segments(left)
+    right_segs = turn_streamline_to_segments(right)
+    ret = []
+    for centre_seg in centre_segs
+        lws = [Inf, Inf]
+        for left_seg in left_segs
+            d = get_distance_between_segments(centre_seg, left_seg, A, b)
+            if d < lws[1]
+                lws[1] = d
+            end
+        end
+        for right_seg in right_segs
+            d = get_distance_between_segments(centre_seg, right_seg, A, b)
+            if d < lws[2]
+                lws[2] = d
+            end
+        end
+        push!(ret, lws)
+    end
+    return ret
 end
