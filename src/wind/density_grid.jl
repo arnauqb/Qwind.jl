@@ -19,14 +19,7 @@ struct DensityGrid{T,U} <: InterpolationGrid
         interpolator =
             Interpolations.interpolate((r_range, z_range), grid, Gridded(Linear()))
         interpolator = Interpolations.extrapolate(interpolator, 1e2)
-        return new{typeof(r_range[1]),Int}(
-            r_range,
-            z_range,
-            grid,
-            nr,
-            nz,
-            interpolator,
-        )
+        return new{typeof(r_range[1]),Int}(r_range, z_range, grid, nr, nz, interpolator)
     end
 end
 
@@ -126,11 +119,7 @@ function interpolate_density(grid::DensityGrid, r, z)
 end
 
 
-function get_density_interpolator(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    n::Vector{Float64}
-)
+function get_density_interpolator(r, z, n)
     mask = (r .> 0) .& (z .> 0)
     r = r[mask]
     z = z[mask]
@@ -149,8 +138,8 @@ function update_density_grid(
     hull::ConcaveHull.Hull,
     r::Vector{Float64},
     z::Vector{Float64},
-    n::Vector{Float64},
     r0::Vector{Float64},
+    n,
 )
     r_range, z_range = get_spatial_grid(r, z, r0, old_grid.nr, old_grid.nz)
     interpolator = get_density_interpolator(r, z, n)
@@ -187,8 +176,8 @@ function update_density_grid(
     hull::ConcaveHull.Hull,
     r::Vector{Float64},
     z::Vector{Float64},
-    n::Vector{Float64},
     r0::Vector{Float64},
+    n,
 )
     r_range, z_range = get_spatial_grid(r, z, r0, old_grid.nr, old_grid.nz)
     interpolator = get_density_interpolator(r, z, n)
@@ -214,13 +203,61 @@ function update_density_grid(
     return grid
 end
 
+function calculate_densities(streamlines)
+    A = zeros(2, 2)
+    b = zeros(2)
+    # get line widths
+    lw_pairs = get_width_pairs(streamlines[2], streamlines[1], streamlines[3], A, b)
+    lws = [[[Inf, lw_pairs[i][1]] for i = 1:length(lw_pairs)]]
+    for i = 2:(length(streamlines) - 1)
+        lw_pairs =
+            get_width_pairs(streamlines[i], streamlines[i - 1], streamlines[i + 1], A, b)
+        push!(lws, lw_pairs)
+    end
+    lws_last = [[lws[end][i][2], Inf] for i = 1:length(lws[end])]
+    push!(lws, lws_last)
+    # calculate densities
+    rs = Float64[]
+    zs = Float64[]
+    ns = Float64[]
+    for (i, sl) in enumerate(streamlines)
+        r0 = sl.r[1]
+        n0 = sl.n[1]
+        v0 = sl.vz[1]
+        lw0 = sl.width[1]
+        for j = 1:(length(sl.r) - 1)
+            r = sl.r[j]
+            z = sl.z[j]
+            d = sqrt(r^2 + z^2)
+            v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
+            left_lw = min(lws[i][j][1], lw0)
+            right_lw = min(lws[i][j][2], lw0)
+            lw = left_lw + right_lw
+            n = (r0 * lw0 * v0 * n0) / (d * v * lw)
+            push!(ns, n)
+            push!(rs, r)
+            push!(zs, z)
+        end
+    end
+    return rs, zs, ns
+end
+
 function update_density_grid(
     old_grid::DensityGrid,
     update_method::UpdateGridFlag,
     streamlines::Streamlines,
     hull,
 )
-    r, z, _, _, _, n = reduce_streamlines(streamlines)
-    r0 = [line.r[1] for line in streamlines]
-    return update_density_grid(old_grid, update_method, hull, r, z, n, r0)
+    #r, z, _, _, _, _ = reduce_streamlines(streamlines)
+    r, z, n = calculate_densities(streamlines)
+    r0s = [line.r[1] for line in streamlines]
+    return update_density_grid(
+        old_grid,
+        update_method,
+        hull,
+        r,
+        z,
+        r0s,
+        n,
+    )
 end
