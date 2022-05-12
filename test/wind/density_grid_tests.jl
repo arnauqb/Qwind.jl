@@ -61,8 +61,8 @@ end
             new_hull,
             r_range,
             z_range,
-            new_density,
             r0_range,
+            new_density,
         )
         for r in new_grid.r_range
             for z in new_grid.z_range
@@ -86,8 +86,8 @@ end
             new_hull,
             r_range,
             z_range,
-            new_density,
             r0_range,
+            new_density,
         )
         for r in new_grid.r_range
             for z in new_grid.z_range

@@ -121,9 +121,9 @@ end
 
 function get_density_interpolator(r, z, n)
     mask = (r .> 0) .& (z .> 0)
+    n = n[mask]
     r = r[mask]
     z = z[mask]
-    n = n[mask]
     r_log = log10.(r)
     z_log = log10.(z)
     log_n = log10.(n)

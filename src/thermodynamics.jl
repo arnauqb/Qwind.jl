@@ -31,5 +31,5 @@ function compute_density(r, z, v_r, v_z, r_0, z_0, v_0, n_0)
     else
         v_ratio = v_0 / v_t
     end
-    return n_0 * v_ratio # * radial
+    return n_0 * v_ratio * radial
 end
