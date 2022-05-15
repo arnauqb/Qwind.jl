@@ -57,8 +57,9 @@ VelocityGrid(grid_data::Dict) = VelocityGrid(
     grid_data["vr_grid"],
     grid_data["vphi_grid"],
     grid_data["vz_grid"],
-    grid_data["nr"],
-    grid_data["nz"],
+    get(grid_data, "nr", length(grid_data["r"])),
+    #length(grid_data["r"]),
+    get(grid_data, "nz", length(grid_data["z"])),
 )
 
 function VelocityGrid(h5_path, it_num)

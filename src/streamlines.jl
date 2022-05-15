@@ -54,7 +54,7 @@ function Streamline(tdata::Dict)
         tdata["vz"],
         tdata["n"],
         tdata["line_width"],
-        tdata["escaped"],
+        get(tdata, "escaped", true), 
     )
 end
 
