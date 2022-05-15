@@ -248,7 +248,7 @@ function save(
     _, _, ar, az = integrator.du
     vt = sqrt(vr^2 + vz^2)
     at = sqrt(ar^2 + az^2)
-    vphi = integrator.p.l0 / sqrt(r^2 + z^2)
+    vphi = integrator.p.l0 / r^2
     dvdr = at / vt
     density = compute_density(r, z, vr, vz, integrator.p)
     taux = compute_tau_xray(
