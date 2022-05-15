@@ -27,8 +27,8 @@ DensityGrid(grid_data::Dict) = DensityGrid(
     grid_data["r"],
     grid_data["z"],
     grid_data["grid"],
-    grid_data["nr"],
-    grid_data["nz"],
+    get(grid_data, "nr", length(grid_data["r"])),
+    get(grid_data, "nz", length(grid_data["z"])),
 )
 
 function DensityGrid(h5_path::String, it_num)

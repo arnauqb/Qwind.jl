@@ -420,4 +420,5 @@ $RECYCLE.BIN/
 
 
 # My custom gitignore
-#Manifest.toml
+Manifest.toml
+**/*.hdf5

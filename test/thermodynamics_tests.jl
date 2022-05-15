@@ -17,5 +17,5 @@ end
     n_0 = 10
     z_0 = 0
     @test compute_density(r, z, v_r, v_z, r_0, z_0, v_0, n_0) ≈
-          10 * (2 / sqrt(10^2 + 20^2))^2 * (1/5)
+          10 * (2 / sqrt(10^2))^2 * (1/5)
 end
