@@ -38,7 +38,7 @@ function reduce_streamlines(streamlines; rtol = 0.1, atol = 1e-4)
     return r, z
 end
 
-function Hull(streamlines; rtol = 1e-2, atol = 1e-2)
+function Hull(streamlines; rtol = 1e-2, atol = 5e-2)
     @info "Constructing wind hull"
     r, z = reduce_streamlines(streamlines, rtol = rtol, atol = atol)
     hull = Hull(r, z)
