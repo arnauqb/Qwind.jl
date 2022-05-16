@@ -203,7 +203,36 @@ function update_density_grid(
     return grid
 end
 
-function calculate_densities(streamlines)
+function calculate_densities(sl::Streamline, width) 
+    r0 = sl.r[1]
+    n0 = sl.n[1]
+    v0 = sl.vz[1]
+    lw0 = sl.width[1]
+    rs = Float64[]
+    zs = Float64[]
+    ns = Float64[]
+    for j = 1:(length(sl.r) - 1)
+        r = sl.r[j]
+        z = sl.z[j]
+        v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
+        left_lw = width[j][1]
+        if left_lw == Inf
+            left_lw = lw0
+        end
+        right_lw = min(width[j][2], lw0)
+        if right_lw == Inf
+            right_lw = lw0
+        end
+        lw = left_lw + right_lw
+        n = (r0 * lw0 * v0 * n0) / (r * v * lw)
+        push!(rs, r)
+        push!(zs, z)
+        push!(ns, n)
+    end
+    return rs, zs, ns
+end
+
+function get_width_pairs(streamlines::Streamlines)
     A = zeros(2, 2)
     b = zeros(2)
     # get line widths
@@ -216,28 +245,20 @@ function calculate_densities(streamlines)
     end
     lws_last = [[lws[end][i][2], Inf] for i = 1:length(lws[end])]
     push!(lws, lws_last)
+    return lws
+end
+
+function calculate_densities(streamlines)
+    lws = get_width_pairs(streamlines)
     # calculate densities
     rs = Float64[]
     zs = Float64[]
     ns = Float64[]
     for (i, sl) in enumerate(streamlines)
-        r0 = sl.r[1]
-        n0 = sl.n[1]
-        v0 = sl.vz[1]
-        lw0 = sl.width[1]
-        for j = 1:(length(sl.r) - 1)
-            r = sl.r[j]
-            z = sl.z[j]
-            d = sqrt(r^2 + z^2)
-            v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
-            left_lw = min(lws[i][j][1], lw0)
-            right_lw = min(lws[i][j][2], lw0)
-            lw = left_lw + right_lw
-            n = (r0 * lw0 * v0 * n0) / (d * v * lw)
-            push!(ns, n)
-            push!(rs, r)
-            push!(zs, z)
-        end
+        rsp, zsp, nsp = calculate_densities(sl, lws[i])
+        rs = vcat(rs, rsp)
+        zs = vcat(zs, zsp)
+        ns = vcat(ns, nsp)
     end
     return rs, zs, ns
 end
@@ -253,7 +274,7 @@ function update_density_grid(
     r0s = [line.r[1] for line in streamlines]
     return update_density_grid(
         old_grid,
-        update_method,
+        ReplaceGrid(),#update_method,
         hull,
         r,
         z,

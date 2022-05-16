@@ -18,6 +18,19 @@ mutable struct Streamline{T<:Vector{<:AbstractFloat}}
     width::T
     escaped::Bool
 end
+Base.getindex(sl::Streamline, idcs) = Streamline(
+    sl.id,
+    sl.t[idcs],
+    sl.r[idcs],
+    sl.z[idcs],
+    sl.vr[idcs],
+    sl.vphi[idcs],
+    sl.vz[idcs],
+    sl.n[idcs],
+    sl.width[idcs],
+    sl.escaped,
+)
+
 
 struct Streamlines
     streamlines::Vector{Streamline}
@@ -54,7 +67,7 @@ function Streamline(tdata::Dict)
         tdata["vz"],
         tdata["n"],
         tdata["line_width"],
-        get(tdata, "escaped", true), 
+        get(tdata, "escaped", true),
     )
 end
 
@@ -102,8 +115,8 @@ function slice_streamline(streamline::Streamline; in = 1, fi = nothing)
 end
 
 function escaped(streamline::Streamline)
-    vt = @. sqrt(streamline.vr ^ 2 + streamline.vz ^ 2)
-    d = @. sqrt(streamline.r ^ 2 + streamline.z ^ 2)
+    vt = @. sqrt(streamline.vr^2 + streamline.vz^2)
+    d = @. sqrt(streamline.r^2 + streamline.z^2)
     return maximum(vt .> compute_escape_velocity.(d))
 end
 
