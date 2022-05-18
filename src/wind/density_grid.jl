@@ -217,11 +217,11 @@ function calculate_densities(sl::Streamline, width)
         v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
         left_lw = width[j][1]
         if left_lw == Inf
-            left_lw = lw0
+            left_lw = lw0 / 2
         end
-        right_lw = min(width[j][2], lw0)
+        right_lw = width[j][2]
         if right_lw == Inf
-            right_lw = lw0
+            right_lw = lw0 / 2
         end
         lw = left_lw + right_lw
         n = (r0 * lw0 * v0 * n0) / (r * v * lw)

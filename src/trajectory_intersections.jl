@@ -468,44 +468,50 @@ function get_distance_between_segments(
     A::Matrix{Float64},
     b::Vector{Float64},
 )
-    s1_lower_x = s1.p1x
-    s1_lower_y = s1.p1y
-    s1_upper_x = s1.p2x
-    s1_upper_y = s1.p2y
-    #s1_mid_x = s1.p1x # + (s1.p2x - s1.p1x) / 2.0
-    #s1_mid_y = s1.p1y + 1e-10 # + (s1.p2y - s1.p1y) / 2.0
+    #s1_lower_x = s1.p1x
+    #s1_lower_y = s1.p1y
+    #s1_upper_x = s1.p2x
+    #s1_upper_y = s1.p2y
+    s1_mid_x = s1.p1x + (s1.p2x - s1.p1x) / 2.0
+    s1_mid_y = s1.p1y + (s1.p2y - s1.p1y) / 2.0
     s1_vec_x = s1.p2x - s1.p1x
     s1_vec_y = s1.p2y - s1.p1y
     s2_vec_x = s2.p2x - s2.p1x
     s2_vec_y = s2.p2y - s2.p1y
-    s1_perp_vec_x = 1.0
-    s1_perp_vec_y = -s1_vec_x / s1_vec_y
-    if abs(s1_perp_vec_y) < 1e-5
+    s1_perp_vec_x = -s1_vec_y / s1_vec_x
+    s1_perp_vec_y = 1.0
+    if abs(s1_perp_vec_x) < 1e-3
         s1_perp_vec_y = 0.0
     end
     A[1, 1] = s1_perp_vec_x
     A[1, 2] = -s2_vec_x
     A[2, 1] = s1_perp_vec_y
     A[2, 2] = -s2_vec_y
-    b[1] = s2.p1x - s1_lower_x
-    b[2] = s2.p1y - s1_lower_y
+    #b[1] = s2.p1x - s1_lower_x
+    #b[2] = s2.p1y - s1_lower_y
+    b[1] = s2.p1x - s1_mid_x
+    b[2] = s2.p1y - s1_mid_y
     sol = A \ b
     if (0 < sol[2] < 1)
         int_x = s2.p1x + sol[2] * s2_vec_x
         int_y = s2.p1y + sol[2] * s2_vec_y
-        distance = sqrt((int_x - s1_lower_x)^2 + (int_y - s1_lower_y)^2)
+        #distance = sqrt((int_x - s1_lower_x)^2 + (int_y - s1_lower_y)^2)
+        distance = sqrt((int_x - s1_mid_x)^2 + (int_y - s1_mid_y)^2)
     else
-        b[1] = s2.p1x - s1_upper_x
-        b[2] = s2.p1y - s1_upper_y
-        sol = A \ b
-        if (0 < sol[2] < 1)
-            int_x = s2.p1x + sol[2] * s2_vec_x
-            int_y = s2.p1y + sol[2] * s2_vec_y
-            distance = sqrt((int_x - s1_upper_x)^2 + (int_y - s1_upper_y)^2)
-        else
-            distance = Inf
-        end
+        distance = Inf
     end
+    #else
+    #    b[1] = s2.p1x - s1_upper_x
+    #    b[2] = s2.p1y - s1_upper_y
+    #    sol = A \ b
+    #    if (0 < sol[2] < 1)
+    #        int_x = s2.p1x + sol[2] * s2_vec_x
+    #        int_y = s2.p1y + sol[2] * s2_vec_y
+    #        distance = sqrt((int_x - s1_upper_x)^2 + (int_y - s1_upper_y)^2)
+    #    else
+    #        distance = Inf
+    #    end
+    #end
     return distance
 end
 
