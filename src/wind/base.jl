@@ -75,7 +75,7 @@ function get_density(wi::Wind, r, z)
 end
 get_density(wi::Wind, point) = get_density(wi, point[1], point[2])
 
-function update_wind(wind::Wind, streamlines::Streamlines)
+function update_wind(wind::Wind, streamlines::Streamlines, integrators)
     @info "Updating wind grids... "
     flush()
     if maximum(wind.density_grid.grid) == wind.vacuum_density
@@ -90,8 +90,13 @@ function update_wind(wind::Wind, streamlines::Streamlines)
         return new_wind
     end
     hull = Hull(streamlines)
-    density_grid =
-        update_density_grid(wind.density_grid, wind.update_grid_flag, streamlines, hull)
+    density_grid = update_density_grid(
+        wind.density_grid,
+        wind.update_grid_flag,
+        streamlines,
+        integrators,
+        hull,
+    )
     velocity_grid =
         update_velocity_grid(wind.velocity_grid, wind.update_grid_flag, streamlines, hull)
     new_wind =

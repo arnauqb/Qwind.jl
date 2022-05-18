@@ -77,7 +77,7 @@ function run_integrators(model::Model, iterations_dict::Dict; it_num, parallel =
     streamlines = interpolate_integrators(
         integrators,
         max_times = max_times,
-        n_timesteps = 1000,
+        n_timesteps = 100,
         log = true,
     )
     iterations_dict[it_num]["integrators"] = integrators
@@ -102,7 +102,7 @@ function run_iteration!(model::Model, iterations_dict::Dict; it_num, parallel = 
     @info "Mass loss fraction $(wind_properties["mass_loss_fraction"])"
     @info "KL fraction $(wind_properties["kinetic_luminosity"] / wind_properties["bolometric_luminosity"])"
     flush()
-    new_wind = update_wind(model.wind, streamlines)
+    new_wind = update_wind(model.wind, streamlines, integrators)
     update_wind!(model, new_wind)
     new_radiation = update_radiation(model.rad, new_wind, model.parameters)
     update_radiation!(model, new_radiation)

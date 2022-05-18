@@ -6,6 +6,10 @@ function NearestNeighbors.KDTree(sl::Streamline)
     points = hcat(sl.r, sl.z)'
     return KDTree(points)
 end
+function NearestNeighbors.KDTree(sl::Sundials.IDAIntegrator)
+    points = hcat(sl.p.data[:r], sl.p.data[:z])'
+    return KDTree(points)
+end
 
 function get_nearest_point(kdtree, point)
     idxs, dists = knn(kdtree, point, 1)
@@ -27,10 +31,23 @@ function get_distances_between_lines(line1, line2)
     return ret
 end
 
+function get_distances_between_lines(
+    line1::Sundials.IDAIntegrator,
+    line2::Sundials.IDAIntegrator,
+)
+    ret = zero(line1.p.data[:r])
+    kdt2 = KDTree(line2)
+    for (i, (r, z)) in enumerate(zip(line1.p.data[:r], line1.p.data[:z]))
+        point = [r, z]
+        ret[i] = get_distance_to_line(kdt2, point)
+    end
+    return ret
+end
+
 function get_streamlines_widths(streamlines)
     ret = []
-    for i in 1:length(streamlines)-1
-        push!(ret, get_distances_between_lines(streamlines[i], streamlines[i+1]))
+    for i = 1:(length(streamlines) - 1)
+        push!(ret, get_distances_between_lines(streamlines[i], streamlines[i + 1]))
     end
     return ret
 end
