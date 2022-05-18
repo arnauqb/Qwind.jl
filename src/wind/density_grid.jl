@@ -205,16 +205,21 @@ end
 
 function calculate_densities(sl::Streamline, width) 
     r0 = sl.r[1]
+    z0 = sl.z[1]
+    d0 = sqrt(r0^2 + z0^2)
     n0 = sl.n[1]
     v0 = sl.vz[1]
+
     rs = Float64[]
     zs = Float64[]
     ns = Float64[]
-    for j = 1:(length(sl.r) - 1)
+    for j = 1:length(sl.r)
         r = sl.r[j]
         z = sl.z[j]
+        d = sqrt(r^2 + z^2)
         v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
-        n = (r0 * width[1] * v0 * n0) / (r * v * width[j])
+        #n = (r0 * width[1] * v0 * n0) / (r * v * width[j])
+        n = (width[1]^2 * v0 * n0) / (v * width[j]^2)
         push!(rs, r)
         push!(zs, z)
         push!(ns, n)
