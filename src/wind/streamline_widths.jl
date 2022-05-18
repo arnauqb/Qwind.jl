@@ -1,4 +1,4 @@
-export KDTree, get_line_widths
+export KDTree, get_distances_between_lines
 
 using NearestNeighbors
 
@@ -17,11 +17,12 @@ function get_distance_to_line(kdtree, point)
     return dists[1]
 end
 
-function get_line_widths(line::Streamline, kdt1, kdt2)
-    ret = zero(line.r)
-    for (i, (r, z)) in enumerate(zip(line.r, line.z))
+function get_distances_between_lines(line1, line2)
+    ret = zero(line1.r)
+    kdt2 = KDTree(line2)
+    for (i, (r, z)) in enumerate(zip(line1.r, line1.z))
         point = [r, z]
-        ret[i] = get_distance_to_line(kdt1, point) + get_distance_to_line(kdt2, point)
+        ret[i] = get_distance_to_line(kdt2, point)
     end
     return ret
 end

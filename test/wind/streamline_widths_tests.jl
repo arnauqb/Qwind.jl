@@ -38,11 +38,11 @@ using Qwind, Test
         @test Qwind.get_distance_to_line(sl_kdtree_3, [0.0, 0.0]) == sqrt(10)
     end
 
-    @testset "Test line widths" begin
-        line_widths = get_line_widths(sl2, sl_kdtree_1, sl_kdtree_3)
-        lw1 = 3 + 1
-        lw2 = 1 + 1
-        lw3 = 1 + 1
+    @testset "Test distance between lines" begin
+        line_widths = get_distances_between_lines(sl2, sl1)
+        lw1 = 3
+        lw2 = 1
+        lw3 = 1
         @test line_widths == [lw1, lw2, lw3]
     end
 
