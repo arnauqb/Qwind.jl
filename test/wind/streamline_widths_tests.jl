@@ -11,27 +11,39 @@ using Qwind, Test
     width = zero(r1)
     escaped = false
     sl1 = Streamline(0, t, r1, z1, vr, vphi, vz, n, width, escaped)
+    sl_kdtree_1 = KDTree(sl1)
 
-    r2 = [2., 2., 2.]
+    r2 = [4., 2., 2.]
     z2 = [1., 2., 3.]
     sl2 = Streamline(0, t, r2, z2, vr, vphi, vz, n, width, escaped)
+    sl_kdtree_2 = KDTree(sl2)
 
     r3 = [3., 3., 3.]
     z3 = [1., 2., 3.]
     sl3 = Streamline(0, t, r3, z3, vr, vphi, vz, n, width, escaped)
+    sl_kdtree_3 = KDTree(sl3)
 
     @testset "Test KD-Tree" begin
-        sl_kdtree_1 = KDTree(sl1)
-        @test get_nearest_point(sl_kdtree_1, [0.0, 0.0]) == [1., 1.]
-        @test get_nearest_point(sl_kdtree_1, [1.1, 2.1]) == [1., 2.]
-        @test get_nearest_point(sl_kdtree_1, [3.0, 3.0]) == [1., 3.]
-        sl_kdtree_2 = KDTree(sl2)
-        @test get_nearest_point(sl_kdtree_2, [0.0, 0.0]) == [2., 1.]
-        @test get_nearest_point(sl_kdtree_1, [2.1, 2.1]) == [2., 2.]
-        @test get_nearest_point(sl_kdtree_2, [3.0, 3.0]) == [2., 3.]
+        @test Qwind.get_nearest_point(sl_kdtree_1, [0.0, 0.0]) == [1., 1.]
+        @test Qwind.get_nearest_point(sl_kdtree_1, [1.1, 2.1]) == [1., 2.]
+        @test Qwind.get_nearest_point(sl_kdtree_1, [3.0, 3.0]) == [1., 3.]
+        @test Qwind.get_nearest_point(sl_kdtree_2, [0.0, 0.0]) == [2., 2.]
+        @test Qwind.get_nearest_point(sl_kdtree_2, [2.1, 2.1]) == [2., 2.]
+        @test Qwind.get_nearest_point(sl_kdtree_2, [3.0, 3.0]) == [2., 3.]
     end
 
-    @testset "Test distance to closest line" begin
+    @testset "Test distance to line" begin
+        @test Qwind.get_distance_to_line(sl_kdtree_1, [0.0, 0.0]) == sqrt(2)
+        @test Qwind.get_distance_to_line(sl_kdtree_2, [0.0, 0.0]) == sqrt(8)
+        @test Qwind.get_distance_to_line(sl_kdtree_3, [0.0, 0.0]) == sqrt(10)
+    end
+
+    @testset "Test line widths" begin
+        line_widths = get_line_widths(sl2, sl_kdtree_1, sl_kdtree_3)
+        lw1 = 3 + 1
+        lw2 = 1 + 1
+        lw3 = 1 + 1
+        @test line_widths == [lw1, lw2, lw3]
     end
 
 end

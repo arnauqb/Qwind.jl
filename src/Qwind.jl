@@ -28,6 +28,7 @@ include("wind/density_grid.jl")
 include("wind/velocity_grid.jl")
 include("wind/iterator.jl")
 include("wind/base.jl")
+include("wind/streamline_widths.jl")
 
 # radiation
 include("radiation/disk.jl")
