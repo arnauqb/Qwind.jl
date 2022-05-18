@@ -1,4 +1,4 @@
-export KDTree, get_distances_between_lines
+export KDTree, get_streamlines_widths
 
 using NearestNeighbors
 
@@ -23,6 +23,14 @@ function get_distances_between_lines(line1, line2)
     for (i, (r, z)) in enumerate(zip(line1.r, line1.z))
         point = [r, z]
         ret[i] = get_distance_to_line(kdt2, point)
+    end
+    return ret
+end
+
+function get_streamlines_widths(streamlines)
+    ret = []
+    for i in 1:length(streamlines)-1
+        push!(ret, get_distances_between_lines(streamlines[i], streamlines[i+1]))
     end
     return ret
 end

@@ -52,25 +52,25 @@ initialize_integrators(model::Model) = initialize_integrators(
 
 function run_integrators(model::Model, iterations_dict::Dict; it_num, parallel = true)
     @info "Computing initial conditions for iteration $it_num..."
-    lines_range, lines_widths = get_initial_radii_and_linewidths(model)
+    initial_lines_range, initial_lines_widths = get_initial_radii_and_linewidths(model)
     f(i) = create_and_run_integrator(
         model,
-        linewidth = lines_widths[i],
-        r0 = lines_range[i],
+        lw0 = initial_lines_widths[i],
+        r0 = initial_lines_range[i],
         trajectory_id = i,
     )
     @info "Starting iteration $it_num ..."
-    @info "Integrating $(length(lines_range)) trajectories ..."
+    @info "Integrating $(length(initial_lines_range)) trajectories ..."
     flush()
     if parallel
         if is_logging(stderr)
             # in an hpc, don't show progress bar
-            integrators = pmap(f, 1:length(lines_range))
+            integrators = pmap(f, 1:length(initial_lines_range))
         else
-            integrators = @showprogress pmap(f, 1:length(lines_range))
+            integrators = @showprogress pmap(f, 1:length(initial_lines_range))
         end
     else
-        integrators = f.(1:length(lines_range))
+        integrators = f.(1:length(initial_lines_range))
     end
     # Resolve intersections.
     max_times, mergers = get_intersection_times(integrators)

@@ -207,7 +207,6 @@ function calculate_densities(sl::Streamline, width)
     r0 = sl.r[1]
     n0 = sl.n[1]
     v0 = sl.vz[1]
-    lw0 = sl.width[1]
     rs = Float64[]
     zs = Float64[]
     ns = Float64[]
@@ -215,16 +214,7 @@ function calculate_densities(sl::Streamline, width)
         r = sl.r[j]
         z = sl.z[j]
         v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
-        left_lw = width[j][1]
-        if left_lw == Inf
-            left_lw = lw0 / 2
-        end
-        right_lw = width[j][2]
-        if right_lw == Inf
-            right_lw = lw0 / 2
-        end
-        lw = left_lw + right_lw
-        n = (r0 * lw0 * v0 * n0) / (r * v * lw)
+        n = (r0 * width[1] * v0 * n0) / (r * v * width[j])
         push!(rs, r)
         push!(zs, z)
         push!(ns, n)
@@ -232,30 +222,14 @@ function calculate_densities(sl::Streamline, width)
     return rs, zs, ns
 end
 
-function get_width_pairs(streamlines::Streamlines)
-    A = zeros(2, 2)
-    b = zeros(2)
-    # get line widths
-    lw_pairs = get_width_pairs(streamlines[2], streamlines[1], streamlines[3], A, b)
-    lws = [[[Inf, lw_pairs[i][1]] for i = 1:length(lw_pairs)]]
-    for i = 2:(length(streamlines) - 1)
-        lw_pairs =
-            get_width_pairs(streamlines[i], streamlines[i - 1], streamlines[i + 1], A, b)
-        push!(lws, lw_pairs)
-    end
-    lws_last = [[lws[end][i][2], Inf] for i = 1:length(lws[end])]
-    push!(lws, lws_last)
-    return lws
-end
-
 function calculate_densities(streamlines)
-    lws = get_width_pairs(streamlines)
+    widths = get_streamlines_widths(streamlines)
     # calculate densities
     rs = Float64[]
     zs = Float64[]
     ns = Float64[]
-    for (i, sl) in enumerate(streamlines)
-        rsp, zsp, nsp = calculate_densities(sl, lws[i])
+    for i in 1:length(streamlines)-1 # The last one is just a boundary
+        rsp, zsp, nsp = calculate_densities(streamlines[i], widths[i])
         rs = vcat(rs, rsp)
         zs = vcat(zs, zsp)
         ns = vcat(ns, nsp)

@@ -11,8 +11,8 @@ function compute_streamline_mdot(streamline::Streamline, Rg; mu_nucleon = 0.61)
     n = streamline.n[1]
     v = sqrt(streamline.vr[1]^2 + streamline.vz[1]^2)
     d = sqrt(streamline.r[1]^2 + streamline.z[1]^2)
-    lw = streamline.width[1]
-    mw = 4π * d * lw * Rg^2 * n * v * C * M_P * mu_nucleon
+    lw0 = streamline.lw0
+    mw = 4π * d * lw0 * Rg^2 * n * v * C * M_P * mu_nucleon
     return mw
 end
 
@@ -20,7 +20,7 @@ function compute_streamline_mdot(streamline::Sundials.IDAIntegrator, Rg; mu_nucl
     n0 = streamline.p.n0
     v0 = streamline.p.v0
     r0 = streamline.p.r0
-    lw = streamline.p.lwnorm * r0
+    lw0 = streamline.p.lw0
     mw = 4π * r0 * lw * Rg^2 * n0 * v0 * C * M_P * mu_nucleon
     return mw
 end
@@ -203,7 +203,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         sgroup["vphi"] = streamline.vphi
         sgroup["vz"] = streamline.vz
         sgroup["n"] = streamline.n
-        sgroup["line_width"] = streamline.width
+        sgroup["lw0"] = streamline.lw0
         sgroup["escaped"] = streamline.escaped
     end
     return

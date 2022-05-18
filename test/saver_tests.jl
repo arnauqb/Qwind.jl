@@ -13,10 +13,10 @@ using Qwind, Test, HDF5
     vz2 = [0.001, 0.0015]
     vphi = [0.1, 0.1]
     n = [1e8, 1e9]
-    widths = [1.0, 2.0]
+    lw0 = 1.0
     streamlines = []
-    push!(streamlines, Streamline(1, t, r, z, vr1, vphi, vz1, n, widths, true)) # this escapes
-    push!(streamlines, Streamline(2, t, r, z, vr2, vphi, vz2, n, widths, false)) # this doesn't
+    push!(streamlines, Streamline(1, t, r, z, vr1, vphi, vz1, n, lw0, true)) # this escapes
+    push!(streamlines, Streamline(2, t, r, z, vr2, vphi, vz2, n, lw0, false)) # this doesn't
     streamlines = Streamlines(streamlines)
     bh = BlackHole(1e8 * M_SUN, 0.5, 0.0)
     @test escaped(streamlines[1]) == true
@@ -30,7 +30,7 @@ using Qwind, Test, HDF5
         expected =
             4π *
             r[1] *
-            widths[1] *
+            lw0 * 
             bh.Rg^2 *
             n[1] *
             sqrt(vr1[1]^2 + vz1[1]^2) *
@@ -104,16 +104,16 @@ end
     iterations_dict = Dict(1 => Dict())
     integrators, streamlines =
         Qwind.run_integrators(model, iterations_dict, it_num = 1, parallel = false)
-    trajectories = [Qwind.Trajectory(integ) for integ in integrators]
+    #trajectories = [Qwind.Trajectory(integ) for integ in integrators]
     Qwind.save_hdf5(integrators, streamlines, model, "./saver_tests.hdf5", 1)
 
     @testset "Save streamlines and trajectories" begin
-        trajs_saved = load_trajectories("./saver_tests.hdf5")
-        for (traj, traj_saved) in zip(trajectories, trajs_saved)
-            for fieldname in fieldnames(Qwind.Trajectory)
-                @test getfield(traj, fieldname) == getfield(traj_saved, fieldname)
-            end
-        end
+        #trajs_saved = load_trajectories("./saver_tests.hdf5")
+        #for (traj, traj_saved) in zip(trajectories, trajs_saved)
+        #    for fieldname in fieldnames(Qwind.Trajectory)
+        #        @test getfield(traj, fieldname) == getfield(traj_saved, fieldname)
+        #    end
+        #end
 
         sl_saved = Streamlines("./saver_tests.hdf5")
         for (sl, sl_saved) in zip(streamlines, sl_saved)

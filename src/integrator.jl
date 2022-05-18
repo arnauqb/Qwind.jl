@@ -35,7 +35,7 @@ struct IntegratorParameters
     v0::Float64
     n0::Float64
     l0::Float64
-    lwnorm::Float64
+    lw0::Float64
     r_min::Float64
     r_max::Float64
     z_min::Float64
@@ -73,7 +73,7 @@ function initialize_integrator(
     params,
     ic,
     r0,
-    linewidth;
+    lw0;
     tmax = 1e8,
     trajectory_id = -1,
 )
@@ -81,7 +81,6 @@ function initialize_integrator(
     z0 = getz0(ic, r0)
     n0 = getn0(ic, radiation = rad, wind = wind, parameters = params, r = r0)
     v0 = getv0(rad.bh, ic, r0, mu_nucleon = params.mu_nucleon)
-    lwnorm = linewidth / sqrt(r0^2 + z0^2)
     termination_callback = DiscreteCallback(
         termination_condition,
         integrator -> affect!(integrator),
@@ -95,7 +94,7 @@ function initialize_integrator(
         v0,
         n0,
         l0,
-        lwnorm,
+        lw0,
         params.integrator_r_min,
         params.integrator_r_max,
         params.integrator_z_min,
@@ -144,17 +143,13 @@ function get_initial_radii_and_linewidths(
     rfi = getrfi(initial_conditions)
     nlines = getnlines(initial_conditions)
     if initial_conditions.trajs_spacing == "log"
-        lines_widths = diff(10 .^ range(log10(rin), log10(rfi), length = nlines + 1))
-        lines_range = [rin + lines_widths[1] / 2.0]
-        for i = 2:nlines
-            r0 = lines_range[i - 1] + lines_widths[i - 1] / 2 + lines_widths[i] / 2
-            push!(lines_range, r0)
-        end
+        lines_range = 10 .^ range(log10(rin), log10(rfi), length=nlines+1)
+        lines_widths = diff(lines_range)
+        lines_range = lines_range[1:end-1]
     else
-        lines_widths = range(rin, rfi, length = nlines)
-        dr = (rfi - rin) / nlines
-        lines_range = [rin + (i + 0.5) * dr for i = 0:(nlines - 1)]
-        lines_widths = diff([lines_range; rfi + dr / 2])
+        lines_range = range(rin, rfi, length = nlines + 1)
+        lines_widths = diff(lines_range)
+        lines_range = lines_range[1:end-1]
     end
     return lines_range, lines_widths
 end
@@ -173,8 +168,8 @@ function get_initial_radii_and_linewidths(model)
     return lines_range, lines_widths
 end
 
-function create_and_run_integrator(model; r0, linewidth, trajectory_id)
-    integrator = initialize_integrator(model, r0, linewidth, trajectory_id = trajectory_id)
+function create_and_run_integrator(model; r0, lw0, trajectory_id)
+    integrator = initialize_integrator(model, r0, lw0, trajectory_id = trajectory_id)
     solve!(integrator)
     return integrator
 end
@@ -374,7 +369,7 @@ function compute_radiation_acceleration(
         parameters,
         r = r,
         z = z,
-        number_density = density,
+        number_density = interpolate_density(wind.density_grid, r, z),
         tau_x = taux,
     )
     #ξ = 0.0
@@ -491,7 +486,7 @@ function compute_lines_range(
     while r < rfi
         delta_r = find_delta_r(model, r, delta_mdot = delta_mdot, tau_total = tau_total)
         tau_total += get_tau(delta_r)
-        push!(lines_range, r + delta_r / 2)
+        push!(lines_range, r)
         push!(lines_widths, delta_r)
         r += delta_r
     end

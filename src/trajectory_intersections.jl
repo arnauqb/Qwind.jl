@@ -207,6 +207,7 @@ struct Trajectory{T<:Vector{<:AbstractFloat}}
     vphi::T
     vz::T
     n::T
+    lw0::Float64
     escaped::Bool
 end
 
@@ -247,6 +248,7 @@ function Trajectory(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vphi],
         integrator.p.data[:vz],
         integrator.p.data[:n],
+        integrator.p.lw0,
         escaped(integrator),
     )
 end
@@ -261,6 +263,7 @@ function load_trajectory(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
+        tdata["lw0"],
         get(tdata, "escaped", true)
     )
 end
@@ -319,7 +322,7 @@ function slice_trajectory(trajectory::Trajectory; in = 1, fi = nothing)
         trajectory.vr[in:fi],
         trajectory.vphi[in:fi],
         trajectory.vz[in:fi],
-        trajectory.n[in:fi],
+        trajectory.lw0,
         trajectory.escaped,
     )
 end

@@ -15,7 +15,7 @@ mutable struct Streamline{T<:Vector{<:AbstractFloat}}
     vphi::T
     vz::T
     n::T
-    width::T
+    lw0::Float64
     escaped::Bool
 end
 Base.getindex(sl::Streamline, idcs) = Streamline(
@@ -27,7 +27,7 @@ Base.getindex(sl::Streamline, idcs) = Streamline(
     sl.vphi[idcs],
     sl.vz[idcs],
     sl.n[idcs],
-    sl.width[idcs],
+    sl.lw0,
     sl.escaped,
 )
 
@@ -50,8 +50,7 @@ function Streamline(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vphi],
         integrator.p.data[:vz],
         integrator.p.data[:n],
-        sqrt.(integrator.p.data[:r] .^ 2 + integrator.p.data[:z] .^ 2) .*
-        integrator.p.lwnorm,
+        integrator.p.lw0,
         escaped(integrator),
     )
 end
@@ -66,7 +65,7 @@ function Streamline(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
-        tdata["line_width"],
+        tdata["lw0"],
         get(tdata, "escaped", true),
     )
 end
@@ -151,7 +150,7 @@ function interpolate_integrator(
             [0.0],
             [0.0],
             [0.0],
-            [0.0],
+            0.0,
             false,
         )
     end
@@ -175,7 +174,7 @@ function interpolate_integrator(
             [0.0],
             [0.0],
             [0.0],
-            [0.0],
+            0.0,
             false,
         )
     end
@@ -184,7 +183,6 @@ function interpolate_integrator(
     z_dense = dense_solution[2, :]
     vr_dense = dense_solution[3, :]
     vz_dense = dense_solution[4, :]
-    line_width_dense = sqrt.(r_dense .^ 2 + z_dense .^ 2) .* integrator.p.lwnorm
     vphi_dense = integrator.p.l0 ./ r_dense
     density_dense =
         compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
@@ -197,7 +195,7 @@ function interpolate_integrator(
         vphi_dense,
         vz_dense,
         density_dense,
-        line_width_dense,
+        integrator.p.lw0,
         escaped(integrator),
     )
 end

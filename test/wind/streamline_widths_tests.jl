@@ -39,11 +39,19 @@ using Qwind, Test
     end
 
     @testset "Test distance between lines" begin
-        line_widths = get_distances_between_lines(sl2, sl1)
+        line_widths = Qwind.get_distances_between_lines(sl2, sl1)
         lw1 = 3
         lw2 = 1
         lw3 = 1
         @test line_widths == [lw1, lw2, lw3]
+    end
+
+    @testset "Test get all widths" begin
+        streamlines = Streamlines([sl1, sl2, sl3])
+        widths = get_streamlines_widths(streamlines)
+        @test length(widths) == 2
+        @test widths[1] == [sqrt(2), 1, 1]
+        @test widths[2] == [1, 1, 1]
     end
 
 end

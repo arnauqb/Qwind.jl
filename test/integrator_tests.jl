@@ -23,18 +23,18 @@ end
         @test length(lines_range) == 25
         @test length(lines_widths) == 25
         @test lines_widths == 4 .* ones(25)
-        @test lines_range[1] == 2
-        @test lines_range[2] == 6
-        @test lines_range[end - 1] == 94
-        @test lines_range[end] == 98
+        @test lines_range[1] == 0
+        @test lines_range[2] == 4
+        @test lines_range[end - 1] == 92
+        @test lines_range[end] == 96
         # log
         ic = UniformIC(1.0, 1e4, 4, 2.0, 1e8, 1e6 / C, "log")
         lines_range, lines_widths = get_initial_radii_and_linewidths(ic, xray_lumin, Rg)
         @test diff(log10.(lines_widths)) ≈ ones(3)
-        @test lines_range[1] == 5.5
-        @test lines_range[2] == 55.0
-        @test lines_range[3] == 550.0
-        @test lines_range[4] == 5500.0
+        @test lines_range[1] == 1.0
+        @test lines_range[2] == 10.0
+        @test lines_range[3] == 100.0
+        @test lines_range[4] == 1000.0
         @test lines_widths[1] == 9
         @test lines_widths[2] == 90
         @test lines_widths[3] == 900
