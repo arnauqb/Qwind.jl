@@ -104,16 +104,16 @@ end
     iterations_dict = Dict(1 => Dict())
     integrators, streamlines =
         Qwind.run_integrators(model, iterations_dict, it_num = 1, parallel = false)
-    #trajectories = [Qwind.Trajectory(integ) for integ in integrators]
+    trajectories = [Qwind.Trajectory(integ) for integ in integrators]
     Qwind.save_hdf5(integrators, streamlines, model, "./saver_tests.hdf5", 1)
 
     @testset "Save streamlines and trajectories" begin
-        #trajs_saved = load_trajectories("./saver_tests.hdf5")
-        #for (traj, traj_saved) in zip(trajectories, trajs_saved)
-        #    for fieldname in fieldnames(Qwind.Trajectory)
-        #        @test getfield(traj, fieldname) == getfield(traj_saved, fieldname)
-        #    end
-        #end
+        trajs_saved = load_trajectories("./saver_tests.hdf5")
+        for (traj, traj_saved) in zip(trajectories, trajs_saved)
+            for fieldname in fieldnames(Qwind.Trajectory)
+                @test getfield(traj, fieldname) == getfield(traj_saved, fieldname)
+            end
+        end
 
         sl_saved = Streamlines("./saver_tests.hdf5")
         for (sl, sl_saved) in zip(streamlines, sl_saved)

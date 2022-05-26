@@ -129,7 +129,7 @@ function save_wind(integrators, streamlines, model, save_path, it_num)
     hdf5_save_path = save_path * "/results.hdf5"
     save_hdf5(integrators, streamlines, model, hdf5_save_path, it_num)
     properties_save_path = iteration_save_path * "/wind_properties.yaml"
-    integrators_save_path = iteration_save_path * "/trajectories.jld2"
+    integrators_save_path = iteration_save_path * "/integrators.jld2"
     save_integrators(integrators, integrators_save_path)
     properties = save_wind_properties(
         streamlines,
@@ -190,6 +190,7 @@ function save_streamlines_and_trajectories!(integrators, streamlines, group)
         tgroup["vphi"] = trajectory.vphi
         tgroup["vz"] = trajectory.vz
         tgroup["n"] = trajectory.n
+        tgroup["lw0"] = trajectory.lw0
         tgroup["escaped"] = trajectory.escaped
     end
 

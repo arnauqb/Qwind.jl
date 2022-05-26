@@ -272,7 +272,7 @@ function update_density_grid(
     hull,
 )
     #r, z, _, _, _, _ = reduce_streamlines(streamlines)
-    r, z, n = calculate_densities(streamlines)
+    r, z, n = calculate_densities(integrators)
     r0s = [line.r[1] for line in streamlines]
     return update_density_grid(
         old_grid,
