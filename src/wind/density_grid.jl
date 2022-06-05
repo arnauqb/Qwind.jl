@@ -206,7 +206,6 @@ end
 function calculate_densities(sl::Streamline, width) 
     r0 = sl.r[1]
     z0 = sl.z[1]
-    d0 = sqrt(r0^2 + z0^2)
     n0 = sl.n[1]
     v0 = sl.vz[1]
 
@@ -216,7 +215,6 @@ function calculate_densities(sl::Streamline, width)
     for j = 1:length(sl.r)
         r = sl.r[j]
         z = sl.z[j]
-        d = sqrt(r^2 + z^2)
         v = sqrt(sl.vr[j]^2 + sl.vz[j]^2)
         n = (r0 * width[1] * v0 * n0) / (r * v * width[j])
         push!(rs, r)
@@ -272,11 +270,11 @@ function update_density_grid(
     hull,
 )
     #r, z, _, _, _, _ = reduce_streamlines(streamlines)
-    r, z, n = calculate_densities(integrators)
+    r, z, n = calculate_densities(streamlines)
     r0s = [line.r[1] for line in streamlines]
     return update_density_grid(
         old_grid,
-        ReplaceGrid(),#update_method,
+        update_method,
         hull,
         r,
         z,
