@@ -227,7 +227,6 @@ end
 function calculate_densities(sl::Sundials.IDAIntegrator, width) 
     r0 = sl.p.r0
     z0 = sl.p.z0
-    d0 = sqrt(r0^2 + z0^2)
     n0 = sl.p.n0
     v0 = sl.p.v0
 
@@ -237,9 +236,8 @@ function calculate_densities(sl::Sundials.IDAIntegrator, width)
     for j = 1:length(sl.p.data[:r])
         r = sl.p.data[:r][j]
         z = sl.p.data[:z][j]
-        d = sqrt(r^2 + z^2)
         v = sqrt(sl.p.data[:vr][j]^2 + sl.p.data[:vz][j]^2)
-        n = (d0 * width[1] * v0 * n0) / (d * v * width[j])
+        n = (r0 * width[1] * v0 * n0) / (r * v * width[j])
         push!(rs, r)
         push!(zs, z)
         push!(ns, n)
@@ -270,7 +268,7 @@ function update_density_grid(
     hull,
 )
     #r, z, _, _, _, _ = reduce_streamlines(streamlines)
-    r, z, n = calculate_densities(streamlines)
+    r, z, n = calculate_densities(integrators)
     r0s = [line.r[1] for line in streamlines]
     return update_density_grid(
         old_grid,
