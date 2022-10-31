@@ -67,7 +67,7 @@ function g(density_grid, iterator, parameters, radiation, z; r, zmax = 1e-1)
     vth = compute_thermal_velocity(T)
     s = vth^2 / (2 * B0 * r)
     a = 1 + (z / r)^2
-    gas_pressure_term = 4 * s * z / r / a
+    gas_pressure_term = 2 * s * z / r / a
     radiation.fuv_grid .= fuv_copy
     return -(grav + fr) / B0 + gas_pressure_term
 end
