@@ -24,8 +24,8 @@ include("streamlines.jl")
 # wind
 include("wind/grids.jl")
 include("wind/wind_hull.jl")
-include("wind/density_grid.jl")
 include("wind/velocity_grid.jl")
+include("wind/density_grid.jl")
 include("wind/iterator.jl")
 include("wind/base.jl")
 

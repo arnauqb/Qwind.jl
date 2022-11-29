@@ -60,8 +60,8 @@ function Wind(
         velocity_grid = VelocityGrid(nr, nz, 0.0)
     else
         hull = Hull(streamlines)
-        density_grid = DensityGrid(streamlines, hull, nr = nr, nz = nz)
         velocity_grid = VelocityGrid(streamlines, hull, nr = nr, nz = nz)
+        density_grid = DensityGrid(streamlines, hull, nr = nr, nz = nz)
     end
     return Wind(hull, density_grid, velocity_grid, vacuum_density, update_grid_flag)
 end
@@ -75,25 +75,44 @@ function get_density(wi::Wind, r, z)
 end
 get_density(wi::Wind, point) = get_density(wi, point[1], point[2])
 
-function update_wind(wind::Wind, streamlines::Streamlines)
+#function get_disk_density_from_streamlines(streamlines, r_range)
+#    r0 = [line.r[1] for line in streamlines]
+#    log_n0 = log10.([line.n[1] for line in streamlines])
+#    println(log_n0)
+#    interpolator = Interpolations.interpolate((r0,), log_n0, Gridded(Linear()))
+#    interpolator = Interpolations.extrapolate(interpolator, 2)
+#    n_interp = 10 .^ interpolator(r_range)
+#    return n_interp
+#end
+
+function update_wind(model, streamlines::Streamlines)
+    wind = model.wind
     @info "Updating wind grids... "
     flush()
-    if maximum(wind.density_grid.grid) == wind.vacuum_density
-        # first iteration, do not average
-        new_wind = Wind(
-            streamlines,
-            nr = wind.density_grid.nr,
-            nz = wind.density_grid.nz,
-            vacuum_density = wind.vacuum_density,
-            update_grid_flag = wind.update_grid_flag,
-        )
-        return new_wind
-    end
     hull = Hull(streamlines)
-    density_grid =
-        update_density_grid(wind.density_grid, wind.update_grid_flag, streamlines, hull)
+    r, z, vr, vphi, vz = reduce_streamlines(streamlines)
+    r0 = [line.r[1] for line in streamlines]
+    r_range, z_range =
+        get_spatial_grid(r, z, r0, wind.density_grid.nr, wind.density_grid.nz)
+    disk_density = []
+    for rp in r_range
+        if rp < model.parameters.disk_r_out
+            n0 = getn0(model, rp)
+        else
+            n0 = 1e2
+        end
+        push!(disk_density, n0)
+    end
     velocity_grid =
-        update_velocity_grid(wind.velocity_grid, wind.update_grid_flag, streamlines, hull)
+        VelocityGrid(hull, r_range, z_range, r = r, z = z, vr = vr, vphi = vphi, vz = vz)
+    density_grid = DensityGrid(
+        hull,
+        r_range,
+        z_range,
+        vr_grid = velocity_grid.vr_grid,
+        vz_grid = velocity_grid.vz_grid,
+        disk_density = disk_density,
+    )
     new_wind =
         Wind(hull, density_grid, velocity_grid, wind.vacuum_density, wind.update_grid_flag)
     return new_wind

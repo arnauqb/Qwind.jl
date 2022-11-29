@@ -32,7 +32,7 @@ end
     r0_range = collect(range(0.1, 100.0, step = 10))
     func(r, z) = 1e12 * exp(-z / 100) / r
     n_range = func.(r_range, z_range)
-    grid = DensityGrid(r_range, z_range, n_range, r0_range, hull, nr = 50, nz = 50)
+    grid = DensityGrid(hull, r_range, z_range, vr_grid, vz_grid, disk_density)
 
     @testset "Test gridpoints" begin
         # Grid points should be exact?

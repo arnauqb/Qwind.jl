@@ -1,5 +1,5 @@
 using ConcaveHull
-export VelocityGrid, get_velocity, interpolate_velocity, update_velocity_grid
+export VelocityGrid, get_velocity, interpolate_velocity
 
 struct VelocityGrid{T,U} <: InterpolationGrid
     r_range::Vector{T}
@@ -89,17 +89,14 @@ end
 
 function VelocityGrid(
     hull::ConcaveHull.Hull,
+    r_range,
+    z_range;
     r,
     z,
     vr,
     vphi,
     vz,
-    r0;
-    nr = "auto",
-    nz = 50,
-    log = true,
 )
-    r_range, z_range = get_spatial_grid(r, z, r0, nr, nz, log = log)
     @info "Constructing velocity interpolators..."
     flush()
     vr_interp, vphi_interp, vz_interp = get_velocity_interpolators(r, z, vr, vphi, vz)
@@ -128,31 +125,13 @@ function VelocityGrid(
     vr_grid = [vr_grid[:, 1] vr_grid]
     vphi_grid = [vphi_grid[:, 1] vphi_grid]
     vz_grid = [vz_grid[:, 1] vz_grid]
-    pushfirst!(z_range, 0.0)
-    grid = VelocityGrid(r_range, z_range, vr_grid, vphi_grid, vz_grid, nr, nz)
+    z_save = copy(z_range)
+    pushfirst!(z_save, 0.0)
+    nr = length(r_range)
+    nz = length(z_range)
+    grid = VelocityGrid(r_range, z_save, vr_grid, vphi_grid, vz_grid, nr, nz)
     @info "Done"
     return grid
-end
-
-function VelocityGrid(
-    streamlines::Streamlines,
-    hull::ConcaveHull.Hull;
-    nr = "auto",
-    nz = 50,
-)
-    r0 = [line.r[1] for line in streamlines]
-    r, z, vr, vphi, vz, n = reduce_streamlines(streamlines)
-    return VelocityGrid(
-        hull,
-        r,
-        z,
-        vr,
-        vphi,
-        vz,
-        r0,
-        nr = nr,
-        nz = nz,
-    )
 end
 
 function get_velocity(grid::VelocityGrid, r, z)
@@ -189,14 +168,4 @@ function get_velocity_interpolators(r, z, vr, vphi, vz; type = "linear")
     vphi_int = scipy_interpolate.LinearNDInterpolator(points, vphi, fill_value = 0)
     vz_int = scipy_interpolate.LinearNDInterpolator(points, vz, fill_value = 0)
     return vr_int, vphi_int, vz_int
-end
-
-
-function update_velocity_grid(
-    old_grid::VelocityGrid,
-    update_method::UpdateGridFlag,
-    streamlines::Streamlines,
-    hull,
-)
-    return VelocityGrid(streamlines, hull, nr = old_grid.nr, nz = old_grid.nz)
 end

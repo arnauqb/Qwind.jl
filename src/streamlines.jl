@@ -14,8 +14,8 @@ mutable struct Streamline{T<:Vector{<:AbstractFloat}}
     vr::T
     vphi::T
     vz::T
-    n::T
     width::T
+    n::T
     escaped::Bool
 end
 
@@ -36,9 +36,9 @@ function Streamline(integrator::Sundials.IDAIntegrator)
         integrator.p.data[:vr],
         integrator.p.data[:vphi],
         integrator.p.data[:vz],
-        integrator.p.data[:n],
         sqrt.(integrator.p.data[:r] .^ 2 + integrator.p.data[:z] .^ 2) .*
         integrator.p.lwnorm,
+        integrator.p.data[:n],
         escaped(integrator),
     )
 end
@@ -52,9 +52,9 @@ function Streamline(tdata::Dict)
         tdata["vr"],
         tdata["vphi"],
         tdata["vz"],
-        tdata["n"],
         tdata["line_width"],
-        get(tdata, "escaped", true), 
+        tdata["n"],
+        tdata["escaped"],
     )
 end
 
@@ -102,8 +102,8 @@ function slice_streamline(streamline::Streamline; in = 1, fi = nothing)
 end
 
 function escaped(streamline::Streamline)
-    vt = @. sqrt(streamline.vr ^ 2 + streamline.vz ^ 2)
-    d = @. sqrt(streamline.r ^ 2 + streamline.z ^ 2)
+    vt = @. sqrt(streamline.vr^2 + streamline.vz^2)
+    d = @. sqrt(streamline.r^2 + streamline.z^2)
     return maximum(vt .> compute_escape_velocity.(d))
 end
 
@@ -113,12 +113,12 @@ function reduce_streamlines(streamlines::Streamlines)
     vr = reduce(vcat, [streamline.vr for streamline in streamlines])
     vphi = reduce(vcat, [streamline.vphi for streamline in streamlines])
     vz = reduce(vcat, [streamline.vz for streamline in streamlines])
-    n = reduce(vcat, [streamline.n for streamline in streamlines])
-    return r, z, vr, vphi, vz, n
+    return r, z, vr, vphi, vz
 end
 
 function interpolate_integrator(
-    integrator::Sundials.IDAIntegrator;
+    integrator::Sundials.IDAIntegrator,
+    density_grid;
     n_timesteps::Int = 1000,
     max_time = nothing,
     log = true,
@@ -138,7 +138,7 @@ function interpolate_integrator(
             [0.0],
             [0.0],
             [0.0],
-            [0.0],
+            0.0,
             false,
         )
     end
@@ -162,7 +162,7 @@ function interpolate_integrator(
             [0.0],
             [0.0],
             [0.0],
-            [0.0],
+            0.0,
             false,
         )
     end
@@ -173,8 +173,7 @@ function interpolate_integrator(
     vz_dense = dense_solution[4, :]
     line_width_dense = sqrt.(r_dense .^ 2 + z_dense .^ 2) .* integrator.p.lwnorm
     vphi_dense = integrator.p.l0 ./ r_dense
-    density_dense =
-        compute_density.(r_dense, z_dense, vr_dense, vz_dense, Ref(integrator.p))
+    density_dense = interpolate_density.(Ref(density_grid), r_dense, z_dense)
     return Streamline(
         integrator.p.id,
         t_range,
@@ -183,14 +182,15 @@ function interpolate_integrator(
         vr_dense,
         vphi_dense,
         vz_dense,
-        density_dense,
         line_width_dense,
+        density_dense,
         escaped(integrator),
     )
 end
 
 function interpolate_integrators(
-    integrators::Vector{<:Sundials.IDAIntegrator};
+    integrators::Vector{<:Sundials.IDAIntegrator},
+    density_grid;
     n_timesteps::Int = 1000,
     max_times,
     log = true,
@@ -202,6 +202,7 @@ function interpolate_integrators(
             ret,
             interpolate_integrator(
                 integrator,
+                density_grid,
                 n_timesteps = n_timesteps,
                 max_time = max_time,
                 log = log,

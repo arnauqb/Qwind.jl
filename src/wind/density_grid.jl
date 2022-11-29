@@ -63,47 +63,55 @@ function DensityGrid(nr::Union{String,Int}, nz::Int, vacuum_density::Float64)
 end
 
 function DensityGrid(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    n::Vector{Float64},
-    r0s::Vector{Float64},
-    hull::ConcaveHull.Hull;
-    nr = "auto",
-    nz = 50,
-    log = true,
+    hull::ConcaveHull.Hull,
+    r_range,
+    z_range;
+    vr_grid,
+    vz_grid,
+    disk_density,
 )
-    @info "Constructing density interpolator..."
-    flush()
-    interpolator = get_density_interpolator(r, z, n)
-    @info "Done"
     @info "Filling density grid..."
     flush()
-    r_range, z_range = get_spatial_grid(r, z, r0s, nr, nz, log = log)
     r_grid = log10.(r_range)' .* ones(length(z_range))
     z_grid = log10.(z_range) .* ones(length(r_range))'
-    density_grid = interpolator(r_grid, z_grid)
-    density_grid = 10 .^ reshape(density_grid, length(z_range), length(r_range))'
-    for (i, r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            point = [r, z]
+    density_grid = 1e2 .* ones(length(r_range), length(z_range))
+    density_grid[:,1] = disk_density
+    for i = 2:length(r_range)
+        ri = r_range[i]
+        rii = r_range[i - 1]
+        for j = 2:length(z_range)
+            zi = z_range[j]
+            zii = z_range[j - 1]
+            point = [ri, zi]
             if !is_point_in_wind(hull, point)
                 density_grid[i, j] = 1e2
+            else
+                D =
+                    (ri * vr_grid[i, j]) / (2 * (ri^2 - rii^2)) +
+                    (vz_grid[i, j]) / (zi - zii)
+                rho =
+                    (rii * vr_grid[i - 1, j] * density_grid[i - 1, j]) /
+                    (2 * (ri^2 - rii^2))
+                rho = rho + (vz_grid[i, j - 1] * density_grid[i, j - 1]) / (zi - zii)
+                rho = abs(rho / D)
+                if isnan(rho) || isinf(rho)
+                    rho = 1e2
+                end
+                #rho = max(1e2, rho)
+                density_grid[i, j] = rho
             end
         end
     end
     # add z = 0 line
     density_grid = [density_grid[:, 1] density_grid]
-    pushfirst!(z_range, 0.0)
-    grid = DensityGrid(r_range, z_range, density_grid, nr, nz)
+    z_save = copy(z_range)
+    pushfirst!(z_save, 0.0)
+    nr = length(r_range)
+    nz = length(z_range)
+    grid = DensityGrid(r_range, z_save, density_grid, nr, nz)
     @info "Done"
     flush()
     return grid
-end
-
-function DensityGrid(streamlines, hull; nr = "auto", nz = 50)
-    r0 = [line.r[1] for line in streamlines]
-    r, z, vr, vphi, vz, n = reduce_streamlines(streamlines)
-    return DensityGrid(r, z, n, r0, hull, nr = nr, nz = nz, log = true)
 end
 
 function get_density(grid::DensityGrid, r, z)
@@ -123,104 +131,4 @@ function interpolate_density(grid::DensityGrid, r, z)
         return 1e2
     end
     return grid.interpolator(r, z)
-end
-
-
-function get_density_interpolator(
-    r::Vector{Float64},
-    z::Vector{Float64},
-    n::Vector{Float64}
-)
-    mask = (r .> 0) .& (z .> 0)
-    r = r[mask]
-    z = z[mask]
-    n = n[mask]
-    r_log = log10.(r)
-    z_log = log10.(z)
-    log_n = log10.(n)
-    points = hcat(r_log, z_log)
-    interp = scipy_interpolate.LinearNDInterpolator(points, log_n, fill_value = 2)
-    return interp
-end
-
-function update_density_grid(
-    old_grid::DensityGrid,
-    update_method::AverageGrid,
-    hull::ConcaveHull.Hull,
-    r::Vector{Float64},
-    z::Vector{Float64},
-    n::Vector{Float64},
-    r0::Vector{Float64},
-)
-    r_range, z_range = get_spatial_grid(r, z, r0, old_grid.nr, old_grid.nz)
-    interpolator = get_density_interpolator(r, z, n)
-    density_grid = 1e2 .* ones((length(r_range), length(z_range)))
-    @info "Averaging grids..."
-    flush()
-    r_grid = log10.(r_range)' .* ones(length(z_range))
-    z_grid = log10.(z_range) .* ones(length(r_range))'
-    density_grid = interpolator(r_grid, z_grid)
-    density_grid = 10 .^ reshape(density_grid, length(z_range), length(r_range))'
-    for (i, r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            point = [r, z]
-            if !is_point_in_wind(hull, point)
-                density_grid[i, j] =
-                    10 .^ ((log10(1e2) + log10(get_density(old_grid, r, z))) / 2.0)
-            else
-                density_grid[i, j] =
-                    10 .^
-                    ((log10(density_grid[i, j]) + log10(get_density(old_grid, r, z))) / 2.0)
-            end
-        end
-    end
-    # add z = 0 line
-    density_grid = [density_grid[:, 1] density_grid]
-    pushfirst!(z_range, 0.0)
-    grid = DensityGrid(r_range, z_range, density_grid, old_grid.nr, old_grid.nz)
-    return grid
-end
-
-function update_density_grid(
-    old_grid::DensityGrid,
-    update_method::ReplaceGrid,
-    hull::ConcaveHull.Hull,
-    r::Vector{Float64},
-    z::Vector{Float64},
-    n::Vector{Float64},
-    r0::Vector{Float64},
-)
-    r_range, z_range = get_spatial_grid(r, z, r0, old_grid.nr, old_grid.nz)
-    interpolator = get_density_interpolator(r, z, n)
-    density_grid = 1e2 .* ones((length(r_range), length(z_range)))
-    @info "Replacing grids..."
-    flush()
-    r_grid = log10.(r_range)' .* ones(length(z_range))
-    z_grid = log10.(z_range) .* ones(length(r_range))'
-    density_grid = interpolator(r_grid, z_grid)
-    density_grid = 10 .^ reshape(density_grid, length(z_range), length(r_range))'
-    for (i, r) in enumerate(r_range)
-        for (j, z) in enumerate(z_range)
-            point = [r, z]
-            if !is_point_in_wind(hull, point)
-                density_grid[i, j] = 1e2
-            end
-        end
-    end
-    # add z = 0 line
-    density_grid = [density_grid[:, 1] density_grid]
-    pushfirst!(z_range, 0.0)
-    grid = DensityGrid(r_range, z_range, density_grid, old_grid.nr, old_grid.nz)
-    return grid
-end
-
-function update_density_grid(
-    old_grid::DensityGrid,
-    update_method::UpdateGridFlag,
-    streamlines::Streamlines,
-    hull,
-)
-    r, z, _, _, _, n = reduce_streamlines(streamlines)
-    r0 = [line.r[1] for line in streamlines]
-    return update_density_grid(old_grid, update_method, hull, r, z, n, r0)
 end

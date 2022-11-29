@@ -267,7 +267,7 @@ function load_trajectory(tdata::Dict)
         tdata["vphi"],
         tdata["vz"],
         tdata["n"],
-        get(tdata, "escaped", true)
+        tdata["escaped"],
     )
 end
 

@@ -208,16 +208,6 @@ function failed(integrator::Sundials.IDAIntegrator, r, z)
         too_long
 end
 
-compute_density(integrator::Sundials.IDAIntegrator) = compute_density(
-    integrator.u[1],
-    integrator.u[2],
-    integrator.u[3],
-    integrator.u[4],
-    integrator.p.r0,
-    integrator.p.v0,
-    integrator.p.n0,
-)
-
 function termination_condition(u, t, integrator)
     r, z, vr, vz = u
     _, _, ar, az = integrator.du
@@ -250,7 +240,7 @@ function save(
     at = sqrt(ar^2 + az^2)
     vphi = integrator.p.l0 / r^2
     dvdr = at / vt
-    density = compute_density(r, z, vr, vz, integrator.p)
+    density = interpolate_density(wind.density_grid, r, z)
     taux = compute_tau_xray(
         wind.density_grid,
         wind.grid_iterator,
@@ -354,7 +344,7 @@ function compute_radiation_acceleration(
     else
         dvdr = at / vt
     end
-    density = compute_density(r, z, vr, vz, integ_parameters)
+    density = interpolate_density(wind.density_grid, r, z)
     taux = compute_tau_xray(
         wind.density_grid,
         wind.grid_iterator,
